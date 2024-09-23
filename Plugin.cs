@@ -15,12 +15,14 @@ public class Plugin : BaseUnityPlugin
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public const string PluginAuthor = "amione";
     public const string PluginName = "StackResizer";
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "1.0.1";
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
     public static ConfigEntry<int> StackResize;
     public static ConfigEntry<bool> RepairLantern;
     public static ConfigEntry<string> LanternRepairConfig;
+    public static ConfigEntry<int> LanternAmountRepairConfig;
+    public static ConfigEntry<float> LanternDurabilityRepairConfig;
     public static ConfigEntry<bool> LogItems;
 
     private void Awake()
@@ -31,7 +33,9 @@ public class Plugin : BaseUnityPlugin
 
         StackResize = ConfigFile.Bind($"{PluginName}", "Stack Resize", 50, "Number for all item stack sizes to be set to");
         RepairLantern = ConfigFile.Bind($"{PluginName}", "Repairable Lantern", true, "Whether or not lantern can be repaired using gasoline on the workbench (true/false)");
-        LanternRepairConfig = ConfigFile.Bind($"{PluginName}", "LanternRepair", "gasoline", "What item will be used for repairing the lantern. (recommended: gasoline or molotov)");
+        LanternRepairConfig = ConfigFile.Bind($"{PluginName}", "Lantern Repair Item", "gasoline", "What item will be used for repairing the lantern. (recommended: gasoline or molotov)");
+        LanternAmountRepairConfig = ConfigFile.Bind($"{PluginName}", "Lantern Amount of Item Used", 1, "Item amount of item to use? Ex. 1 molotov to repair");
+        LanternDurabilityRepairConfig = ConfigFile.Bind($"{PluginName}", "Lantern Durability of Item Used", 0.2f, "Item durability amount to use? Ex. 0.2 of a gasoline to repair (do specify float, havent added checks)");
         LogItems = ConfigFile.Bind($"{PluginName}", "Log Items", false, "Whether or not to log every item (true/false)");
 
         Harmony Patch = new Harmony($"{PluginGUID}");

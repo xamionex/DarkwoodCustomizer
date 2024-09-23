@@ -23,15 +23,29 @@ public class InvItemClassPatch
         // add recipe for repairing lantern
         if (__instance.type == "lantern")
         {
-            __instance.baseClass.repairable = true;
-            __instance.baseClass.gameObject.AddComponent<RepairRequirements>().requirements = new List<CraftingRequirement>
-            {
-                new CraftingRequirement
+            var RepairItem = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true);
+            List<CraftingRequirement> Requirements;
+            if (RepairItem.hasDurability) {
+                Requirements = new List<CraftingRequirement>
                 {
-                    item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
-                    amount = 1
-                }
-            };
+                    new CraftingRequirement
+                    {
+                        item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
+                        durabilityAmount = Plugin.LanternDurabilityRepairConfig.Value
+                    }
+                };
+            } else {
+                Requirements = new List<CraftingRequirement>
+                {
+                    new CraftingRequirement
+                    {
+                        item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
+                        amount = Plugin.LanternAmountRepairConfig.Value
+                    }
+                };
+            }
+            __instance.baseClass.repairable = true;
+            __instance.baseClass.gameObject.AddComponent<RepairRequirements>().requirements = Requirements;
             __instance.durability = __instance.baseClass.maxDurability;
         }
     }
