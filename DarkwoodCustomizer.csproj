@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>StackResizer</AssemblyName>
-    <Product>A mod for darkwood that changes item stack sizes and optionally lets you repair the lantern using any item</Product>
+    <AssemblyName>DarkwoodCustomizer</AssemblyName>
+    <Product>A mod for darkwood that changes inventory sizes, stack sizes among other things</Product>
     <Version>1.0.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
@@ -12,7 +12,7 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
-    <RootNamespace>StackResizer</RootNamespace>
+    <RootNamespace>DarkwoodCustomizer</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

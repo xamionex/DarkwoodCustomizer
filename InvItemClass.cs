@@ -1,11 +1,6 @@
-﻿using BepInEx;
-using BepInEx.Configuration;
-using HarmonyLib;
-using MonoMod.Utils;
-using Newtonsoft.Json;
-using StackResizer;
+﻿using HarmonyLib;
+using DarkwoodCustomizer;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
 public class InvItemClassPatch
@@ -13,7 +8,7 @@ public class InvItemClassPatch
     public static bool ConfigReloaded = true;
     public static void Postfix(InvItemClass __instance)
     {
-        if (__instance.baseClass.stackable)
+        if (__instance.baseClass.stackable && Plugin.ChangeStacks.Value)
         {
             __instance.baseClass.maxAmount = Plugin.StackResize.Value;
         }
@@ -24,7 +19,7 @@ public class InvItemClassPatch
         }
 
         // add recipe for repairing lantern
-        if (__instance.type == "lantern")
+        if (__instance.type == "lantern" && Plugin.RepairLantern.Value)
         {
             if (!__instance.baseClass.repairable && ConfigReloaded)
             {
