@@ -1,13 +1,16 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using MonoMod.Utils;
 using Newtonsoft.Json;
 using StackResizer;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
 public class InvItemClassPatch
 {
+    public static bool ConfigReloaded = true;
     public static void Postfix(InvItemClass __instance)
     {
         if (__instance.baseClass.stackable)
@@ -23,30 +26,34 @@ public class InvItemClassPatch
         // add recipe for repairing lantern
         if (__instance.type == "lantern")
         {
-            var RepairItem = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true);
-            List<CraftingRequirement> Requirements;
-            if (RepairItem.hasDurability) {
-                Requirements = new List<CraftingRequirement>
-                {
-                    new CraftingRequirement
+            if (!__instance.baseClass.repairable && ConfigReloaded)
+            {
+                var RepairItem = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true);
+                List<CraftingRequirement> Requirements;
+                if (RepairItem.hasDurability) {
+                    Requirements = new List<CraftingRequirement>
                     {
-                        item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
-                        durabilityAmount = Plugin.LanternDurabilityRepairConfig.Value
-                    }
-                };
-            } else {
-                Requirements = new List<CraftingRequirement>
-                {
-                    new CraftingRequirement
+                        new CraftingRequirement
+                        {
+                            item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
+                            durabilityAmount = Plugin.LanternDurabilityRepairConfig.Value
+                        }
+                    };
+                } else {
+                    Requirements = new List<CraftingRequirement>
                     {
-                        item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
-                        amount = Plugin.LanternAmountRepairConfig.Value
-                    }
-                };
+                        new CraftingRequirement
+                        {
+                            item = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true),
+                            amount = Plugin.LanternAmountRepairConfig.Value
+                        }
+                    };
+                }
+                __instance.baseClass.repairable = true;
+                __instance.baseClass.gameObject.AddComponent<RepairRequirements>().requirements = Requirements;
+                __instance.durability = __instance.baseClass.maxDurability;
+                ConfigReloaded = false;
             }
-            __instance.baseClass.repairable = true;
-            __instance.baseClass.gameObject.AddComponent<RepairRequirements>().requirements = Requirements;
-            __instance.durability = __instance.baseClass.maxDurability;
         }
     }
 }

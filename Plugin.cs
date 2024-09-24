@@ -2,6 +2,7 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using System;
 using System.IO;
 
 namespace StackResizer;
@@ -45,11 +46,18 @@ public class Plugin : BaseUnityPlugin
         fileWatcher = new FileSystemWatcher(Paths.ConfigPath, PluginGUID + ".cfg");
         fileWatcher.NotifyFilter = NotifyFilters.LastWrite;
         fileWatcher.Changed += OnFileChanged;
+        ConfigFile.ConfigReloaded += OnConfigReloaded;
         fileWatcher.EnableRaisingEvents = true;
     }
+
+    private void OnConfigReloaded(object sender, EventArgs e)
+    {
+        Log.LogInfo($"Reloaded configuration file");
+        InvItemClassPatch.ConfigReloaded = true;
+    }
+
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         ConfigFile.Reload();
-        Log.LogInfo($"Reloaded configuration file");
     }
 }
