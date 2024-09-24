@@ -16,7 +16,7 @@ public class Plugin : BaseUnityPlugin
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public const string PluginAuthor = "amione";
     public const string PluginName = "StackResizer";
-    public const string PluginVersion = "1.0.2";
+    public const string PluginVersion = "1.0.3";
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
     public static ConfigEntry<int> StackResize;
