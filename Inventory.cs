@@ -1,27 +1,36 @@
+using DarkwoodCustomizer;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Reflection.Emit;
-using HarmonyLib;
-using DarkwoodCustomizer;
 
 [HarmonyPatch]
 public class InventoryPatch
 {
+	public delegate float GetWorkbenchCraftingOffsetDelegate();
+
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
 	[HarmonyTranspiler]
 	public static IEnumerable<CodeInstruction> InventoryShow(IEnumerable<CodeInstruction> instructions)
 	{
 		var codes = new List<CodeInstruction>(instructions);
+		var targetMethod = GetWorkbenchCraftingOffset();
+
 		for (int i = 0; i < codes.Count; i++)
 		{
 			// replaces 670 offset for workbench crafting with 1000
 			if (codes[i].opcode == OpCodes.Ldc_R4 && codes[i].operand.ToString() == "670")
 			{
-				codes[i] = new CodeInstruction(OpCodes.Ldc_R4, Plugin.WorkbenchCraftingOffset.Value);
+				codes[i] = Transpilers.EmitDelegate(GetWorkbenchCraftingOffset);
 				break;
 			}
 		}
 		return codes;
 	}
+
+    public static float GetWorkbenchCraftingOffset()
+    {
+        return Plugin.WorkbenchCraftingOffset.Value; // Return the actual value
+    }
 
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
     [HarmonyPrefix]

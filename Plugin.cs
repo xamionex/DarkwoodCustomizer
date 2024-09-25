@@ -57,7 +57,7 @@ public class Plugin : BaseUnityPlugin
         LogItems = ConfigFile.Bind($"{PluginName}", "Log Items", false, "Whether or not to log every item (true/false)");
 
         // InventoryResize config
-        WorkbenchCraftingOffset = ConfigFile.Bind($"{PluginName}", "Workbench Crafting Offset", 1000f, "Pixels offset for the workbench crafting window, requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
+        WorkbenchCraftingOffset = ConfigFile.Bind($"{PluginName}", "Workbench Crafting Offset", 1000f, "Pixels offset for the workbench crafting window, no longer requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
         RightSlots = ConfigFile.Bind($"{PluginName}", "Storage Right Slots", 12, "Number that determines slots in workbench to the right");
         DownSlots = ConfigFile.Bind($"{PluginName}", "Storage Down Slots", 9, "Number that determines slots in workbench downward");
         InventoryRightSlots = ConfigFile.Bind($"{PluginName}", "Inventory Right Slots", 2, "Number that determines slots in inventory to the right");
@@ -68,9 +68,9 @@ public class Plugin : BaseUnityPlugin
         HotbarSlots = ConfigFile.Bind($"{PluginName}", "Enable Hotbar Changing", false, "This will circumvent the Hotbar progression and enables the 2 settings above this one to take effect, disable to return to default Hotbar slots");
         RemoveExcess = ConfigFile.Bind($"{PluginName}", "Remove Excess Slots", true, "Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)");
 
-        Harmony Patch = new Harmony($"{PluginGUID}");
-        Patch.PatchAll(typeof(InvItemClassPatch));
-        Patch.PatchAll(typeof(InventoryPatch));
+        Harmony Harmony = new Harmony($"{PluginGUID}");
+        Harmony.PatchAll(typeof(InvItemClassPatch));
+        Harmony.PatchAll(typeof(InventoryPatch));
         Log.LogInfo($"Plugin {PluginGUID} v{PluginVersion} is loaded!");
 
         fileWatcher = new FileSystemWatcher(Paths.ConfigPath, PluginGUID + ".cfg");
