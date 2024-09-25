@@ -94,13 +94,21 @@ public class InventoryPatch
 			}
 			Plugin.LogDivider();
 		}
-		if (difference < 0 && Plugin.RemoveExcess.Value)
+		while (difference < 0 && Plugin.RemoveExcess.Value)
 		{
-			__instance.slots.RemoveRange(MaximumSlots - 1, Math.Abs(difference));
+			for (int i = MaximumSlots - 1; i < __instance.slots.Count; i++)
+			{
+				__instance.slots.RemoveAt(i - 1);
+				difference++;
+			}
 		}
-		else
+		while (difference > 0)
 		{
-			__instance.slots.AddRange(Enumerable.Repeat(new InvSlot(), difference));
+			for (int i = 0; i < difference; i++)
+			{
+				__instance.slots.Add(new InvSlot());
+				difference--;
+			}
 		}
 		return;
 	}

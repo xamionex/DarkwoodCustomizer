@@ -19,7 +19,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigFile PlayerConfigFile;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.1";
+    public const string PluginVersion = "1.1.2";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
