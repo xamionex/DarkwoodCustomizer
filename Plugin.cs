@@ -16,7 +16,7 @@ public class Plugin : BaseUnityPlugin
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.0.4";
+    public const string PluginVersion = "1.0.5";
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
 
