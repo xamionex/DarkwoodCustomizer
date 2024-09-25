@@ -10,6 +10,20 @@ public class PlayerPatch
     [HarmonyPostfix]
     public static void CharUpdate(Player __instance)
     {
+        if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
+        {
+            __instance.stamina = __instance.maxStamina;
+            if (Plugin.PlayerInfiniteStaminaEffect.Value)
+            {
+                __instance.flashStaminaBar();
+            }
+        }
+        if (Plugin.PlayerHealthModification.Value && Plugin.PlayerGodmode.Value)
+        {
+            __instance.health = __instance.maxHealth;
+            __instance.invulnerable = true;
+        }
+        else if (__instance.invulnerable) __instance.invulnerable = false;
         if (!RefreshPlayer) return;
         if (Plugin.PlayerStaminaModification.Value)
         {

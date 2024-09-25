@@ -6,16 +6,40 @@ using System.Collections.Generic;
 public class InvItemClassPatch
 {
     public static bool RefreshLantern = true;
+    public static Dictionary<string, int> ItemStackSizes = new Dictionary<string, int>();
+    public static bool ItemStackSizesChanged = true;
+
     public static void Postfix(InvItemClass __instance)
     {
-        if (__instance.baseClass.stackable && Plugin.ChangeStacks.Value)
+        if (Plugin.ChangeStacks.Value)
         {
-            __instance.baseClass.maxAmount = Plugin.StackResize.Value;
+            if (Plugin.UseGlobalStackSize.Value)
+            {
+                __instance.baseClass.maxAmount = Plugin.StackResize.Value;
+            }
+            if (Plugin.CustomStacks.TryGetValue(__instance.baseClass.name, out int value))
+            {
+                __instance.baseClass.maxAmount = value;
+            }
         }
-
         if (Plugin.LogItems.Value)
         {
-            Plugin.Log.LogInfo($"I see an item: {__instance.baseClass.name} with the stack size of {__instance.baseClass.maxAmount}!");
+            if (!ItemStackSizes.ContainsKey(__instance.baseClass.name))
+            {
+                ItemStackSizes.Add(__instance.baseClass.name, __instance.baseClass.maxAmount);
+                ItemStackSizesChanged = true;
+            }
+            if (ItemStackSizesChanged)
+            {
+                Plugin.LogDivider();
+                Plugin.Log.LogInfo($"So far I've seen items:");
+                foreach (var item in ItemStackSizes)
+                {
+                    Plugin.Log.LogInfo($"{item.Key}: {item.Value}");
+                }
+                Plugin.LogDivider();
+                ItemStackSizesChanged = false;
+            }
         }
 
         // add recipe for repairing lantern
@@ -23,7 +47,7 @@ public class InvItemClassPatch
         {
             if (!__instance.baseClass.repairable && RefreshLantern)
             {
-                var repairItem = Singleton<ItemsDatabase>.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true);
+                var repairItem = ItemsDatabase.Instance.getItem(Plugin.LanternRepairConfig.Value.ToString(), true);
                 var Requirements = new List<CraftingRequirement>
                 {
                     new CraftingRequirement
