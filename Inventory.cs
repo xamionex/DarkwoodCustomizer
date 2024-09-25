@@ -1,6 +1,8 @@
 using DarkwoodCustomizer;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 
 [HarmonyPatch]
@@ -27,73 +29,78 @@ public class InventoryPatch
 		return codes;
 	}
 
-    public static float GetWorkbenchCraftingOffset()
-    {
-        return Plugin.WorkbenchCraftingOffset.Value; // Return the actual value
-    }
+	public static float GetWorkbenchCraftingOffset()
+	{
+		return Plugin.WorkbenchCraftingOffset.Value; // Return the actual value
+	}
 
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-    [HarmonyPrefix]
-    public static void AddSlots(Inventory __instance, string labelName = "")
-    {
-        if (Plugin.HotbarSlots.Value && __instance.isHotbar())
-        {
-			__instance.maxColumns = Plugin.HotbarRightSlots.Value;
-			if (__instance.slots.Count != Plugin.HotbarRightSlots.Value*Plugin.HotbarDownSlots.Value)
-			{
-				Plugin.Log.LogInfo($"Upgrades acquired of Hotbar are: {Player.Instance.hotbarUpgrades}");
-				ModifySlots(__instance, __instance.maxColumns*Plugin.HotbarDownSlots.Value);
-			}
-        } else if (__instance.isHotbar()) {
-			__instance.maxColumns = 1;
-			if (__instance.slots.Count != Plugin.HotbarRightSlots.Value*Plugin.HotbarDownSlots.Value)
-			{
-				Plugin.Log.LogInfo($"Upgrades acquired of Hotbar are: {Player.Instance.hotbarUpgrades}");
-				ModifySlots(__instance, __instance.maxColumns*Player.Instance.hotbarUpgrades);
-			}
-		}
-        if (Plugin.InventorySlots.Value && __instance.invType == Inventory.InvType.playerInv)
-        {
-			__instance.maxColumns = Plugin.InventoryRightSlots.Value;
-			if (__instance.slots.Count != Plugin.InventoryRightSlots.Value*Plugin.InventoryDownSlots.Value)
-			{
-				Plugin.Log.LogInfo($"Upgrades acquired of Inventory are: {Player.Instance.inventoryUpgrades}");
-				ModifySlots(__instance, __instance.maxColumns*Plugin.InventoryDownSlots.Value);
-			}
-        } else if (__instance.invType == Inventory.InvType.playerInv) {
-			__instance.maxColumns = 2;
-			if (__instance.slots.Count != Plugin.InventoryRightSlots.Value*Plugin.InventoryDownSlots.Value)
-			{
-				Plugin.Log.LogInfo($"Upgrades acquired of Inventory are: {Player.Instance.inventoryUpgrades}");
-				ModifySlots(__instance, __instance.maxColumns*Player.Instance.inventoryUpgrades);
-			}
-		}
-        if (labelName == "Storage")
-        {
+	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
+	[HarmonyPrefix]
+	public static void ModifyInventorySlots(Inventory __instance, string labelName = "")
+	{
+		int maxSlots = 0;
+
+		if (labelName == "Storage")
+		{
 			__instance.maxColumns = Plugin.RightSlots.Value;
-			if (__instance.slots.Count != Plugin.RightSlots.Value*Plugin.DownSlots.Value)
-			{
-				ModifySlots(__instance, __instance.maxColumns*Plugin.DownSlots.Value);
-			}
-        }
-    }
+			maxSlots = __instance.maxColumns * Plugin.DownSlots.Value;
+		}
+		else if (Plugin.HotbarSlots.Value && __instance.isHotbar())
+		{
+			__instance.maxColumns = Plugin.HotbarRightSlots.Value;
+			maxSlots = __instance.maxColumns * Plugin.HotbarDownSlots.Value;
+		}
+		else if (Plugin.InventorySlots.Value && __instance.invType == Inventory.InvType.playerInv)
+		{
+			__instance.maxColumns = Plugin.InventoryRightSlots.Value;
+			maxSlots = __instance.maxColumns * Plugin.InventoryDownSlots.Value;
+		}
+		else if (__instance.invType == Inventory.InvType.playerInv)
+		{
+			__instance.maxColumns = 2;
+			maxSlots = 12 + (2 * Player.Instance.inventoryUpgrades);
+		}
+		else if (__instance.isHotbar())
+		{
+			__instance.maxColumns = 1;
+			maxSlots = 3 + Player.Instance.hotbarUpgrades;
+		}
 
+		if (maxSlots > 0 && maxSlots != __instance.slots.Count)
+		{
+			if (Plugin.LogDebug.Value)
+			{
+				Plugin.LogDivider();
+				Plugin.Log.LogInfo($"Player has {Player.Instance.inventoryUpgrades} inventory upgrades and {Player.Instance.hotbarUpgrades} hotbar upgrades.");
+			}
+			ModifySlots(__instance, maxSlots);
+		}
+	}
 	public static void ModifySlots(Inventory __instance, int MaximumSlots)
 	{
-		Plugin.Log.LogInfo($"Maximum slots allowed is {MaximumSlots} and we have {__instance.slots.Count}");
-		if (MaximumSlots < __instance.slots.Count && Plugin.RemoveExcess.Value)
+		int difference = MaximumSlots - __instance.slots.Count;
+		if (Plugin.LogDebug.Value)
 		{
-			Plugin.Log.LogInfo($"Removing {__instance.slots.Count - MaximumSlots} slots");
-			for (int i = __instance.slots.Count; i > MaximumSlots; i--)
+			Plugin.LogDivider();
+			Plugin.Log.LogInfo($"Maximum slots allowed in \"{__instance.name}\" is {MaximumSlots} and we have {__instance.slots.Count}");
+
+			if (difference < 0)
 			{
-				__instance.slots.RemoveAt(i-1);
+				Plugin.Log.LogInfo($"Removing {Math.Abs(difference)} slots");
 			}
-		} else {
-			Plugin.Log.LogInfo($"Adding {MaximumSlots - __instance.slots.Count} slots");
-			for (int i = __instance.slots.Count; i < MaximumSlots; i++)
+			else
 			{
-				__instance.slots.Add(new InvSlot());
+				Plugin.Log.LogInfo($"Adding {difference} slots");
 			}
+			Plugin.LogDivider();
+		}
+		if (difference < 0 && Plugin.RemoveExcess.Value)
+		{
+			__instance.slots.RemoveRange(MaximumSlots - 1, Math.Abs(difference));
+		}
+		else
+		{
+			__instance.slots.AddRange(Enumerable.Repeat(new InvSlot(), difference));
 		}
 		return;
 	}
