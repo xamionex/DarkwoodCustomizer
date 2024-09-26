@@ -3,6 +3,9 @@
 A mod for darkwood that lets you customize a lot of things about your player\
 There is too many things that you can customize to be listed here\
 The mod has full documentation on every option in the config, don't miss those!\
+Most options are set to vanilla by default with a few exceptions like:\
+Beartraps are recovered when disarming them, Lantern can be repaired using gasoline (0.2L)\
+Workbench inventory is 9x12\
 You can find versions of the dll in every commit change and download it
 
 ## WARNING
