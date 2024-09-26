@@ -242,8 +242,6 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(GeneratorPatch));
         Log.LogInfo($"Patching in CamMainPatch! (Camera)");
         Harmony.PatchAll(typeof(CamMainPatch));
-        Log.LogInfo($"Patching in SaveManagerPatch! (Loading values)");
-        Harmony.PatchAll(typeof(SaveManagerPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();

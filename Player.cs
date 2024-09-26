@@ -5,7 +5,13 @@ using UnityEngine;
 public class PlayerPatch
 {
     public static bool RefreshPlayer = true;
-    public static bool SaveLoaded = true;
+
+    [HarmonyPatch(typeof(Player), nameof(Player.registerMe))]
+    [HarmonyPostfix]
+    public static void PlayerRegistered(Player __instance)
+    {
+        __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+    }
 
     [HarmonyPatch(typeof(Player), nameof(Player.Update))]
     [HarmonyPostfix]
@@ -35,10 +41,9 @@ public class PlayerPatch
         if (Plugin.PlayerHealthModification.Value)
         {
             __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
-            if (__instance.health > __instance.maxHealth || SaveLoaded)
+            if (__instance.health > __instance.maxHealth)
             {
                 __instance.health = __instance.maxHealth;
-                SaveLoaded = false;
             }
             __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
             __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
