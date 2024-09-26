@@ -1,8 +1,11 @@
 # DarkwoodCustomizer
 
 A mod for darkwood that lets you customize a lot of things about your player\
-Changes your inventory or hotbar or storage size to whatever you want\
-Changes item stack sizes to whatever amount you want and optionally lets you repair the lantern using any item you want and any amount of that item\
+There is too many things that you can customize to be listed here\
+The mod has full documentation on every option in the config, don't miss those!\
+Most options are set to vanilla by default with a few exceptions like:\
+Beartraps are recovered when disarming them, Lantern can be repaired using gasoline (0.2L)\
+Workbench inventory is 9x12\
 You can find versions of the dll in every commit change and download it
 
 ## WARNING
@@ -15,14 +18,14 @@ Another warning! Please do check out the config before loading your save, do not
 ## INVENTORY WARNING
 
 If you do enable this, the changes are permanent! You can change it back by remembering ~~at what inventory upgrade you are at but that's only if you remember
-Other way to change it back is to practically guess or if you're on max upgrade then it's 9 down slots (2x9)
+Other way to change it back is to practically guess or if you're on max upgrade then it's 9 down slots (2x9)~~
 
-Upgrade 0 is 6 slots down (no upgrades)
-Upgrade 1 is 7
-Upgrade 2 is 8
-Upgrade 3 is 9
+~~Upgrade 0 is 6 slots down (no upgrades)\
+Upgrade 1 is 7\
+Upgrade 2 is 8\
+Upgrade 3 is 9~~
 
-Another warning is because to me my modification for this looks very sketchy do make issues if you find it modifying something other than the player inventory,
+~~Another warning is because to me my modification for this looks very sketchy do make issues if you find it modifying something other than the player inventory,
 do not let this persuade you though, there is nothing to lose and it'll just look funny and make some work for me.~~
 
 No longer the case for version 1.0.4
