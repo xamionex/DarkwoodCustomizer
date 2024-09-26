@@ -5,10 +5,11 @@ using UnityEngine;
 public class PlayerPatch
 {
     public static bool RefreshPlayer = true;
+    public static bool SaveLoaded = true;
 
     [HarmonyPatch(typeof(Player), nameof(Player.Update))]
     [HarmonyPostfix]
-    public static void CharUpdate(Player __instance)
+    public static void PlayerUpdate(Player __instance)
     {
         if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
         {
@@ -34,9 +35,10 @@ public class PlayerPatch
         if (Plugin.PlayerHealthModification.Value)
         {
             __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
-            if (__instance.health > __instance.maxHealth)
+            if (__instance.health > __instance.maxHealth || SaveLoaded)
             {
                 __instance.health = __instance.maxHealth;
+                SaveLoaded = false;
             }
             __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
             __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;

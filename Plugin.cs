@@ -14,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.7";
+    public const string PluginVersion = "1.1.8";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -242,6 +242,8 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(GeneratorPatch));
         Log.LogInfo($"Patching in CamMainPatch! (Camera)");
         Harmony.PatchAll(typeof(CamMainPatch));
+        Log.LogInfo($"Patching in SaveManagerPatch! (Loading values)");
+        Harmony.PatchAll(typeof(SaveManagerPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
