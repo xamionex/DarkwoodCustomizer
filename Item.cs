@@ -7,7 +7,8 @@ public static class ItemPatch
     [HarmonyPrefix]
     public static void BearTrapDisarm(Item __instance)
     {
-        if (Plugin.BearTrapRecovery.Value)
+        if (!Plugin.EnableItemsModification.Value) return;
+        if (Plugin.BearTrapRecovery.Value && __instance.name == "bearTrap")
         {
             var bearTrap = ItemsDatabase.Instance.getItem("beartrap", true);
             if (bearTrap != null)

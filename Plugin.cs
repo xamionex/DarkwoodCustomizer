@@ -12,28 +12,21 @@ namespace DarkwoodCustomizer;
 [BepInProcess("Darkwood.exe")]
 public class Plugin : BaseUnityPlugin
 {
-    public static ConfigFile ConfigFile;
-    public static ConfigFile StacksConfigFile;
-    public static ConfigFile ItemsConfigFile;
-    public static ConfigFile LanternConfigFile;
-    public static ConfigFile InventoriesConfigFile;
-    public static ConfigFile CharacterConfigFile;
-    public static ConfigFile PlayerConfigFile;
-    public static ConfigFile TimeConfigFile;
-    public static ConfigFile GeneratorConfigFile;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.5";
+    public const string PluginVersion = "1.1.6";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
 
     // Base Plugin Values
+    public static ConfigFile ConfigFile;
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
 
     // Stack Resize Values
+    public static ConfigFile StacksConfigFile;
     public static ConfigEntry<bool> ChangeStacks;
     public static ConfigEntry<bool> UseGlobalStackSize;
     public static ConfigEntry<int> StackResize;
@@ -41,16 +34,19 @@ public class Plugin : BaseUnityPlugin
     public static Dictionary<string, int> CustomStacks;
 
     // Items Values
+    public static ConfigFile ItemsConfigFile;
     public static ConfigEntry<bool> EnableItemsModification;
     public static ConfigEntry<bool> BearTrapRecovery;
 
     // Lantern Repair Values
+    public static ConfigFile LanternConfigFile;
     public static ConfigEntry<bool> RepairLantern;
     public static ConfigEntry<string> LanternRepairConfig;
     public static ConfigEntry<int> LanternAmountRepairConfig;
     public static ConfigEntry<float> LanternDurabilityRepairConfig;
 
     // Inventory Resize Values
+    public static ConfigFile InventoriesConfigFile;
     public static ConfigEntry<bool> RemoveExcess;
 
     // Workbench
@@ -69,11 +65,13 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> HotbarSlots;
 
     // Character Values
+    public static ConfigFile CharacterConfigFile;
     public static ConfigEntry<bool> CharacterModification;
     public static ConfigEntry<string> jsonCharacters;
     public static Dictionary<string, Dictionary<string, float>> CustomCharacters;
 
     // Player Values
+    public static ConfigFile PlayerConfigFile;
     public static ConfigEntry<bool> PlayerModification;
     public static ConfigEntry<float> PlayerFOV;
     public static ConfigEntry<bool> PlayerCantGetInterrupted;
@@ -103,6 +101,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> PlayerRunSpeedModifier;
 
     // Time values
+    public static ConfigFile TimeConfigFile;
     public static ConfigEntry<bool> TimeModification;
     public static ConfigEntry<float> DaytimeFlow;
     public static ConfigEntry<float> NighttimeFlow;
@@ -111,9 +110,15 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ResetWell;
 
     // Generator values
+    public static ConfigFile GeneratorConfigFile;
     public static ConfigEntry<bool> GeneratorModification;
     public static ConfigEntry<float> GeneratorModifier;
     public static ConfigEntry<bool> GeneratorInfiniteFuel;
+
+    // Camera values
+    public static ConfigFile CameraConfigFile;
+    public static ConfigEntry<bool> CameraModification;
+    public static ConfigEntry<float> CameraFoV;
 
     private void Awake()
     {
@@ -127,6 +132,7 @@ public class Plugin : BaseUnityPlugin
         PlayerConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Player.cfg"), true);
         TimeConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Time.cfg"), true);
         GeneratorConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Generator.cfg"), true);
+        CameraConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Camera.cfg"), true);
 
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
@@ -213,6 +219,10 @@ public class Plugin : BaseUnityPlugin
         GeneratorModifier = GeneratorConfigFile.Bind($"Generator", "Generator Modifier", 1f, "2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast");
         GeneratorInfiniteFuel = GeneratorConfigFile.Bind($"Generator", "Generator Infinte Fuel", false, "Enable this to make the generator have infinite fuel");
 
+        // Camera config
+        CameraModification = CameraConfigFile.Bind($"Camera", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        CameraFoV = CameraConfigFile.Bind($"Camera", "Camera Zoom Factor", 1f, "Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in");
+
         LogDivider();
 
         Harmony Harmony = new Harmony($"{PluginGUID}");
@@ -230,6 +240,8 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(ControllerPatch));
         Log.LogInfo($"Patching in GeneratorPatch! (Generator Fuel)");
         Harmony.PatchAll(typeof(GeneratorPatch));
+        Log.LogInfo($"Patching in CamMainPatch! (Camera)");
+        Harmony.PatchAll(typeof(CamMainPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
@@ -283,6 +295,11 @@ public class Plugin : BaseUnityPlugin
                 Log.LogInfo($"{PluginGUID}.Generator.cfg was reloaded.");
                 GeneratorPatch.RefreshGenerator = true;
                 GeneratorConfigFile.Reload();
+                break;
+            case PluginGUID + ".Camera.cfg":
+                Log.LogInfo($"{PluginGUID}.Camera.cfg was reloaded.");
+                CamMainPatch.RefreshCamera = true;
+                CameraConfigFile.Reload();
                 break;
             default:
                 Log.LogInfo($"Unknown file with the PluginGUID was reloaded.");
