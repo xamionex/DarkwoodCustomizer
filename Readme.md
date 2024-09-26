@@ -1,8 +1,8 @@
 # DarkwoodCustomizer
 
 A mod for darkwood that lets you customize a lot of things about your player\
-Changes your inventory or hotbar or storage size to whatever you want\
-Changes item stack sizes to whatever amount you want and optionally lets you repair the lantern using any item you want and any amount of that item\
+There is too many things that you can customize to be listed here\
+The mod has full documentation on every option in the config, don't miss those!\
 You can find versions of the dll in every commit change and download it
 
 ## WARNING
