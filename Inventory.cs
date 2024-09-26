@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-[HarmonyPatch]
 public class InventoryPatch
 {
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]

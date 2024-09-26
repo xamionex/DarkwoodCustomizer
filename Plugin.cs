@@ -17,18 +17,21 @@ public class Plugin : BaseUnityPlugin
     public static ConfigFile ItemsConfigFile;
     public static ConfigFile LanternConfigFile;
     public static ConfigFile InventoriesConfigFile;
+    public static ConfigFile CharacterConfigFile;
     public static ConfigFile PlayerConfigFile;
     public static ConfigFile TimeConfigFile;
     public static ConfigFile GeneratorConfigFile;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.4";
+    public const string PluginVersion = "1.1.5";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
 
     // Base Plugin Values
     public static ConfigEntry<bool> LogDebug;
+    public static ConfigEntry<bool> LogItems;
+    public static ConfigEntry<bool> LogCharacters;
 
     // Stack Resize Values
     public static ConfigEntry<bool> ChangeStacks;
@@ -46,7 +49,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> LanternRepairConfig;
     public static ConfigEntry<int> LanternAmountRepairConfig;
     public static ConfigEntry<float> LanternDurabilityRepairConfig;
-    public static ConfigEntry<bool> LogItems;
 
     // Inventory Resize Values
     public static ConfigEntry<bool> RemoveExcess;
@@ -65,6 +67,11 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> HotbarRightSlots;
     public static ConfigEntry<int> HotbarDownSlots;
     public static ConfigEntry<bool> HotbarSlots;
+
+    // Character Values
+    public static ConfigEntry<bool> CharacterModification;
+    public static ConfigEntry<string> jsonCharacters;
+    public static Dictionary<string, Dictionary<string, float>> CustomCharacters;
 
     // Player Values
     public static ConfigEntry<bool> PlayerModification;
@@ -116,19 +123,21 @@ public class Plugin : BaseUnityPlugin
         ItemsConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Items.cfg"), true);
         LanternConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Lantern.cfg"), true);
         InventoriesConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Inventories.cfg"), true);
+        CharacterConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Characters.cfg"), true);
         PlayerConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Player.cfg"), true);
         TimeConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Time.cfg"), true);
         GeneratorConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Generator.cfg"), true);
 
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
-        LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item, Pro tip: enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed");
+        LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
+        LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is updating the specific character\nRead the extended documentation in the Characters config");
 
         // Stacks config
         ChangeStacks = StacksConfigFile.Bind($"Stack Sizes", "Enable Section", false, "Whether or not stack sizes will be changed by the mod.");
         UseGlobalStackSize = StacksConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
         StackResize = StacksConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
-        var jsonStacks = StacksConfigFile.Bind($"Stack Sizes", "Custom Stacks", "{\"nail\":500,\"wood\":500}", "Warning: Enable the logs for items in the main config, if you mistake an item name the plugin wont be finishing the function, A JSON object that is a dictionary of ItemName:StackSize. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
+        var jsonStacks = StacksConfigFile.Bind($"Stack Sizes", "Custom Stacks", "{\"nail\":500,\"wood\":500}", "Enable the logs for items in the main config. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
         CustomStacks = JsonConvert.DeserializeObject<Dictionary<string, int>>(jsonStacks.Value);
 
         // Items config
@@ -158,6 +167,11 @@ public class Plugin : BaseUnityPlugin
         HotbarSlots = InventoriesConfigFile.Bind($"Hotbar", "Enable Section", false, "This will circumvent the Hotbar progression and enable this section, disable to return to default Hotbar slots");
         HotbarRightSlots = InventoriesConfigFile.Bind($"Hotbar", "Hotbar Right Slots", 1, "Number that determines slots in Hotbar to the right, requires reload of save (Return to Menu > Load Save)");
         HotbarDownSlots = InventoriesConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward, requires reload of save (Return to Menu > Load Save)");
+
+        // Character values
+        CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        var jsonCharacters = CharacterConfigFile.Bind($"Characters", "Custom Characters", "{\"Dog\":{\"health\":20,\"speed\":1,\"damage\":0},\"Rabbit\":{\"health\":1,\"speed\":1,\"damage\":0}}", "Warning: Enable character logs in main config. Be cautious with numbers, but name errors are harmless. Health is static, Speed is a modifier, and Damage is not yet implemented.\nIf you don't know which enemy is which download RuntimeUnityEditor and place it in the plugins folder, it will allow you to search the names in the object browser and see their textures (aka how they look)");
+        CustomCharacters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, float>>>(jsonCharacters.Value);
 
         // Player values
         PlayerModification = PlayerConfigFile.Bind($"Player", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
@@ -252,6 +266,10 @@ public class Plugin : BaseUnityPlugin
                 Log.LogInfo($"{PluginGUID}.Player.cfg was reloaded.");
                 PlayerPatch.RefreshPlayer = true;
                 PlayerConfigFile.Reload();
+                break;
+            case PluginGUID + ".Characters.cfg":
+                Log.LogInfo($"{PluginGUID}.Characters.cfg was reloaded.");
+                CharacterConfigFile.Reload();
                 break;
             case PluginGUID + ".Stacks.cfg":
                 Log.LogInfo($"{PluginGUID}.Stacks.cfg was reloaded.");

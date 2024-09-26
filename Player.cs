@@ -1,13 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
 using DarkwoodCustomizer;
 using HarmonyLib;
 using UnityEngine;
 
-[HarmonyPatch]
 public class PlayerPatch
 {
     public static bool RefreshPlayer = true;

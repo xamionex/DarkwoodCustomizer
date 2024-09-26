@@ -1,7 +1,6 @@
 using DarkwoodCustomizer;
 using HarmonyLib;
 
-[HarmonyPatch]
 public class ControllerPatch
 {
     [HarmonyPatch(typeof(Controller), nameof(Controller.refreshTime))]

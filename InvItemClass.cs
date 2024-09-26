@@ -2,14 +2,15 @@
 using DarkwoodCustomizer;
 using System.Collections.Generic;
 
-[HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
 public class InvItemClassPatch
 {
     public static bool RefreshLantern = true;
     public static Dictionary<string, int> ItemStackSizes = new Dictionary<string, int>();
     public static bool ItemStackSizesChanged = true;
 
-    public static void Postfix(InvItemClass __instance)
+    [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
+    [HarmonyPostfix]
+    public static void ItemPatch(InvItemClass __instance)
     {
         if (Plugin.ChangeStacks.Value)
         {
@@ -32,7 +33,8 @@ public class InvItemClassPatch
             if (ItemStackSizesChanged)
             {
                 Plugin.LogDivider();
-                Plugin.Log.LogInfo($"So far I've seen items:");
+                Plugin.Log.LogInfo($"Since the logging option was enabled I have seen Items:");
+                Plugin.LogDivider();
                 foreach (var item in ItemStackSizes)
                 {
                     Plugin.Log.LogInfo($"{item.Key}: {item.Value}");
