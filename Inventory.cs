@@ -2,14 +2,11 @@ using DarkwoodCustomizer;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;
 
 [HarmonyPatch]
 public class InventoryPatch
 {
-	public delegate float GetWorkbenchCraftingOffsetDelegate();
-
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
 	[HarmonyTranspiler]
 	public static IEnumerable<CodeInstruction> InventoryShow(IEnumerable<CodeInstruction> instructions)
@@ -23,6 +20,7 @@ public class InventoryPatch
 			if (codes[i].opcode == OpCodes.Ldc_R4 && codes[i].operand.ToString() == "670")
 			{
 				codes[i] = Transpilers.EmitDelegate(GetWorkbenchCraftingOffset);
+				Plugin.Log.LogInfo("Patched offset of workbench window");
 				break;
 			}
 		}

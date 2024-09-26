@@ -17,9 +17,10 @@ public class Plugin : BaseUnityPlugin
     public static ConfigFile LanternConfigFile;
     public static ConfigFile InventoriesConfigFile;
     public static ConfigFile PlayerConfigFile;
+    public static ConfigFile TimeConfigFile;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.2";
+    public const string PluginVersion = "1.1.3";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -62,6 +63,7 @@ public class Plugin : BaseUnityPlugin
     // Player Values
     public static ConfigEntry<bool> PlayerModification;
     public static ConfigEntry<float> PlayerFOV;
+    public static ConfigEntry<bool> PlayerCantGetInterrupted;
 
     // Player Stamina Values
     public static ConfigEntry<bool> PlayerStaminaModification;
@@ -87,6 +89,14 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> PlayerRunSpeed;
     public static ConfigEntry<float> PlayerRunSpeedModifier;
 
+    // Time values
+    public static ConfigEntry<bool> TimeModification;
+    public static ConfigEntry<float> DaytimeFlow;
+    public static ConfigEntry<float> NighttimeFlow;
+    public static ConfigEntry<bool> UseCurrentTime;
+    public static ConfigEntry<int> CurrentTime;
+    public static ConfigEntry<bool> ResetWell;
+
     private void Awake()
     {
         Log = Logger;
@@ -95,6 +105,7 @@ public class Plugin : BaseUnityPlugin
         LanternConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Lantern.cfg"), true);
         InventoriesConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Inventories.cfg"), true);
         PlayerConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Player.cfg"), true);
+        TimeConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Time.cfg"), true);
 
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
@@ -134,6 +145,7 @@ public class Plugin : BaseUnityPlugin
         // Player values
         PlayerModification = PlayerConfigFile.Bind($"Player", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
         PlayerFOV = PlayerConfigFile.Bind($"Player", "Player FoV", 90f, "Set your players' FoV (370 recommended, set to 720 if you want to always see everything)");
+        PlayerCantGetInterrupted = PlayerConfigFile.Bind($"Player", "Cant Get Interrupted", true, "If set to true you can't get stunned, shoddy implementation please report if it doesn't work correctly");
 
         // Player Stamina config
         PlayerStaminaModification = PlayerConfigFile.Bind($"Stamina", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
@@ -156,17 +168,28 @@ public class Plugin : BaseUnityPlugin
         PlayerWalkSpeed = PlayerConfigFile.Bind($"Speed", "Walk Speed", 7.5f, "Set your walk speed");
         PlayerRunSpeed = PlayerConfigFile.Bind($"Speed", "Run Speed", 15f, "Set your run speed");
         PlayerRunSpeedModifier = PlayerConfigFile.Bind($"Speed", "Run Speed Modifier", 1f, "Multiplies your run speed by this value");
+
+        // Time config
+        TimeModification = TimeConfigFile.Bind($"Time", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        DaytimeFlow = TimeConfigFile.Bind($"Time", "Daytime Flow", 1f, "Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.");
+        NighttimeFlow = TimeConfigFile.Bind($"Time", "Nighttime Flow", 0.75f, "Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.");
+        UseCurrentTime = TimeConfigFile.Bind($"Time", "Set Time", false, "Enable this to use the config for time of day below");
+        CurrentTime = TimeConfigFile.Bind($"Time", "Set Current Time", 1, "(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)");
+        ResetWell = TimeConfigFile.Bind($"Time", "Reset Well", false, "Whether or not to reset well constantly");
+
         LogDivider();
 
         Harmony Harmony = new Harmony($"{PluginGUID}");
-        Log.LogInfo($"Patched InvItemClass!");
+        Log.LogInfo($"Patching InvItemClass! (Items)");
         Harmony.PatchAll(typeof(InvItemClassPatch));
-        Log.LogInfo($"Patched Inventory!");
+        Log.LogInfo($"Patching Inventory! (Storage)");
         Harmony.PatchAll(typeof(InventoryPatch));
-        Log.LogInfo($"Patched Character!");
+        Log.LogInfo($"Patching Character! (Soontm)");
         Harmony.PatchAll(typeof(CharacterPatch));
-        Log.LogInfo($"Patched Player!");
+        Log.LogInfo($"Patching Player! (Player Update)");
         Harmony.PatchAll(typeof(PlayerPatch));
+        Log.LogInfo($"Patching Controller! (Time)");
+        Harmony.PatchAll(typeof(ControllerPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
@@ -180,31 +203,39 @@ public class Plugin : BaseUnityPlugin
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         LogDivider();
-        Log.LogInfo($"Reloaded configuration file.");
-        LogDivider();
         switch (e.Name)
         {
             case PluginGUID + ".cfg":
+                Log.LogInfo($"{PluginGUID}.cfg was reloaded.");
                 ConfigFile.Reload();
                 break;
             case PluginGUID + ".Inventories.cfg":
+                Log.LogInfo($"{PluginGUID}.Inventories.cfg was reloaded.");
                 InventoriesConfigFile.Reload();
                 break;
             case PluginGUID + ".Lantern.cfg":
+                Log.LogInfo($"{PluginGUID}.Lantern.cfg was reloaded.");
                 InvItemClassPatch.RefreshLantern = true;
                 LanternConfigFile.Reload();
                 break;
             case PluginGUID + ".Player.cfg":
+                Log.LogInfo($"{PluginGUID}.Player.cfg was reloaded.");
                 PlayerConfigFile.Reload();
                 PlayerPatch.RefreshPlayer = true;
                 break;
             case PluginGUID + ".Stacks.cfg":
+                Log.LogInfo($"{PluginGUID}.Stacks.cfg was reloaded.");
                 StacksConfigFile.Reload();
                 break;
+            case PluginGUID + ".Time.cfg":
+                Log.LogInfo($"{PluginGUID}.Time.cfg was reloaded.");
+                TimeConfigFile.Reload();
+                break;
             default:
-                // Handle unexpected file changes (if necessary)
+                Log.LogInfo($"Unknown file with the PluginGUID was reloaded.");
                 break;
         }
+        LogDivider();
     }
 
     public static void LogDivider()

@@ -1,5 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using DarkwoodCustomizer;
 using HarmonyLib;
+using UnityEngine;
 
 [HarmonyPatch]
 public class PlayerPatch
@@ -75,5 +81,29 @@ public class PlayerPatch
             Plugin.LogDivider();
         }
         RefreshPlayer = false;
+    }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.getHit), [typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool)])]
+    [HarmonyPrefix]
+    public static void gotHit(Player __instance, float damage, Transform attackerTransform, bool CanCutInHalf, bool byPlayer, ref bool canInterrupt, bool normalHit, bool showRedScreen, bool force, bool dontShowHealthBar)
+    {
+        if (Plugin.PlayerCantGetInterrupted.Value)
+        {
+            canInterrupt = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.restartMeleeIndicator))]
+    [HarmonyPrefix]
+    public static void RestartMeleeIndicator(ref bool __runOriginal)
+    {
+        if (Plugin.PlayerCantGetInterrupted.Value)
+        {
+            __runOriginal = false;
+        }
+        else
+        {
+            __runOriginal = true;
+        }
     }
 }
