@@ -14,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.6";
+    public const string PluginVersion = "1.1.7";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -298,7 +298,6 @@ public class Plugin : BaseUnityPlugin
                 break;
             case PluginGUID + ".Camera.cfg":
                 Log.LogInfo($"{PluginGUID}.Camera.cfg was reloaded.");
-                CamMainPatch.RefreshCamera = true;
                 CameraConfigFile.Reload();
                 break;
             default:
