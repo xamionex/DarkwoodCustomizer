@@ -14,13 +14,15 @@ public class Plugin : BaseUnityPlugin
 {
     public static ConfigFile ConfigFile;
     public static ConfigFile StacksConfigFile;
+    public static ConfigFile ItemsConfigFile;
     public static ConfigFile LanternConfigFile;
     public static ConfigFile InventoriesConfigFile;
     public static ConfigFile PlayerConfigFile;
     public static ConfigFile TimeConfigFile;
+    public static ConfigFile GeneratorConfigFile;
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.3";
+    public const string PluginVersion = "1.1.4";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -34,6 +36,10 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> StackResize;
     public static ConfigEntry<string> jsonStacks;
     public static Dictionary<string, int> CustomStacks;
+
+    // Items Values
+    public static ConfigEntry<bool> EnableItemsModification;
+    public static ConfigEntry<bool> BearTrapRecovery;
 
     // Lantern Repair Values
     public static ConfigEntry<bool> RepairLantern;
@@ -97,15 +103,22 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> CurrentTime;
     public static ConfigEntry<bool> ResetWell;
 
+    // Generator values
+    public static ConfigEntry<bool> GeneratorModification;
+    public static ConfigEntry<float> GeneratorModifier;
+    public static ConfigEntry<bool> GeneratorInfiniteFuel;
+
     private void Awake()
     {
         Log = Logger;
         ConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".cfg"), true);
         StacksConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Stacks.cfg"), true);
+        ItemsConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Items.cfg"), true);
         LanternConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Lantern.cfg"), true);
         InventoriesConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Inventories.cfg"), true);
         PlayerConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Player.cfg"), true);
         TimeConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Time.cfg"), true);
+        GeneratorConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Generator.cfg"), true);
 
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
@@ -117,6 +130,10 @@ public class Plugin : BaseUnityPlugin
         StackResize = StacksConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
         var jsonStacks = StacksConfigFile.Bind($"Stack Sizes", "Custom Stacks", "{\"nail\":500,\"wood\":500}", "Warning: Enable the logs for items in the main config, if you mistake an item name the plugin wont be finishing the function, A JSON object that is a dictionary of ItemName:StackSize. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
         CustomStacks = JsonConvert.DeserializeObject<Dictionary<string, int>>(jsonStacks.Value);
+
+        // Items config
+        EnableItemsModification = ItemsConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does not require restarts");
+        BearTrapRecovery = ItemsConfigFile.Bind($"Items", "BearTrap Recovery", true, "Whether or not you recover a beartrap when disarming it");
 
         // Lantern config
         RepairLantern = LanternConfigFile.Bind($"Lantern", "Enable Section", true, "Whether or not lantern can be repaired using gasoline on the workbench");
@@ -177,19 +194,28 @@ public class Plugin : BaseUnityPlugin
         CurrentTime = TimeConfigFile.Bind($"Time", "Set Current Time", 1, "(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)");
         ResetWell = TimeConfigFile.Bind($"Time", "Reset Well", false, "Whether or not to reset well constantly");
 
+        // Generator config
+        GeneratorModification = GeneratorConfigFile.Bind($"Generator", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        GeneratorModifier = GeneratorConfigFile.Bind($"Generator", "Generator Modifier", 1f, "2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast");
+        GeneratorInfiniteFuel = GeneratorConfigFile.Bind($"Generator", "Generator Infinte Fuel", false, "Enable this to make the generator have infinite fuel");
+
         LogDivider();
 
         Harmony Harmony = new Harmony($"{PluginGUID}");
-        Log.LogInfo($"Patching InvItemClass! (Items)");
+        Log.LogInfo($"Patching in ItemPatch! (beartrap disarm)");
+        Harmony.PatchAll(typeof(ItemPatch));
+        Log.LogInfo($"Patching in InvItemClassPatch! (Items)");
         Harmony.PatchAll(typeof(InvItemClassPatch));
-        Log.LogInfo($"Patching Inventory! (Storage)");
+        Log.LogInfo($"Patching in InventoryPatch! (Storage)");
         Harmony.PatchAll(typeof(InventoryPatch));
-        Log.LogInfo($"Patching Character! (Soontm)");
+        Log.LogInfo($"Patching in CharacterPatch! (Soontm)");
         Harmony.PatchAll(typeof(CharacterPatch));
-        Log.LogInfo($"Patching Player! (Player Update)");
+        Log.LogInfo($"Patching in PlayerPatch! (Player Update)");
         Harmony.PatchAll(typeof(PlayerPatch));
-        Log.LogInfo($"Patching Controller! (Time)");
+        Log.LogInfo($"Patching in ControllerPatch! (Time)");
         Harmony.PatchAll(typeof(ControllerPatch));
+        Log.LogInfo($"Patching in GeneratorPatch! (Generator Fuel)");
+        Harmony.PatchAll(typeof(GeneratorPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
@@ -213,6 +239,10 @@ public class Plugin : BaseUnityPlugin
                 Log.LogInfo($"{PluginGUID}.Inventories.cfg was reloaded.");
                 InventoriesConfigFile.Reload();
                 break;
+            case PluginGUID + ".Items.cfg":
+                Log.LogInfo($"{PluginGUID}.Items.cfg was reloaded.");
+                ItemsConfigFile.Reload();
+                break;
             case PluginGUID + ".Lantern.cfg":
                 Log.LogInfo($"{PluginGUID}.Lantern.cfg was reloaded.");
                 InvItemClassPatch.RefreshLantern = true;
@@ -220,8 +250,8 @@ public class Plugin : BaseUnityPlugin
                 break;
             case PluginGUID + ".Player.cfg":
                 Log.LogInfo($"{PluginGUID}.Player.cfg was reloaded.");
-                PlayerConfigFile.Reload();
                 PlayerPatch.RefreshPlayer = true;
+                PlayerConfigFile.Reload();
                 break;
             case PluginGUID + ".Stacks.cfg":
                 Log.LogInfo($"{PluginGUID}.Stacks.cfg was reloaded.");
@@ -230,6 +260,11 @@ public class Plugin : BaseUnityPlugin
             case PluginGUID + ".Time.cfg":
                 Log.LogInfo($"{PluginGUID}.Time.cfg was reloaded.");
                 TimeConfigFile.Reload();
+                break;
+            case PluginGUID + ".Generator.cfg":
+                Log.LogInfo($"{PluginGUID}.Generator.cfg was reloaded.");
+                GeneratorPatch.RefreshGenerator = true;
+                GeneratorConfigFile.Reload();
                 break;
             default:
                 Log.LogInfo($"Unknown file with the PluginGUID was reloaded.");
