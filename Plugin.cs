@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.2";
+    public const string PluginVersion = "1.2.3";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -189,6 +189,7 @@ public class Plugin : BaseUnityPlugin
         MigrateConfigFiles();
 
         // Base Plugin config
+        ConfigFile.Bind($"Note", "Thank you ", ":)", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
         LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
@@ -237,7 +238,7 @@ public class Plugin : BaseUnityPlugin
         // Player values
         PlayerModification = PlayerConfigFile.Bind($"Player", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
         PlayerFOV = PlayerConfigFile.Bind($"Player", "Player FoV", 90f, "Set your players' FoV (370 recommended, set to 720 if you want to always see everything)");
-        PlayerCantGetInterrupted = PlayerConfigFile.Bind($"Player", "Cant Get Interrupted", true, "If set to true you can't get stunned, shoddy implementation please report if it doesn't work correctly");
+        PlayerCantGetInterrupted = PlayerConfigFile.Bind($"Player", "Cant Get Interrupted", true, "If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it");
 
         // Player Stamina config
         PlayerStaminaModification = PlayerConfigFile.Bind($"Stamina", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
