@@ -5,13 +5,20 @@ using System.Collections.Generic;
 public class InvItemClassPatch
 {
     public static bool RefreshLantern = true;
-    public static Dictionary<string, int> ItemStackSizes = new Dictionary<string, int>();
-    public static bool ItemStackSizesChanged = true;
+    public static List<string> ItemStackSizes = new List<string>();
 
     [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
     [HarmonyPostfix]
     public static void ItemPatch(InvItemClass __instance)
     {
+        if (Plugin.LogItems.Value)
+        {
+            if (!ItemStackSizes.Contains(__instance.baseClass.name))
+            {
+                ItemStackSizes.Add(__instance.baseClass.name);
+                Plugin.Log.LogInfo($"[ITEM] {__instance.baseClass.name}: {__instance.baseClass.maxAmount}");
+            }
+        }
         if (Plugin.ChangeStacks.Value)
         {
             if (Plugin.UseGlobalStackSize.Value)
@@ -21,26 +28,6 @@ public class InvItemClassPatch
             if (Plugin.CustomStacks.TryGetValue(__instance.baseClass.name, out int value))
             {
                 __instance.baseClass.maxAmount = value;
-            }
-        }
-        if (Plugin.LogItems.Value)
-        {
-            if (!ItemStackSizes.ContainsKey(__instance.baseClass.name))
-            {
-                ItemStackSizes.Add(__instance.baseClass.name, __instance.baseClass.maxAmount);
-                ItemStackSizesChanged = true;
-            }
-            if (ItemStackSizesChanged)
-            {
-                Plugin.LogDivider();
-                Plugin.Log.LogInfo($"Since the logging option was enabled I have seen Items:");
-                Plugin.LogDivider();
-                foreach (var item in ItemStackSizes)
-                {
-                    Plugin.Log.LogInfo($"{item.Key}: {item.Value}");
-                }
-                Plugin.LogDivider();
-                ItemStackSizesChanged = false;
             }
         }
 

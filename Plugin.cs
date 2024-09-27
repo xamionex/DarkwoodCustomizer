@@ -14,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.8";
+    public const string PluginVersion = "1.1.9";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -137,7 +137,7 @@ public class Plugin : BaseUnityPlugin
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
-        LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is updating the specific character\nRead the extended documentation in the Characters config");
+        LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
 
         // Stacks config
         ChangeStacks = StacksConfigFile.Bind($"Stack Sizes", "Enable Section", false, "Whether or not stack sizes will be changed by the mod.");
@@ -176,7 +176,7 @@ public class Plugin : BaseUnityPlugin
 
         // Character values
         CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        var jsonCharacters = CharacterConfigFile.Bind($"Characters", "Custom Characters", "{\"Dog\":{\"health\":20,\"speed\":1,\"damage\":0},\"Rabbit\":{\"health\":1,\"speed\":1,\"damage\":0}}", "Warning: Enable character logs in main config. Be cautious with numbers, but name errors are harmless. Health is static, Speed is a modifier, and Damage is not yet implemented.\nIf you don't know which enemy is which download RuntimeUnityEditor and place it in the plugins folder, it will allow you to search the names in the object browser and see their textures (aka how they look)");
+        var jsonCharacters = CharacterConfigFile.Bind($"Characters", "Custom Characters", "{\"Dog\":{\"health\":20,\"walkspeed\":2,\"runspeed\":10,\"damage\":0},\"Rabbit\":{\"health\":1,\"walkspeed\":2,\"runspeed\":8,\"damage\":0}}", "Warning: Enable character logs in main config. Be cautious with numbers, but name errors are harmless. Health is static, Speed is a modifier, and Damage is not yet implemented.\nIf you don't know which enemy is which download RuntimeUnityEditor and place it in the plugins folder, it will allow you to search the names in the object browser and see their textures (aka how they look)");
         CustomCharacters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, float>>>(jsonCharacters.Value);
 
         // Player values

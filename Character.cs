@@ -19,39 +19,34 @@ public class CharacterPatch
                     case "health":
                         __instance.maxHealth = Stat.Value;
                         break;
-                    case "speed":
-                        __instance.speedModifier = Stat.Value;
+                    case "walkspeed":
+                        __instance.idleWalkSpeed = Stat.Value;
+                        break;
+                    case "runspeed":
+                        __instance.chaseSpeed = Stat.Value;
                         break;
                     case "damage":
                         //__instance.damage = Stat.Value;
                         break;
                     default:
-                        Plugin.Log.LogInfo($"Customized Character {__instance.name} has unknown stat {Stat.Key}");
                         break;
                 }
             }
         }
+    }
+
+    [HarmonyPatch(typeof(Character), "Awake")]
+    [HarmonyPrefix]
+    public static void ChararcterAwake(Character __instance)
+    {
         if (Plugin.LogCharacters.Value)
         {
             if (!CustomCharactersList.Contains(__instance.name))
             {
                 CustomCharactersList.Add(__instance.name);
-                Plugin.LogDivider();
-                Plugin.Log.LogInfo("Since the logging option was enabled I have seen Characters:");
-                Plugin.LogDivider();
-                foreach (var character in CustomCharactersList)
-                {
-                    Plugin.Log.LogInfo(character);
-                }
-                Plugin.LogDivider();
+                Plugin.Log.LogInfo($"[CHARACTER] {__instance.name}: ({__instance.chaseSpeed}RS), ({__instance.idleWalkSpeed}WS), ({__instance.maxHealth}MaxHP)");
             }
         }
-    }
-
-    [HarmonyPatch(typeof(Character), nameof(Character.init))]
-    [HarmonyPrefix]
-    public static void CharInit(Character __instance)
-    {
         if (Plugin.CustomCharacters.TryGetValue(__instance.name, out Dictionary<string, float> Stats))
         {
             foreach (var Stat in Stats)
@@ -62,8 +57,11 @@ public class CharacterPatch
                         __instance.maxHealth = Stat.Value;
                         __instance.health = Stat.Value;
                         break;
-                    case "speed":
-                        __instance.speedModifier = Stat.Value;
+                    case "walkspeed":
+                        __instance.idleWalkSpeed = Stat.Value;
+                        break;
+                    case "runspeed":
+                        __instance.chaseSpeed = Stat.Value;
                         break;
                     default:
                         break;

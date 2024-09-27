@@ -63,22 +63,11 @@ public class PlayerPatch
         if (Plugin.LogDebug.Value)
         {
             Plugin.LogDivider();
-            Plugin.Log.LogInfo($"Player has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
-            Plugin.LogDivider();
-            Plugin.Log.LogInfo($"Player MaxStamina: {__instance.maxStamina}");
-            Plugin.Log.LogInfo($"Player SR Interval: {__instance.staminaRegenInterval}");
-            Plugin.Log.LogInfo($"Player SR Value: {__instance.staminaRegenValue}");
-            Plugin.LogDivider();
-            Plugin.Log.LogInfo($"Player MaxHP: {__instance.maxHealth}");
-            Plugin.Log.LogInfo($"Player HPR Interval: {__instance.healthRegenInterval}");
-            Plugin.Log.LogInfo($"Player HPR Modifier: {__instance.healthRegenModifier}");
-            Plugin.Log.LogInfo($"Player HPR Value: {__instance.healthRegenValue}");
-            Plugin.LogDivider();
-            Plugin.Log.LogInfo($"Player Walk Speed: {__instance.walkSpeed}");
-            Plugin.Log.LogInfo($"Player Run Speed: {__instance.runSpeed}");
-            Plugin.Log.LogInfo($"Player Run Speed Modifier: {__instance.runSpeedModifier}");
-            Plugin.LogDivider();
-            Plugin.Log.LogInfo($"Player FoV: {__instance.currentDestFOV}");
+            Plugin.Log.LogInfo($"[Player] Has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
+            Plugin.Log.LogInfo($"[Player] MaxHP: {__instance.maxHealth} | HPR Interval: {__instance.healthRegenInterval} | HPR Modifier: {__instance.healthRegenModifier} | HPR Value: {__instance.healthRegenValue}");
+            Plugin.Log.LogInfo($"[Player] Max Stamina: {__instance.maxStamina} | SR Interval: {__instance.staminaRegenInterval} | SR Value: {__instance.staminaRegenValue}");
+            Plugin.Log.LogInfo($"[Player] WS: {__instance.walkSpeed} | RS: {__instance.runSpeed} | RS Modifier: {__instance.runSpeedModifier}");
+            Plugin.Log.LogInfo($"[Player] FoV: {__instance.currentDestFOV}");
             Plugin.LogDivider();
         }
         RefreshPlayer = false;
