@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.1";
+    public const string PluginVersion = "1.2.2";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -86,14 +86,14 @@ public class Plugin : BaseUnityPlugin
             health = 20f,
             walkspeed = 2f,
             runspeed = 10f,
-            damage = 0f,
+            damage = 1f,
         },
         Rabbit = new
         {
             health = 1f,
             walkspeed = 2f,
             runspeed = 8f,
-            damage = 0f,
+            damage = 1f,
         },
     });
 
@@ -231,6 +231,7 @@ public class Plugin : BaseUnityPlugin
 
         // Character values
         CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section updates when a character spawns");
+        CharacterConfigFile.Bind($"Characters", "Note", "", "Damage is a modifier and the rest are values, its much harder to modify damage value than just to have a modifier");
         CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, DefaultCustomCharacters);
 
         // Player values

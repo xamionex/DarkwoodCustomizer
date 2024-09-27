@@ -83,18 +83,4 @@ public class PlayerPatch
             canInterrupt = false;
         }
     }
-
-    [HarmonyPatch(typeof(Player), nameof(Player.restartMeleeIndicator))]
-    [HarmonyPrefix]
-    public static void RestartMeleeIndicator(ref bool __runOriginal)
-    {
-        if (Plugin.PlayerCantGetInterrupted.Value)
-        {
-            __runOriginal = false;
-        }
-        else
-        {
-            __runOriginal = true;
-        }
-    }
 }
