@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.4";
+    public const string PluginVersion = "1.2.5";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -24,6 +24,7 @@ public class Plugin : BaseUnityPlugin
     // Base Plugin Values
     public static string ConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID);
     public static ConfigFile ConfigFile = new(Path.Combine(ConfigPath, "Logging.cfg"), true);
+    public static ConfigEntry<string> ThankYouNote;
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
@@ -189,7 +190,7 @@ public class Plugin : BaseUnityPlugin
         MigrateConfigFiles();
 
         // Base Plugin config
-        ConfigFile.Bind($"Note", "Thank you", ":)", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
+        ThankYouNote = ConfigFile.Bind($"Note", "Thank you", "", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
         LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
