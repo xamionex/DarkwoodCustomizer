@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.5";
+    public const string PluginVersion = "1.2.6";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -290,11 +290,12 @@ public class Plugin : BaseUnityPlugin
         if (!Directory.Exists(DefaultsConfigPath))
             Directory.CreateDirectory(DefaultsConfigPath);
 
-        string DefaultsCustomCharactersPath = Path.Combine(DefaultsConfigPath, "CustomCharacters.json");
-        if (File.Exists(DefaultsCustomCharactersPath) && !File.ReadAllText(DefaultsCustomCharactersPath).Equals(JsonConvert.SerializeObject(DefaultCustomCharacters, Formatting.Indented)))
-            File.Delete(DefaultsCustomCharactersPath);
-        if (!File.Exists(DefaultsCustomCharactersPath))
-            File.WriteAllText(DefaultsCustomCharactersPath, JsonConvert.SerializeObject(DefaultCustomCharacters, Formatting.Indented));
+        string DefaultsReadMePath = Path.Combine(DefaultsConfigPath, "ReadMe.txt");
+        string ReadMeString = "This folder is a readonly folder for you to use as a template when creating your own custom characters, recipes, etc.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the plugin config folder, not in the default folder";
+        if (File.Exists(DefaultsReadMePath) && !File.ReadAllText(DefaultsReadMePath).Equals(ReadMeString))
+            File.Delete(DefaultsReadMePath);
+        if (!File.Exists(DefaultsReadMePath))
+            File.WriteAllText(DefaultsReadMePath, ReadMeString);
 
         string DefaultsCustomCraftingRecipesPath = Path.Combine(DefaultsConfigPath, "CustomCraftingRecipes.json");
         if (File.Exists(DefaultsCustomCraftingRecipesPath) && !File.ReadAllText(DefaultsCustomCraftingRecipesPath).Equals(JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented)))
