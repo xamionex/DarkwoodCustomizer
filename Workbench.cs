@@ -10,23 +10,21 @@ public class WorkbenchPatch
     private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipes = [];
 
     [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
-    [HarmonyPrefix]
-    public static void ItemPatch(Workbench __instance)
+    [HarmonyPostfix]
+    public static void LevelPatch(Workbench __instance)
     {
         if (!Plugin.WorkbenchModification.Value) return;
+        CustomizedRecipes.Clear();
         foreach (var RecipeProperty in Plugin.CustomCraftingRecipes.Properties())
         {
-            if (!CustomizedRecipes.TryGetValue(RecipeProperty.Name, out _))
+            var RecipeObject = RecipeProperty.Value as JObject;
+            if (RecipeObject != null)
             {
-                var RecipeObject = RecipeProperty.Value as JObject;
-                if (RecipeObject != null)
-                {
-                    WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
-                }
-                else
-                {
-                    CustomizedRecipes.Add(RecipeProperty.Name, (Resources.Load(Singleton<ItemsDatabase>.Instance.recipesDict[RecipeProperty.Name]) as GameObject).GetComponent<CraftingRecipes>());
-                }
+                WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
+            }
+            else
+            {
+                CustomizedRecipes.Add(RecipeProperty.Name, (Resources.Load(Singleton<ItemsDatabase>.Instance.recipesDict[RecipeProperty.Name]) as GameObject).GetComponent<CraftingRecipes>());
             }
         }
     }
@@ -82,6 +80,15 @@ public class WorkbenchPatch
         }
 
         if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Added recipe of {ItemName} with {CustomizedRecipes[ItemName].recipes[0].requirements.Count} requirements at level {LevelToAddTo} workbench");
+        Plugin.Log.LogInfo(CustomizedRecipes[ItemName]);
+        for (int i = 0; i < 8; i++)
+        {
+            int index = instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipes[ItemName].name);
+            if (index != -1)
+            {
+                instance.levels[i].recipes.RemoveAt(index);
+            }
+        }
         instance.levels[LevelToAddTo].recipes.Add(CustomizedRecipes[ItemName]);
     }
 }

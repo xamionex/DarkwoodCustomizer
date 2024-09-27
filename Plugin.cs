@@ -15,10 +15,11 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.0";
+    public const string PluginVersion = "1.2.1";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
+    public static FileSystemWatcher fileWatcherJson;
 
     // Base Plugin Values
     public static string ConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID);
@@ -149,6 +150,8 @@ public class Plugin : BaseUnityPlugin
     // Workbench values
     public static ConfigFile WorkbenchConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Workbench.cfg"), true);
     public static ConfigEntry<bool> WorkbenchModification;
+    public static ConfigEntry<bool> WorkbenchSetLevel;
+    public static ConfigEntry<int> WorkbenchLevel;
     public static string CustomCraftingRecipesPath => Path.Combine(ConfigPath, "CustomCraftingRecipes.json");
     public static JObject CustomCraftingRecipes;
     public static JObject DefaultCustomCraftingRecipes = JObject.FromObject(new
@@ -276,6 +279,8 @@ public class Plugin : BaseUnityPlugin
 
         // Workbench config
         WorkbenchModification = WorkbenchConfigFile.Bind($"Workbench", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        WorkbenchSetLevel = WorkbenchConfigFile.Bind($"Workbench", "Workbench Set Level", false, "Enable this to set the level of the workbench you use to the current value below");
+        WorkbenchLevel = WorkbenchConfigFile.Bind($"Workbench", "Workbench Level", 0, "Sets the level of the workbench you're using, Level you want-1, so for example Level 8 is 7");
         CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, DefaultCustomCraftingRecipes);
 
         string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "defaults");
@@ -326,10 +331,14 @@ public class Plugin : BaseUnityPlugin
         LogDivider();
 
         fileWatcher = new FileSystemWatcher(ConfigPath, "*.cfg");
-        fileWatcher = new FileSystemWatcher(ConfigPath, "*.json");
         fileWatcher.NotifyFilter = NotifyFilters.LastWrite;
         fileWatcher.Changed += OnFileChanged;
         fileWatcher.EnableRaisingEvents = true;
+
+        fileWatcherJson = new FileSystemWatcher(ConfigPath, "*.json");
+        fileWatcherJson.NotifyFilter = NotifyFilters.LastWrite;
+        fileWatcherJson.Changed += OnFileChanged;
+        fileWatcherJson.EnableRaisingEvents = true;
     }
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
@@ -373,6 +382,9 @@ public class Plugin : BaseUnityPlugin
                 break;
             case "Camera.cfg":
                 CameraConfigFile.Reload();
+                break;
+            case "Workbench.cfg":
+                WorkbenchConfigFile.Reload();
                 break;
             case "CustomStacks.json":
                 CustomStacks = (JObject)GetJsonConfig(CustomStacksPath, DefaultCustomStacks);
