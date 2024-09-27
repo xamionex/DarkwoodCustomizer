@@ -1,5 +1,6 @@
 using HarmonyLib;
-using DarkwoodCustomizer;
+
+namespace DarkwoodCustomizer;
 
 public static class GeneratorPatch
 {

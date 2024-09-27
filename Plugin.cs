@@ -3,7 +3,8 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using Newtonsoft.Json;
-using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using System;
 using System.IO;
 
 namespace DarkwoodCustomizer;
@@ -14,42 +15,50 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.1.9";
+    public const string PluginVersion = "1.2.0";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
 
     // Base Plugin Values
-    public static ConfigFile ConfigFile;
+    public static string ConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID);
+    public static ConfigFile ConfigFile = new(Path.Combine(ConfigPath, "Logging.cfg"), true);
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
+    public static ConfigEntry<bool> LogWorkbench;
 
     // Stack Resize Values
-    public static ConfigFile StacksConfigFile;
+    public static ConfigFile StacksConfigFile = new(Path.Combine(ConfigPath, "Stacks.cfg"), true);
     public static ConfigEntry<bool> ChangeStacks;
     public static ConfigEntry<bool> UseGlobalStackSize;
     public static ConfigEntry<int> StackResize;
-    public static ConfigEntry<string> jsonStacks;
-    public static Dictionary<string, int> CustomStacks;
+    public static string CustomStacksPath => Path.Combine(ConfigPath, "CustomStacks.json");
+    public static JObject CustomStacks;
+    public static JObject DefaultCustomStacks = JObject.FromObject(new
+    {
+        nail = 500,
+        wood = 500,
+    });
 
     // Items Values
-    public static ConfigFile ItemsConfigFile;
+    public static ConfigFile ItemsConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Items.cfg"), true);
     public static ConfigEntry<bool> EnableItemsModification;
     public static ConfigEntry<bool> BearTrapRecovery;
 
     // Lantern Repair Values
-    public static ConfigFile LanternConfigFile;
+    public static ConfigFile LanternConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Lantern.cfg"), true);
     public static ConfigEntry<bool> RepairLantern;
     public static ConfigEntry<string> LanternRepairConfig;
     public static ConfigEntry<int> LanternAmountRepairConfig;
     public static ConfigEntry<float> LanternDurabilityRepairConfig;
 
     // Inventory Resize Values
-    public static ConfigFile InventoriesConfigFile;
+    public static ConfigFile InventoriesConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Inventories.cfg"), true);
     public static ConfigEntry<bool> RemoveExcess;
 
     // Workbench
+    public static ConfigEntry<bool> WorkbenchInventoryModification;
     public static ConfigEntry<float> WorkbenchCraftingOffset;
     public static ConfigEntry<int> RightSlots;
     public static ConfigEntry<int> DownSlots;
@@ -65,13 +74,30 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> HotbarSlots;
 
     // Character Values
-    public static ConfigFile CharacterConfigFile;
+    public static ConfigFile CharacterConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Characters.cfg"), true);
     public static ConfigEntry<bool> CharacterModification;
-    public static ConfigEntry<string> jsonCharacters;
-    public static Dictionary<string, Dictionary<string, float>> CustomCharacters;
+    public static string CustomCharactersPath => Path.Combine(ConfigPath, "CustomCharacters.json");
+    public static JObject CustomCharacters;
+    public static JObject DefaultCustomCharacters = JObject.FromObject(new
+    {
+        Dog = new
+        {
+            health = 20f,
+            walkspeed = 2f,
+            runspeed = 10f,
+            damage = 0f,
+        },
+        Rabbit = new
+        {
+            health = 1f,
+            walkspeed = 2f,
+            runspeed = 8f,
+            damage = 0f,
+        },
+    });
 
     // Player Values
-    public static ConfigFile PlayerConfigFile;
+    public static ConfigFile PlayerConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Player.cfg"), true);
     public static ConfigEntry<bool> PlayerModification;
     public static ConfigEntry<float> PlayerFOV;
     public static ConfigEntry<bool> PlayerCantGetInterrupted;
@@ -101,7 +127,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> PlayerRunSpeedModifier;
 
     // Time values
-    public static ConfigFile TimeConfigFile;
+    public static ConfigFile TimeConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Time.cfg"), true);
     public static ConfigEntry<bool> TimeModification;
     public static ConfigEntry<float> DaytimeFlow;
     public static ConfigEntry<float> NighttimeFlow;
@@ -110,41 +136,66 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ResetWell;
 
     // Generator values
-    public static ConfigFile GeneratorConfigFile;
+    public static ConfigFile GeneratorConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Generator.cfg"), true);
     public static ConfigEntry<bool> GeneratorModification;
     public static ConfigEntry<float> GeneratorModifier;
     public static ConfigEntry<bool> GeneratorInfiniteFuel;
 
     // Camera values
-    public static ConfigFile CameraConfigFile;
+    public static ConfigFile CameraConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Camera.cfg"), true);
     public static ConfigEntry<bool> CameraModification;
     public static ConfigEntry<float> CameraFoV;
+
+    // Workbench values
+    public static ConfigFile WorkbenchConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Workbench.cfg"), true);
+    public static ConfigEntry<bool> WorkbenchModification;
+    public static string CustomCraftingRecipesPath => Path.Combine(ConfigPath, "CustomCraftingRecipes.json");
+    public static JObject CustomCraftingRecipes;
+    public static JObject DefaultCustomCraftingRecipes = JObject.FromObject(new
+    {
+        ammo_clip_mediumCal = new
+        {
+            requiredlevel = 3,
+            icon = "inventoryitems/ammo/ammo_clip_mediumCal",
+            requirements = new
+            {
+                ammo_single_mediumCal = 10,
+                wire = 1,
+                junk = 6,
+            },
+        },
+        knife = new
+        {
+            requiredlevel = 3,
+            icon = "inventoryitems/meleeweapons/knife",
+            requirements = new
+            {
+                junk = 1,
+                wood = 1,
+                tape = 1,
+                stone = 1,
+            },
+        },
+    });
 
     private void Awake()
     {
         Log = Logger;
-        ConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".cfg"), true);
-        StacksConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Stacks.cfg"), true);
-        ItemsConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Items.cfg"), true);
-        LanternConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Lantern.cfg"), true);
-        InventoriesConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Inventories.cfg"), true);
-        CharacterConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Characters.cfg"), true);
-        PlayerConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Player.cfg"), true);
-        TimeConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Time.cfg"), true);
-        GeneratorConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Generator.cfg"), true);
-        CameraConfigFile = new ConfigFile(Path.Combine(Paths.ConfigPath, PluginGUID + ".Camera.cfg"), true);
+
+        // 1.1.9 migration check
+        MigrateConfigFiles();
 
         // Base Plugin config
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
         LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
+        LogWorkbench = ConfigFile.Bind($"Logging", "Enable Debug Logs for Workbench", false, "Whether to log every time a custom recipe is added to the workbench");
 
         // Stacks config
         ChangeStacks = StacksConfigFile.Bind($"Stack Sizes", "Enable Section", false, "Whether or not stack sizes will be changed by the mod.");
         UseGlobalStackSize = StacksConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
         StackResize = StacksConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
-        var jsonStacks = StacksConfigFile.Bind($"Stack Sizes", "Custom Stacks", "{\"nail\":500,\"wood\":500}", "Enable the logs for items in the main config. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
-        CustomStacks = JsonConvert.DeserializeObject<Dictionary<string, int>>(jsonStacks.Value);
+        CustomStacks = (JObject)GetJsonConfig(CustomStacksPath, DefaultCustomStacks);
 
         // Items config
         EnableItemsModification = ItemsConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does not require restarts");
@@ -160,6 +211,7 @@ public class Plugin : BaseUnityPlugin
         RemoveExcess = InventoriesConfigFile.Bind($"Inventories", "Remove Excess Slots", true, "Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)");
 
         // Workbench
+        WorkbenchInventoryModification = InventoriesConfigFile.Bind($"Workbench", "Enable Section", false, "Enables this section of the mod, warning: disabling will not return the workbench to vanilla, you have to do it with this config");
         WorkbenchCraftingOffset = InventoriesConfigFile.Bind($"Workbench", "Workbench Crafting Offset", 1000f, "Pixels offset for the workbench crafting window, no longer requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
         RightSlots = InventoriesConfigFile.Bind($"Workbench", "Storage Right Slots", 12, "Number that determines slots in workbench to the right, vanilla is 6");
         DownSlots = InventoriesConfigFile.Bind($"Workbench", "Storage Down Slots", 9, "Number that determines slots in workbench downward, vanilla is 8");
@@ -175,9 +227,8 @@ public class Plugin : BaseUnityPlugin
         HotbarDownSlots = InventoriesConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward, requires reload of save (Return to Menu > Load Save)");
 
         // Character values
-        CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        var jsonCharacters = CharacterConfigFile.Bind($"Characters", "Custom Characters", "{\"Dog\":{\"health\":20,\"walkspeed\":2,\"runspeed\":10,\"damage\":0},\"Rabbit\":{\"health\":1,\"walkspeed\":2,\"runspeed\":8,\"damage\":0}}", "Warning: Enable character logs in main config. Be cautious with numbers, but name errors are harmless. Health is static, Speed is a modifier, and Damage is not yet implemented.\nIf you don't know which enemy is which download RuntimeUnityEditor and place it in the plugins folder, it will allow you to search the names in the object browser and see their textures (aka how they look)");
-        CustomCharacters = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, float>>>(jsonCharacters.Value);
+        CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section updates when a character spawns");
+        CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, DefaultCustomCharacters);
 
         // Player values
         PlayerModification = PlayerConfigFile.Bind($"Player", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
@@ -223,6 +274,32 @@ public class Plugin : BaseUnityPlugin
         CameraModification = CameraConfigFile.Bind($"Camera", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
         CameraFoV = CameraConfigFile.Bind($"Camera", "Camera Zoom Factor", 1f, "Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in");
 
+        // Workbench config
+        WorkbenchModification = WorkbenchConfigFile.Bind($"Workbench", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
+        CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, DefaultCustomCraftingRecipes);
+
+        string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "defaults");
+        if (!Directory.Exists(DefaultsConfigPath))
+            Directory.CreateDirectory(DefaultsConfigPath);
+
+        string DefaultsCustomCharactersPath = Path.Combine(DefaultsConfigPath, "CustomCharacters.json");
+        if (File.Exists(DefaultsCustomCharactersPath) && !File.ReadAllText(DefaultsCustomCharactersPath).Equals(JsonConvert.SerializeObject(DefaultCustomCharacters, Formatting.Indented)))
+            File.Delete(DefaultsCustomCharactersPath);
+        if (!File.Exists(DefaultsCustomCharactersPath))
+            File.WriteAllText(DefaultsCustomCharactersPath, JsonConvert.SerializeObject(DefaultCustomCharacters, Formatting.Indented));
+
+        string DefaultsCustomCraftingRecipesPath = Path.Combine(DefaultsConfigPath, "CustomCraftingRecipes.json");
+        if (File.Exists(DefaultsCustomCraftingRecipesPath) && !File.ReadAllText(DefaultsCustomCraftingRecipesPath).Equals(JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented)))
+            File.Delete(DefaultsCustomCraftingRecipesPath);
+        if (!File.Exists(DefaultsCustomCraftingRecipesPath))
+            File.WriteAllText(DefaultsCustomCraftingRecipesPath, JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented));
+
+        string DefaultsCustomStacksPath = Path.Combine(DefaultsConfigPath, "CustomStacks.json");
+        if (File.Exists(DefaultsCustomStacksPath) && !File.ReadAllText(DefaultsCustomStacksPath).Equals(JsonConvert.SerializeObject(DefaultCustomStacks, Formatting.Indented)))
+            File.Delete(DefaultsCustomStacksPath);
+        if (!File.Exists(DefaultsCustomStacksPath))
+            File.WriteAllText(DefaultsCustomStacksPath, JsonConvert.SerializeObject(DefaultCustomStacks, Formatting.Indented));
+
         LogDivider();
 
         Harmony Harmony = new Harmony($"{PluginGUID}");
@@ -242,11 +319,14 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(GeneratorPatch));
         Log.LogInfo($"Patching in CamMainPatch! (Camera)");
         Harmony.PatchAll(typeof(CamMainPatch));
+        Log.LogInfo($"Patching in WorkbenchPatch! (Recipes)");
+        Harmony.PatchAll(typeof(WorkbenchPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
 
-        fileWatcher = new FileSystemWatcher(Paths.ConfigPath, PluginGUID + "*.cfg");
+        fileWatcher = new FileSystemWatcher(ConfigPath, "*.cfg");
+        fileWatcher = new FileSystemWatcher(ConfigPath, "*.json");
         fileWatcher.NotifyFilter = NotifyFilters.LastWrite;
         fileWatcher.Changed += OnFileChanged;
         fileWatcher.EnableRaisingEvents = true;
@@ -254,56 +334,61 @@ public class Plugin : BaseUnityPlugin
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
+        var UnknownFile = false;
         LogDivider();
         switch (e.Name)
         {
-            case PluginGUID + ".cfg":
-                Log.LogInfo($"{PluginGUID}.cfg was reloaded.");
+            case "Logging.cfg":
                 ConfigFile.Reload();
                 break;
-            case PluginGUID + ".Inventories.cfg":
-                Log.LogInfo($"{PluginGUID}.Inventories.cfg was reloaded.");
+            case "Inventories.cfg":
                 InventoriesConfigFile.Reload();
                 break;
-            case PluginGUID + ".Items.cfg":
-                Log.LogInfo($"{PluginGUID}.Items.cfg was reloaded.");
+            case "Items.cfg":
                 ItemsConfigFile.Reload();
                 break;
-            case PluginGUID + ".Lantern.cfg":
-                Log.LogInfo($"{PluginGUID}.Lantern.cfg was reloaded.");
+            case "Lantern.cfg":
                 InvItemClassPatch.RefreshLantern = true;
                 LanternConfigFile.Reload();
                 break;
-            case PluginGUID + ".Player.cfg":
-                Log.LogInfo($"{PluginGUID}.Player.cfg was reloaded.");
+            case "Player.cfg":
                 PlayerPatch.RefreshPlayer = true;
                 PlayerConfigFile.Reload();
                 break;
-            case PluginGUID + ".Characters.cfg":
-                Log.LogInfo($"{PluginGUID}.Characters.cfg was reloaded.");
+            case "Characters.cfg":
                 CharacterConfigFile.Reload();
                 break;
-            case PluginGUID + ".Stacks.cfg":
-                Log.LogInfo($"{PluginGUID}.Stacks.cfg was reloaded.");
+            case "Characters.json":
+                CharacterConfigFile.Reload();
+                break;
+            case "Stacks.cfg":
                 StacksConfigFile.Reload();
                 break;
-            case PluginGUID + ".Time.cfg":
-                Log.LogInfo($"{PluginGUID}.Time.cfg was reloaded.");
+            case "Time.cfg":
                 TimeConfigFile.Reload();
                 break;
-            case PluginGUID + ".Generator.cfg":
-                Log.LogInfo($"{PluginGUID}.Generator.cfg was reloaded.");
+            case "Generator.cfg":
                 GeneratorPatch.RefreshGenerator = true;
                 GeneratorConfigFile.Reload();
                 break;
-            case PluginGUID + ".Camera.cfg":
-                Log.LogInfo($"{PluginGUID}.Camera.cfg was reloaded.");
+            case "Camera.cfg":
                 CameraConfigFile.Reload();
+                break;
+            case "CustomStacks.json":
+                CustomStacks = (JObject)GetJsonConfig(CustomStacksPath, DefaultCustomStacks);
+                break;
+            case "CustomCharacters.json":
+                CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, DefaultCustomCharacters);
+                break;
+            case "CustomCraftingRecipes.json":
+                CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, DefaultCustomCraftingRecipes);
                 break;
             default:
                 Log.LogInfo($"Unknown file with the PluginGUID was reloaded.");
+                UnknownFile = true;
                 break;
         }
+        if (!UnknownFile) Log.LogInfo($"{e.Name} was reloaded!");
         LogDivider();
     }
 
@@ -312,5 +397,104 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo("");
         Log.LogInfo("--------------------------------------------------------------------------------");
         Log.LogInfo("");
+    }
+
+    public static object GetJsonConfig(string FilePath, JObject DefaultJson)
+    {
+        try
+        {
+            // Try to load the existing file
+            var jsonData = GetJsonFile(FilePath);
+
+            if (jsonData == null) return CreateNewJsonFile(FilePath, DefaultJson);
+            return jsonData;
+        }
+        catch (Exception)
+        {
+            // If the file exists and it errors out, rename it to the same name with an increment and make a new default config
+            return CreateNewJsonFile(FilePath, DefaultJson);
+        }
+    }
+
+    public static JObject CreateNewJsonFile(string FilePath, JObject DefaultJson)
+    {
+        var i = 0;
+        var NewFilePath = FilePath;
+        if (File.Exists(FilePath))
+        {
+            while (File.Exists(NewFilePath))
+            {
+                NewFilePath = $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}";
+            }
+            File.Move(FilePath, NewFilePath);
+            File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
+            Log.LogInfo($"Renamed {FilePath} to {NewFilePath} and created new default config because it was erroring out.");
+        }
+        else
+        {
+            File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
+            Log.LogInfo($"Created {FilePath} with default config because it didnt exist.");
+        }
+        return DefaultJson;
+    }
+
+    public static JObject GetJsonFile(string JsonPath)
+    {
+        try
+        {
+            // Read the file contents
+            var fileContents = File.ReadAllText(JsonPath);
+
+            // Parse the cleaned JSON string
+            JObject jsonObject = JObject.Parse(fileContents);
+
+            return jsonObject;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError($"Error loading JSON file: {ex.Message}");
+            return null;
+        }
+    }
+
+
+    private void MigrateConfigFiles()
+    {
+        // 1.1.9 migration check
+        string loggingConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID + ".cfg");
+        string[] oldConfigFiles = Directory.GetFiles(Paths.ConfigPath, PluginGUID + ".*.cfg");
+
+        // Special case for logging config
+        if (File.Exists(loggingConfigPath))
+        {
+            string newLoggingConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg");
+            if (File.Exists(newLoggingConfigPath)) File.Delete(newLoggingConfigPath);
+            File.Move(loggingConfigPath, newLoggingConfigPath);
+            Log.LogInfo($"Moved old logging config file from {loggingConfigPath} to {newLoggingConfigPath}");
+            ConfigFile.Reload();
+        }
+
+        if (oldConfigFiles.Length == 0) return;
+
+        // Move other config files
+        foreach (string oldConfigFile in oldConfigFiles)
+        {
+            string configFileCategory = Path.GetFileNameWithoutExtension(oldConfigFile).Replace(PluginGUID + ".", string.Empty).Replace(".cfg", string.Empty);
+            string newConfigFile = Path.Combine(Paths.ConfigPath, PluginGUID, configFileCategory + ".cfg");
+            if (File.Exists(newConfigFile)) File.Delete(newConfigFile);
+            File.Move(oldConfigFile, newConfigFile);
+            Log.LogInfo($"Moved old config file from {oldConfigFile} to {newConfigFile}");
+        }
+        InventoriesConfigFile.Reload();
+        ItemsConfigFile.Reload();
+        LanternConfigFile.Reload();
+        PlayerConfigFile.Reload();
+        CharacterConfigFile.Reload();
+        CharacterConfigFile.Reload();
+        StacksConfigFile.Reload();
+        TimeConfigFile.Reload();
+        GeneratorConfigFile.Reload();
+        CameraConfigFile.Reload();
+        Log.LogInfo("Reloaded all configs!");
     }
 }

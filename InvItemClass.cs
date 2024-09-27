@@ -1,11 +1,13 @@
 ﻿using HarmonyLib;
-using DarkwoodCustomizer;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+
+namespace DarkwoodCustomizer;
 
 public class InvItemClassPatch
 {
     public static bool RefreshLantern = true;
-    public static List<string> ItemStackSizes = new List<string>();
+    public static List<string> ItemStackSizes = [];
 
     [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.assignClass))]
     [HarmonyPostfix]
@@ -25,10 +27,40 @@ public class InvItemClassPatch
             {
                 __instance.baseClass.maxAmount = Plugin.StackResize.Value;
             }
-            if (Plugin.CustomStacks.TryGetValue(__instance.baseClass.name, out int value))
+            if (Plugin.CustomStacks.TryGetValue(__instance.baseClass.name, out JToken value))
             {
-                __instance.baseClass.maxAmount = value;
+                __instance.baseClass.maxAmount = int.Parse(value.ToString());
             }
+        }
+
+        // add recipe for flamethrower
+        if (__instance.type == "weapon_flamethrower_homeMade")
+        {
+            __instance.baseClass.iconType = "weapon_flamethrower_military_01";
+            __instance.baseClass.fireMode = InvItem.FireMode.fullAuto;
+            __instance.baseClass.hasAmmo = false;
+            __instance.baseClass.canBeReloaded = false;
+            __instance.baseClass.hasDurability = true;
+            __instance.baseClass.maxDurability = 100f;
+            __instance.baseClass.ignoreDurabilityInValue = true;
+            __instance.baseClass.repairable = true;
+            __instance.baseClass.gameObject.AddComponent<RepairRequirements>().requirements =
+                [
+                    new CraftingRequirement
+                    {
+                        item = Singleton<ItemsDatabase>.Instance.getItem("gasBottle", true),
+                        amount = 1
+                    },
+                    new CraftingRequirement
+                    {
+                        item = Singleton<ItemsDatabase>.Instance.getItem("barrelExploding", true),
+                        amount = 1
+                    }
+                ];
+            __instance.baseClass.damage = 60;
+            __instance.durability = __instance.baseClass.maxDurability;
+            __instance.ammo = 999;
+            return;
         }
 
         // add recipe for repairing lantern

@@ -1,5 +1,6 @@
-using DarkwoodCustomizer;
 using HarmonyLib;
+
+namespace DarkwoodCustomizer;
 
 public class ControllerPatch
 {

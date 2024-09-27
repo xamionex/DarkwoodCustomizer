@@ -1,6 +1,7 @@
-using DarkwoodCustomizer;
 using HarmonyLib;
 using UnityEngine;
+
+namespace DarkwoodCustomizer;
 
 public class PlayerPatch
 {

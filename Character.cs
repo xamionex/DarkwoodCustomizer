@@ -1,38 +1,41 @@
 using System.Collections.Generic;
-using DarkwoodCustomizer;
 using HarmonyLib;
+using Newtonsoft.Json.Linq;
+
+namespace DarkwoodCustomizer;
 
 public class CharacterPatch
 {
-    public static List<string> CustomCharactersList = new List<string>();
+    public static List<string> CustomCharactersList = [];
 
     [HarmonyPatch(typeof(Character), nameof(Character.Update))]
     [HarmonyPrefix]
     public static void CharUpdate(Character __instance)
     {
-        if (Plugin.CustomCharacters.TryGetValue(__instance.name, out Dictionary<string, float> Stats))
+        if (Plugin.CustomCharacters.TryGetValue(__instance.name, out JToken Stats))
         {
-            foreach (var Stat in Stats)
+            foreach (var Stat in Stats.Children())
             {
-                switch (Stat.Key)
+                switch (Stat.Path)
                 {
                     case "health":
-                        __instance.maxHealth = Stat.Value;
+                        __instance.maxHealth = float.Parse(Stat.ToString());
                         break;
                     case "walkspeed":
-                        __instance.idleWalkSpeed = Stat.Value;
+                        __instance.idleWalkSpeed = float.Parse(Stat.ToString());
                         break;
                     case "runspeed":
-                        __instance.chaseSpeed = Stat.Value;
+                        __instance.chaseSpeed = float.Parse(Stat.ToString());
                         break;
                     case "damage":
-                        //__instance.damage = Stat.Value;
+                        //__instance.damage = float.Parse(Stat.ToString());
                         break;
                     default:
                         break;
                 }
             }
         }
+
     }
 
     [HarmonyPatch(typeof(Character), "Awake")]
@@ -47,21 +50,21 @@ public class CharacterPatch
                 Plugin.Log.LogInfo($"[CHARACTER] {__instance.name}: ({__instance.chaseSpeed}RS), ({__instance.idleWalkSpeed}WS), ({__instance.maxHealth}MaxHP)");
             }
         }
-        if (Plugin.CustomCharacters.TryGetValue(__instance.name, out Dictionary<string, float> Stats))
+        if (Plugin.CustomCharacters.TryGetValue(__instance.name, out JToken Stats))
         {
-            foreach (var Stat in Stats)
+            foreach (var Stat in Stats.Children())
             {
-                switch (Stat.Key)
+                switch (Stat.Path)
                 {
                     case "health":
-                        __instance.maxHealth = Stat.Value;
-                        __instance.health = Stat.Value;
+                        __instance.maxHealth = float.Parse(Stat.ToString());
+                        __instance.health = float.Parse(Stat.ToString());
                         break;
                     case "walkspeed":
-                        __instance.idleWalkSpeed = Stat.Value;
+                        __instance.idleWalkSpeed = float.Parse(Stat.ToString());
                         break;
                     case "runspeed":
-                        __instance.chaseSpeed = Stat.Value;
+                        __instance.chaseSpeed = float.Parse(Stat.ToString());
                         break;
                     default:
                         break;
