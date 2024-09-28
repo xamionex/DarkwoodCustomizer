@@ -18,7 +18,7 @@ public class InvItemClassPatch
             if (!ItemStackSizes.Contains(__instance.baseClass.name))
             {
                 ItemStackSizes.Add(__instance.baseClass.name);
-                Plugin.Log.LogInfo($"[ITEM] {__instance.baseClass.name}: Amount:{__instance.baseClass.maxAmount} Icon: {__instance.baseClass.iconType}");
+                Plugin.Log.LogInfo($"[ITEM] {__instance.baseClass.name}: Amount: {__instance.baseClass.maxAmount} Icon: {__instance.baseClass.iconType}");
             }
         }
         if (Plugin.ChangeStacks.Value)

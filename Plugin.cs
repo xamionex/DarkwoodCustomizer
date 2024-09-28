@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.6";
+    public const string PluginVersion = "1.2.7";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -23,8 +23,8 @@ public class Plugin : BaseUnityPlugin
 
     // Base Plugin Values
     public static string ConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID);
+    public static string JsonConfigPath = Path.Combine(ConfigPath, "Customs");
     public static ConfigFile ConfigFile = new(Path.Combine(ConfigPath, "Logging.cfg"), true);
-    public static ConfigEntry<string> ThankYouNote;
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
@@ -35,7 +35,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ChangeStacks;
     public static ConfigEntry<bool> UseGlobalStackSize;
     public static ConfigEntry<int> StackResize;
-    public static string CustomStacksPath => Path.Combine(ConfigPath, "CustomStacks.json");
+    public static string CustomStacksPath => Path.Combine(JsonConfigPath, "CustomStacks.json");
     public static JObject CustomStacks;
     public static JObject DefaultCustomStacks = JObject.FromObject(new
     {
@@ -78,25 +78,9 @@ public class Plugin : BaseUnityPlugin
     // Character Values
     public static ConfigFile CharacterConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Characters.cfg"), true);
     public static ConfigEntry<bool> CharacterModification;
-    public static string CustomCharactersPath => Path.Combine(ConfigPath, "CustomCharacters.json");
+    public static string CustomCharactersPath => Path.Combine(JsonConfigPath, "CustomCharacters.json");
     public static JObject CustomCharacters;
-    public static JObject DefaultCustomCharacters = JObject.FromObject(new
-    {
-        Dog = new
-        {
-            health = 20f,
-            walkspeed = 2f,
-            runspeed = 10f,
-            damage = 1f,
-        },
-        Rabbit = new
-        {
-            health = 1f,
-            walkspeed = 2f,
-            runspeed = 8f,
-            damage = 1f,
-        },
-    });
+    public static JObject DefaultCustomCharacters = JObject.FromObject(new { });
 
     // Player Values
     public static ConfigFile PlayerConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Player.cfg"), true);
@@ -153,7 +137,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> WorkbenchModification;
     public static ConfigEntry<bool> WorkbenchSetLevel;
     public static ConfigEntry<int> WorkbenchLevel;
-    public static string CustomCraftingRecipesPath => Path.Combine(ConfigPath, "CustomCraftingRecipes.json");
+    public static string CustomCraftingRecipesPath => Path.Combine(JsonConfigPath, "CustomCraftingRecipes.json");
     public static JObject CustomCraftingRecipes;
     public static JObject DefaultCustomCraftingRecipes = JObject.FromObject(new
     {
@@ -188,9 +172,11 @@ public class Plugin : BaseUnityPlugin
 
         // 1.1.9 migration check
         MigrateConfigFiles();
+        // 1.2.6 migration check
+        MigrateJsonFiles();
 
         // Base Plugin config
-        ThankYouNote = ConfigFile.Bind($"Note", "Thank you", "", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
+        ConfigFile.Bind($"Note", "Thank you", "", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
         LogDebug = ConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = ConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
         LogCharacters = ConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
@@ -232,8 +218,8 @@ public class Plugin : BaseUnityPlugin
         HotbarDownSlots = InventoriesConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward, requires reload of save (Return to Menu > Load Save)");
 
         // Character values
-        CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, This section updates when a character spawns");
-        CharacterConfigFile.Bind($"Characters", "Note", "", "Damage is a modifier and the rest are values, its much harder to modify damage value than just to have a modifier");
+        CharacterModification = CharacterConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json");
+        CharacterConfigFile.Bind($"Characters", "Note", "ReadMePlease", "Launch a save once to generate the config\nThere is a damage modifier and also all the character's attacks\nYou can edit both and they'll take effect\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error");
         CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, DefaultCustomCharacters);
 
         // Player values
@@ -286,12 +272,12 @@ public class Plugin : BaseUnityPlugin
         WorkbenchLevel = WorkbenchConfigFile.Bind($"Workbench", "Workbench Level", 0, "Sets the level of the workbench you're using, Level you want-1, so for example Level 8 is 7");
         CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, DefaultCustomCraftingRecipes);
 
-        string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "defaults");
+        string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "VanillaDefaults");
         if (!Directory.Exists(DefaultsConfigPath))
             Directory.CreateDirectory(DefaultsConfigPath);
 
         string DefaultsReadMePath = Path.Combine(DefaultsConfigPath, "ReadMe.txt");
-        string ReadMeString = "This folder is a readonly folder for you to use as a template when creating your own custom characters, recipes, etc.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the plugin config folder, not in the default folder";
+        string ReadMeString = "This folder is a readonly folder for you to use as a template when creating your own custom things.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the DarkwoodCustomizer/Customs folder, not in the VanillaDefaults folder";
         if (File.Exists(DefaultsReadMePath) && !File.ReadAllText(DefaultsReadMePath).Equals(ReadMeString))
             File.Delete(DefaultsReadMePath);
         if (!File.Exists(DefaultsReadMePath))
@@ -339,7 +325,7 @@ public class Plugin : BaseUnityPlugin
         fileWatcher.Changed += OnFileChanged;
         fileWatcher.EnableRaisingEvents = true;
 
-        fileWatcherJson = new FileSystemWatcher(ConfigPath, "*.json");
+        fileWatcherJson = new FileSystemWatcher(JsonConfigPath, "*.json");
         fileWatcherJson.NotifyFilter = NotifyFilters.LastWrite;
         fileWatcherJson.Changed += OnFileChanged;
         fileWatcherJson.EnableRaisingEvents = true;
@@ -348,7 +334,6 @@ public class Plugin : BaseUnityPlugin
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         var UnknownFile = false;
-        LogDivider();
         switch (e.Name)
         {
             case "Logging.cfg":
@@ -400,12 +385,11 @@ public class Plugin : BaseUnityPlugin
                 CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, DefaultCustomCraftingRecipes);
                 break;
             default:
-                Log.LogInfo($"Unknown file with the PluginGUID was reloaded.");
+                Log.LogInfo($"Unknown file was edited.");
                 UnknownFile = true;
                 break;
         }
         if (!UnknownFile) Log.LogInfo($"{e.Name} was reloaded!");
-        LogDivider();
     }
 
     public static void LogDivider()
@@ -448,6 +432,11 @@ public class Plugin : BaseUnityPlugin
         }
         else
         {
+            var directory = Path.GetDirectoryName(FilePath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
             File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
             Log.LogInfo($"Created {FilePath} with default config because it didnt exist.");
         }
@@ -468,7 +457,7 @@ public class Plugin : BaseUnityPlugin
         }
         catch (Exception ex)
         {
-            Log.LogError($"Error loading JSON file: {ex.Message}");
+            Log.LogInfo($"Error loading JSON file: {ex.Message}");
             return null;
         }
     }
@@ -512,5 +501,30 @@ public class Plugin : BaseUnityPlugin
         GeneratorConfigFile.Reload();
         CameraConfigFile.Reload();
         Log.LogInfo("Reloaded all configs!");
+    }
+
+    private void MigrateJsonFiles()
+    {
+        // 1.2.6 migration check
+        // Move JSON files
+        string oldJsonPath = Path.Combine(Paths.ConfigPath, PluginGUID);
+        string newJsonPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Customs");
+        if (!Directory.Exists(newJsonPath)) Directory.CreateDirectory(newJsonPath);
+        foreach (string jsonFile in Directory.GetFiles(oldJsonPath, "*.json"))
+        {
+            string fileName = Path.GetFileName(jsonFile);
+            string newJsonFile = Path.Combine(newJsonPath, fileName == "CustomCharacters.json" ? fileName + "_ThisIsYourOldConfigFrom1.2.6.json" : fileName);
+            if (File.Exists(newJsonFile)) File.Delete(newJsonFile);
+            File.Move(jsonFile, newJsonFile);
+            Log.LogInfo($"Moved and renamed old JSON file from {jsonFile} to {newJsonFile}");
+        }
+
+        // Remove old defaults folder
+        string oldDefaultsPath = Path.Combine(Paths.ConfigPath, PluginGUID, "defaults");
+        if (Directory.Exists(oldDefaultsPath))
+        {
+            Directory.Delete(oldDefaultsPath, true);
+            Log.LogInfo($"Deleted old defaults folder at \"defaults\"");
+        }
     }
 }
