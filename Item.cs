@@ -6,15 +6,26 @@ public static class ItemPatch
 {
     [HarmonyPatch(typeof(Item), nameof(Item.disarm))]
     [HarmonyPrefix]
-    public static void BearTrapDisarm(Item __instance)
+    public static void PickingUpGroundItem(Item __instance)
     {
+        // Since this includes mushrooms and more dont exit if it isnt beartrap, for future code if needed
         if (!Plugin.EnableItemsModification.Value) return;
+        Plugin.Log.LogInfo(__instance.name);
         if (Plugin.BearTrapRecovery.Value && __instance.name == "bearTrap")
         {
-            var bearTrap = ItemsDatabase.Instance.getItem("beartrap", true);
-            if (bearTrap != null)
+            __instance.invItemAmount = 3;
+            if (!Plugin.BearTrapRecoverySwitch.Value)
             {
-                __instance.invItem = bearTrap;
+                __instance.invItem = ItemsDatabase.Instance.getItem("beartrap", true);
+                __instance.invItemAmount = 1;
+            }
+        }
+        if (Plugin.ChainTrapRecovery.Value && __instance.name == "chainTrap")
+        {
+            __instance.invItemAmount = 2;
+            if (!Plugin.ChainTrapRecoverySwitch.Value)
+            {
+                __instance.invItem = ItemsDatabase.Instance.getItem("chaintrap", true);
                 __instance.invItemAmount = 1;
             }
         }

@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BepInEx.Logging;
 using HarmonyLib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -35,22 +35,93 @@ public class CharacterPatch
         {
             name = name.Substring(0, name.IndexOf("(Clone)"));
         }
-        if (Plugin.LogCharacters.Value)
+        AddMissingStats(__instance, name);
+        if (!Plugin.CharacterModification.Value) return;
+        if (!Plugin.CustomCharacters.TryGetValue(name, out var Stats) && Stats != null) return;
+        UpdateCharacterValues(__instance, Stats, name, UpdateHealth);
+    }
+
+    public static void UpdateCharacterValues(Character __instance, JToken Stats, string name, bool UpdateHealth = false)
+    {
+        float MaxHealth = float.Parse(Stats["Health"]?.ToString() ?? "1");
+        if (MaxHealth != __instance.maxHealth)
         {
-            if (!CustomCharactersList.Contains(name))
+            __instance.maxHealth = MaxHealth;
+            if (UpdateHealth) __instance.health = MaxHealth;
+        }
+        float WalkSpeed = float.Parse(Stats["WalkSpeed"]?.ToString() ?? "1");
+        if (WalkSpeed != __instance.idleWalkSpeed)
+        {
+            __instance.idleWalkSpeed = WalkSpeed;
+        }
+        float ChaseSpeed = float.Parse(Stats["RunSpeed"]?.ToString() ?? "1");
+        if (ChaseSpeed != __instance.chaseSpeed)
+        {
+            __instance.chaseSpeed = ChaseSpeed;
+        }
+        if (Stats["Attacks"] is JArray Attacks)
+        {
+            if (Attacks.Count > __instance.sensorTypes.Count)
             {
-                CustomCharactersList.Add(name);
-                Plugin.Log.LogInfo($"[CHARACTER] {name}: ({__instance.chaseSpeed}RS), ({__instance.idleWalkSpeed}WS), ({__instance.maxHealth}MaxHP)");
+                Plugin.Log.LogError($"[CHARACTER] {name} has only {__instance.sensorTypes.Count} attacks but the CustomCharacters file has {Attacks.Count}! This won't work, Skipping!");
+            }
+            else
+            {
+                for (int i = 0; i < Attacks.Count; i++)
+                {
+                    var Attack = Attacks[i] as JObject;
+                    if (Attack != null)
+                    {
+                        var attack = Attack[$"{i + 1}"] as JObject;
+                        var damage = attack["Damage"]?.ToObject<int>() ?? null;
+                        if (damage == null)
+                        {
+                            attack["AttackName(ReadOnly)"] = __instance.sensorTypes[i].name;
+                            attack["AttackIsRanged(ReadOnly)"] = __instance.sensorTypes[i].isRanged;
+                            attack["Damage"] = __instance.sensorTypes[i].damage;
+                            damage = __instance.sensorTypes[i].damage;
+                            File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
+                        }
+                        if (damage == null)
+                        {
+                            Plugin.Log.LogError($"[CHARACTER] {name} has a corrupted attack damage, skipping!");
+                            return;
+                        };
+                        if (damage != __instance.sensorTypes[i].damage)
+                        {
+                            __instance.sensorTypes[i].damage = (int)damage;
+                        }
+                    }
+                }
             }
         }
-        if (!Plugin.CustomCharacters.ContainsKey(name))
+    }
+
+    private static void AddMissingStats(Character __instance, string name)
+    {
+        bool Changed = false;
+        // Corrects the character stats if they are missing
+        if (Plugin.CustomCharacters.ContainsKey(name))
         {
-            Plugin.CustomCharacters[name] = JObject.FromObject(new
+            JObject charStats = (JObject)Plugin.CustomCharacters[name];
+            if (!charStats.ContainsKey("Health"))
             {
-                Health = __instance.maxHealth,
-                WalkSpeed = __instance.idleWalkSpeed,
-                RunSpeed = __instance.chaseSpeed,
-                Attacks = __instance.sensorTypes.Select((s, i) => new JObject
+                charStats["Health"] = __instance.maxHealth;
+                Changed = true;
+            }
+            if (!charStats.ContainsKey("WalkSpeed"))
+            {
+                charStats["WalkSpeed"] = __instance.idleWalkSpeed;
+                Changed = true;
+            }
+            if (!charStats.ContainsKey("RunSpeed"))
+            {
+                charStats["RunSpeed"] = __instance.chaseSpeed;
+                Changed = true;
+            }
+            if (!charStats.ContainsKey("Attacks") && __instance.sensorTypes.Count > 0)
+            {
+                charStats["Attacks"] = JArray.FromObject(__instance.sensorTypes.Select((s, i) => new JObject
                 {
                     { $"{i + 1}", new JObject
                         {
@@ -59,57 +130,30 @@ public class CharacterPatch
                             { "Damage", s.damage }
                         }
                     }
-                }).ToArray()
-            });
-            if (Plugin.LogCharacters.Value) Plugin.Log.LogInfo($"[CHARACTER] {name}: Adding to CustomCharacters since it didn't exist");
-            File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
+                }).ToArray());
+                Changed = true;
+            }
         }
-        if (!Plugin.CharacterModification.Value) return;
-        if (Plugin.CustomCharacters.TryGetValue(name, out var Stats) && Stats != null)
+        else
         {
-            float MaxHealth = float.Parse(Stats["Health"]?.ToString() ?? "1");
-            if (MaxHealth != __instance.maxHealth)
+            Plugin.CustomCharacters[name] = JObject.FromObject(new
             {
-                __instance.maxHealth = MaxHealth;
-                if (UpdateHealth) __instance.health = MaxHealth;
-                Plugin.Log.LogInfo($"[CHARACTER] {name}: Health set to {MaxHealth}");
-            }
-            float WalkSpeed = float.Parse(Stats["WalkSpeed"]?.ToString() ?? "1");
-            if (WalkSpeed != __instance.idleWalkSpeed)
+                Health = __instance.maxHealth,
+                WalkSpeed = __instance.idleWalkSpeed,
+                RunSpeed = __instance.chaseSpeed,
+                Attacks = __instance.sensorTypes.Select((s, i) => new JObject
             {
-                __instance.idleWalkSpeed = WalkSpeed;
-                Plugin.Log.LogInfo($"[CHARACTER] {name}: Walk speed set to {WalkSpeed}");
-            }
-            float ChaseSpeed = float.Parse(Stats["RunSpeed"]?.ToString() ?? "1");
-            if (ChaseSpeed != __instance.chaseSpeed)
-            {
-                __instance.chaseSpeed = ChaseSpeed;
-                Plugin.Log.LogInfo($"[CHARACTER] {name}: Chase speed set to {ChaseSpeed}");
-            }
-            var Attacks = Stats["Attacks"] as JArray;
-            if (Attacks != null)
-            {
-                if (Attacks.Count > __instance.sensorTypes.Count)
-                {
-                    Plugin.Log.LogError($"[CHARACTER] {name} has only {__instance.sensorTypes.Count} attacks but the CustomCharacters file has {Attacks.Count}! This won't work, Skipping!");
-                }
-                else
-                {
-                    for (int i = 0; i < Attacks.Count; i++)
+                { $"{i + 1}", new JObject
                     {
-                        var Attack = Attacks[i] as JObject;
-                        if (Attack != null)
-                        {
-                            var damage = Attack[$"{i + 1}"]?["Damage"]?.ToObject<int>() ?? 1;
-                            if (damage != __instance.sensorTypes[i].damage)
-                            {
-                                __instance.sensorTypes[i].damage = damage;
-                                Plugin.Log.LogInfo($"[CHARACTER] {name}: Attack {i + 1} damage set to {damage}");
-                            }
-                        }
+                        { "AttackName(ReadOnly)", s.name },
+                        { "AttackIsRanged(ReadOnly)", s.isRanged },
+                        { "Damage", s.damage }
                     }
                 }
-            }
+            }).ToArray()
+            });
+            Changed = true;
         }
+        if (Changed) File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
     }
 }

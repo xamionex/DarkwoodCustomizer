@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,14 +8,30 @@ namespace DarkwoodCustomizer;
 
 public class WorkbenchPatch
 {
+    private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipesLog = [];
     private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipes = [];
+    private static string LogTypeFlag = "";
+    private static bool OnFirst;
 
     [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
-    [HarmonyPostfix]
-    public static void LevelPatch(Workbench __instance)
+    [HarmonyPrefix]
+    public static void WorkbenchRecipes(Workbench __instance)
     {
         if (!Plugin.WorkbenchModification.Value) return;
-        CustomizedRecipes.Clear();
+        OnFirst = true;
+        if (Plugin.CustomCraftingRecipesUseDefaults.Value)
+        {
+            LogTypeFlag = "[DEFAULTCUSTOMRECIPES]";
+            foreach (var RecipeProperty in Plugin.DefaultCustomCraftingRecipes.Properties())
+            {
+                var RecipeObject = RecipeProperty.Value as JObject;
+                if (RecipeObject != null)
+                {
+                    WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
+                }
+            }
+        }
+        LogTypeFlag = "[USERCUSTOMRECIPES]";
         foreach (var RecipeProperty in Plugin.CustomCraftingRecipes.Properties())
         {
             var RecipeObject = RecipeProperty.Value as JObject;
@@ -22,33 +39,59 @@ public class WorkbenchPatch
             {
                 WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
             }
-            else
-            {
-                CustomizedRecipes.Add(RecipeProperty.Name, (Resources.Load(Singleton<ItemsDatabase>.Instance.recipesDict[RecipeProperty.Name]) as GameObject).GetComponent<CraftingRecipes>());
-            }
         }
     }
 
     public static void WorkbenchCraftingAddRecipe(string ItemName, JObject RecipeObject, Workbench instance)
     {
-        var ItemIcon = RecipeObject["icon"]?.Value<string>();
-        var LevelToAddTo = RecipeObject["requiredlevel"]?.Value<int>() ?? 0;
+        var ItemResource = RecipeObject["icon"]?.Value<string>() ?? RecipeObject["resource"]?.Value<string>();
+        var LevelToAddTo = RecipeObject["requiredlevel"]?.Value<int>() - 1 ?? 0;
         var RequirementsToken = RecipeObject["requirements"];
 
-        if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Adding recipe of {ItemName}");
+        if (OnFirst) CustomizedRecipes.Clear();
+        OnFirst = false;
 
-        CustomizedRecipes.Add(ItemName, (Resources.Load(ItemIcon ?? "inventoryitems/meleeweapons/knife") as GameObject).AddComponent<CraftingRecipes>());
+        GameObject ItemResourceObject = LoadResource(ItemResource, true);
+        if (ItemResourceObject == null)
+        {
+            ItemResourceObject = LoadResource(ItemResource);
+        }
+        else
+        {
+            _ = Singleton<ItemsDatabase>.Instance.getItem(ItemName, true);
+            Plugin.Log.LogWarning($"{LogTypeFlag} Item {ItemName} is unused and will not be loaded!");
+            if (!Plugin.WorkbenchUnusedContinue.Value) return;
+            Plugin.Log.LogWarning($"{LogTypeFlag} Trying to load {ItemName} anyway because trying to load unused is enabled!");
+        }
+
+        if (ItemResourceObject == null)
+        {
+            Plugin.Log.LogError($"{LogTypeFlag} Item {ItemName} does not exist!");
+            return;
+        }
+
+        CraftingRecipes ItemPath = ItemResourceObject.GetComponent<CraftingRecipes>() ?? ItemResourceObject.AddComponent<CraftingRecipes>();
+
+        if (CustomizedRecipesLog.ContainsKey(ItemName))
+            CustomizedRecipesLog[ItemName] = ItemPath;
+        else
+            CustomizedRecipesLog.Add(ItemName, ItemPath);
+
+        if (CustomizedRecipes.ContainsKey(ItemName))
+            CustomizedRecipes[ItemName] = ItemPath;
+        else
+            CustomizedRecipes.Add(ItemName, ItemPath);
+
         CustomizedRecipes[ItemName].recipes = [new CraftingRecipes.Recipe { requirements = [] }];
+        CustomizedRecipes[ItemName].recipes[0].produceAmount = RecipeObject["givesamount"]?.Value<int>() ?? 1;
 
         if (RequirementsToken != null)
         {
-            if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo("Looping through requirements");
             foreach (var requirement in RequirementsToken.Children<JProperty>())
             {
                 var itemName = requirement.Name;
                 var amount = requirement.Value.Value<int>();
 
-                if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Adding requirement of {itemName} for {amount} amount");
                 var item = Singleton<ItemsDatabase>.Instance.getItem(itemName, true);
 
                 if (item == null)
@@ -59,7 +102,6 @@ public class WorkbenchPatch
 
                 if (!item.stackable && item.maxDurability > 0)
                 {
-                    if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Adding durability requirement of {itemName} for {amount} amount");
                     CustomizedRecipes[ItemName].recipes[0].requirements.Add(new CraftingRequirement
 
                     {
@@ -69,7 +111,6 @@ public class WorkbenchPatch
                 }
                 else
                 {
-                    if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Adding amount requirement of {itemName} for {amount} amount");
                     CustomizedRecipes[ItemName].recipes[0].requirements.Add(new CraftingRequirement
                     {
                         item = item,
@@ -79,16 +120,83 @@ public class WorkbenchPatch
             }
         }
 
-        if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"Added recipe of {ItemName} with {CustomizedRecipes[ItemName].recipes[0].requirements.Count} requirements at level {LevelToAddTo} workbench");
-        Plugin.Log.LogInfo(CustomizedRecipes[ItemName]);
         for (int i = 0; i < 8; i++)
         {
-            int index = instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipes[ItemName].name);
+            int index = instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipesLog[ItemName].name);
             if (index != -1)
             {
                 instance.levels[i].recipes.RemoveAt(index);
             }
         }
+
+        if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"{LogTypeFlag} Added recipe of {ItemName} with {CustomizedRecipes[ItemName].recipes[0].requirements.Count} requirements at level {LevelToAddTo} workbench");
         instance.levels[LevelToAddTo].recipes.Add(CustomizedRecipes[ItemName]);
+    }
+
+    public static GameObject LoadResource(string itemName, bool UnusedOnly = false)
+    {
+        var resourcePaths = new[]
+        {
+            $"InventoryItems/{itemName}",
+            $"InventoryItems_NotUsed/{itemName}",
+        };
+        if (UnusedOnly)
+        {
+            resourcePaths = new[]
+            {
+                $"InventoryItems_NotUsed/{itemName}",
+            };
+        }
+        foreach (var resourcePath in resourcePaths)
+        {
+            try
+            {
+                var resource = Resources.Load<GameObject>(resourcePath);
+                if (resource != null)
+                {
+                    return resource;
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore exceptions when loading resources
+            }
+        }
+
+        // If we're only looking for unused items it should exit above, if it doesnt that means we're looking for an item that exists in the game
+        if (UnusedOnly) return null;
+
+        var categories = new[]
+        {
+            "Materials",
+            "Misc",
+            "Ammo",
+            "Consumables",
+            "Useable",
+            "FireArms",
+            "MeleeWeapons",
+            "Traps",
+            "ThrownItems",
+            "ExpObjs",
+            "Home",
+        };
+        foreach (var category in categories)
+        {
+            string resourcePath = $"InventoryItems/{category}/{itemName}";
+            try
+            {
+                var resource = Resources.Load<GameObject>(resourcePath);
+                if (resource != null)
+                {
+                    return resource;
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore exceptions when loading resources
+            }
+        }
+
+        return null;
     }
 }

@@ -13,12 +13,17 @@ public class InvItemClassPatch
     [HarmonyPostfix]
     public static void ItemPatch(InvItemClass __instance)
     {
+        if (Singleton<Dreams>.Instance.dreaming || __instance.baseClass == null)
+        {
+            return;
+        }
+        var type = __instance.baseClass.type ?? __instance.type;
         if (Plugin.LogItems.Value)
         {
-            if (!ItemStackSizes.Contains(__instance.baseClass.name))
+            if (!ItemStackSizes.Contains(type))
             {
-                ItemStackSizes.Add(__instance.baseClass.name);
-                Plugin.Log.LogInfo($"[ITEM] {__instance.baseClass.name}: Amount: {__instance.baseClass.maxAmount} Icon: {__instance.baseClass.iconType}");
+                ItemStackSizes.Add(type);
+                Plugin.Log.LogInfo($"[ITEM] {type}: Amount: {__instance.baseClass.maxAmount} Icon: {__instance.baseClass.iconType}");
             }
         }
         if (Plugin.ChangeStacks.Value)
@@ -27,7 +32,7 @@ public class InvItemClassPatch
             {
                 __instance.baseClass.maxAmount = Plugin.StackResize.Value;
             }
-            if (Plugin.CustomStacks.TryGetValue(__instance.baseClass.name, out JToken value))
+            if (Plugin.CustomStacks.TryGetValue(type, out JToken value))
             {
                 __instance.baseClass.maxAmount = int.Parse(value.ToString());
             }
