@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.1";
+    public const string PluginVersion = "1.3.2";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -49,27 +49,48 @@ public class Plugin : BaseUnityPlugin
     {
         weapon_flamethrower_homeMade = new
         {
+            ReadMePlease = "Welcome to the default CustomItems.json I recommend editing these kind of files with something that has linting, which will tell you if you've made a mistake somewhere, I personally use VSCode.. because that's what I use to code this plugin but you can also use Notepad++",
+            note = "This is an example for you, you don't need to add this many data types but you can, if you want",
+            note2 = "Copy this whole file to Customs/CustomItems.json and change the values, they will take priority over the defaults, note that if defaults are enabled, these will still take effect and yours will just override them",
+            note4 = "Continuing off of last note, if you want to change just the name, make a copy of this in Customs/CustomItems.json and remove everything except the name and description, and then change them, you'll see that the item still works despite your json having basically nothing in it, that is if defaults are enabled",
+            note3 = "If you want to fully disable defaults, do that in Items.cfg",
+            note5 = "anyway, flamethrower is a bit finnicky and I've made it use ammo instead of durability but it still likes to be funky and will always say 'This item is broken'",
             name = "Flamethrower",
-            description = "It's a flamethrower!",
+            description = "Makeshift flamethrower made with some kind of gun scraps and two tanks strapped to it, I better be careful with this.",
+            descriptionandnameNote = "The above values override the default game name and description of the item this is assigned to, so you can literally change it to whatever you want",
+            descriptionandnameNote2 = "You can try this by adding these values to the lantern item and seeing that it will change its name and description",
             iconType = "weapon_flamethrower_military_01",
+            iconTypeNote = "You can look at ItemLog.log and get icons from items and put them here, if something breaks while making the item, know that it might be this, if nothing works just set this to the items' name",
             fireMode = "fullAuto",
-            hasAmmo = false,
+            fireModeNote = "Fire modes: burst, single, semi, auto/fullauto. Single is for singleuse items",
+            hasAmmo = true,
             canBeReloaded = true,
             ammoReloadType = "magazine",
+            ammoReloadTypeNote = "This dictates which type of reload this item does, single or magazine, magazine restores the items max ammo, single restores only 1 ammo in the item",
             ammoType = "gasoline",
-            hasDurability = true,
-            maxDurability = 200f,
+            hasDurability = false,
+            maxDurability = 100f,
             ignoreDurabilityInValue = true,
+            ignoreDurabilityInValueNote = "Traders reduce the value of the item if it has a lower durability, this will disable that if it's set to true",
             repairable = true,
+            repairableNote = "Whether or not the item can be repaired, in this case, the flamethrower",
             requirements = new
             {
                 gasoline = 1,
             },
-            damage = 60,
+            requirementsNote = "This says which items should be used for repairing this one, and how many of those items, and yes, it can have multiple repair requirements, just add a comma and another item below",
+            damage = 5,
             flamethrowerdrag = 0.4f,
             flamethrowercontactDamage = 20,
-            clipSize = 1000,
+            flamethrowerNote = "The above two values are only for flamethrowers, dont expect them to work for other items",
+            clipSize = 100,
+            clipSizeNote = "The above value sets how much max ammo this item can have",
             value = 100,
+            drainDurabilityOnShot = false,
+            drainAmmoOnShot = true,
+            drainNotes = "The two above values dictate whether or not my mod will drain the ammo/durability of this item when its fired, only enable this when the item doesnt do that by default",
+            InfiniteAmmo = false,
+            InfiniteDurability = false,
         },
         lantern = new
         {

@@ -1,4 +1,5 @@
 using HarmonyLib;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -13,11 +14,61 @@ public class PlayerPatch
     private static void PlayerFiresWeapon()
     {
         if (!Plugin.ItemsModification.Value) return;
-        if (Player.Instance.currentItem.type == "weapon_flamethrower_homeMade")
+
+        bool isInfiniteAmmo;
+        bool isInfiniteDurability;
+        JObject data;
+        (bool, bool) shouldDrain;
+
+        if (Plugin.CustomItems.ContainsKey(Player.Instance.currentItem.type))
         {
-            //Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
-            Player.Instance.currentItem.drainDurability(1f);
+            data = (JObject)Plugin.CustomItems[Player.Instance.currentItem.type];
+            isInfiniteAmmo = (bool)(data["InfiniteAmmo"] ?? false);
+            isInfiniteDurability = (bool)(data["InfiniteDurability"] ?? false);
+            shouldDrain = DrainWeapon(Player.Instance.currentItem, data);
         }
+        else
+        {
+            data = (JObject)Plugin.DefaultCustomItems[Player.Instance.currentItem.type];
+            isInfiniteAmmo = (bool)(data["InfiniteAmmo"] ?? false);
+            isInfiniteDurability = (bool)(data["InfiniteDurability"] ?? false);
+            shouldDrain = DrainWeapon(Player.Instance.currentItem, data);
+        }
+        switch (shouldDrain)
+        {
+            case (true, true):
+                Player.Instance.currentItem.ammo -= 1;
+                Player.Instance.currentItem.drainDurability(1f);
+                break;
+            case (true, false):
+                Player.Instance.currentItem.drainDurability(1f);
+                break;
+            case (false, true):
+                Player.Instance.currentItem.ammo -= 1;
+                break;
+            case (false, false):
+                break;
+        }
+        if (Player.Instance.currentItem.ammo > Player.Instance.currentItem.baseClass.clipSize) Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
+        if (Player.Instance.currentItem.durability > Player.Instance.currentItem.baseClass.maxDurability) Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
+        if (isInfiniteAmmo)
+        {
+            Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
+            return;
+        }
+        if (isInfiniteDurability)
+        {
+            Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
+            return;
+        }
+    }
+
+    private static (bool, bool) DrainWeapon(InvItemClass Weapon, JObject data)
+    {
+        if (data == null) return (false, false);
+        bool drainDurability = (bool)(data["drainDurabilityOnShot"] ?? false);
+        bool drainAmmo = (bool)(data["drainAmmoOnShot"] ?? false);
+        return (drainDurability, drainAmmo);
     }
 
     [HarmonyPatch(typeof(Player), nameof(Player.registerMe))]
