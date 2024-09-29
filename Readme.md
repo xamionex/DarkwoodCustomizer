@@ -1,12 +1,14 @@
 # DarkwoodCustomizer
 
-A mod for darkwood that lets you customize a lot of things about your player\
+A mod for darkwood that lets you customize a lot of things about your game\
 There is too many things that you can customize to be listed here\
 The mod has full documentation on every option in the config, don't miss those!\
 Most options are set to vanilla by default with a few exceptions like:\
-Beartraps are recovered when disarming them, Lantern can be repaired using gasoline (0.2L)\
+Trap materials are recovered when disarming them\
+Custom Items added by default like the unused items\
+Lantern repair\
 Workbench inventory is 9x12\
-You can find versions of the dll in every commit change and download it
+And more, check out the cfgs to get the most out of this mod and make your game to your liking.
 
 ## WARNING
 
