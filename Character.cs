@@ -42,6 +42,7 @@ public class CharacterPatch
 
     public static void UpdateCharacterValues(Character __instance, JToken Stats, string name, bool UpdateHealth = false)
     {
+        if (__instance == null) return;
         float MaxHealth = float.Parse(Stats["Health"]?.ToString() ?? "1");
         if (MaxHealth != __instance.maxHealth)
         {

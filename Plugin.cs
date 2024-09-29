@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.9";
+    public const string PluginVersion = "1.3.0";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -97,21 +97,26 @@ public class Plugin : BaseUnityPlugin
     public static ConfigFile InventoriesConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Inventories.cfg"), true);
     public static ConfigEntry<bool> RemoveExcess;
 
-    // Workbench
+    // Workbench values
     public static ConfigEntry<bool> WorkbenchInventoryModification;
-    public static ConfigEntry<float> WorkbenchCraftingOffset;
+    public static ConfigEntry<float> CraftingOffset;
     public static ConfigEntry<int> RightSlots;
     public static ConfigEntry<int> DownSlots;
 
-    // Inventory
+    // Inventory values
     public static ConfigEntry<int> InventoryRightSlots;
     public static ConfigEntry<int> InventoryDownSlots;
     public static ConfigEntry<bool> InventorySlots;
 
-    // Hotbar
+    // Hotbar values
     public static ConfigEntry<int> HotbarRightSlots;
     public static ConfigEntry<int> HotbarDownSlots;
     public static ConfigEntry<bool> HotbarSlots;
+
+    // Crafting values
+    public static ConfigEntry<int> CraftingRightSlots;
+    public static ConfigEntry<int> CraftingDownSlots;
+    public static ConfigEntry<bool> CraftingSlots;
 
     // Character Values
     public static ConfigFile CharacterConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Characters.cfg"), true);
@@ -256,16 +261,16 @@ public class Plugin : BaseUnityPlugin
         ConfigFile CategoryConfigFile = ConfigFile;
         CategoryConfigFile.Bind($"Note", "Thank you", "no prob!", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
         LogDebug = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
-        LogItems = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nProtip: Enable on main menu, load your save, disable it, quit the game and open Bepinex/LogOutput.log, then you'll have all the items in the game listed\nYou can comment if you wish to know what the item's name you're looking for is too.");
+        LogItems = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nWhen enabled logs will be saved in ItemLog.log");
         LogCharacters = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
         LogWorkbench = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Workbench", false, "Whether to log every time a custom recipe is added to the workbench");
 
         // Items config
         CategoryConfigFile = ItemsConfigFile;
         ItemsModification = CategoryConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does require save reloads for everything except trap recoveries");
-        BearTrapRecovery = CategoryConfigFile.Bind($"Items", "BearTrap Recovery", true, "Whether or not you recover a beartrap when disarming it");
+        BearTrapRecovery = CategoryConfigFile.Bind($"Items", "BearTrap Recovery", true, "Enables the option below");
         BearTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "BearTrap Recover Items", true, "false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal");
-        ChainTrapRecovery = CategoryConfigFile.Bind($"Items", "ChainTrap Recovery", true, "Whether or not you recover a chaintrap when disarming it");
+        ChainTrapRecovery = CategoryConfigFile.Bind($"Items", "ChainTrap Recovery", true, "Enables the option below");
         ChainTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "ChainTrap Recover Items", true, "false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal");
         UseGlobalStackSize = CategoryConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
         StackResize = CategoryConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to.");
@@ -277,10 +282,9 @@ public class Plugin : BaseUnityPlugin
         RemoveExcess = CategoryConfigFile.Bind($"Inventories", "Remove Excess Slots", true, "Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)");
 
         // Workbench
-        WorkbenchInventoryModification = CategoryConfigFile.Bind($"Workbench", "Enable Section", false, "Enables this section of the mod, warning: disabling will not return the workbench to vanilla, you have to do it with this config");
-        WorkbenchCraftingOffset = CategoryConfigFile.Bind($"Workbench", "Workbench Crafting Offset", 1000f, "Pixels offset for the workbench crafting window, no longer requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
-        RightSlots = CategoryConfigFile.Bind($"Workbench", "Storage Right Slots", 12, "Number that determines slots in workbench to the right, vanilla is 6");
-        DownSlots = CategoryConfigFile.Bind($"Workbench", "Storage Down Slots", 9, "Number that determines slots in workbench downward, vanilla is 8");
+        WorkbenchInventoryModification = CategoryConfigFile.Bind($"Workbench", "Enable Section", false, "Enables this section of the mod, warning: disabling will return the workbench to vanilla, if you have items on the slots that will be removed, they will be gone");
+        RightSlots = CategoryConfigFile.Bind($"Workbench", "Storage Right Slots", 12, "Number that determines slots in workbench to the right");
+        DownSlots = CategoryConfigFile.Bind($"Workbench", "Storage Down Slots", 9, "Number that determines slots in workbench downward");
 
         // Inventory
         InventorySlots = CategoryConfigFile.Bind($"Inventory", "Enable Section", false, "This will circumvent the inventory progression and enable this section, disable to return to default Inventory slots");
@@ -291,6 +295,12 @@ public class Plugin : BaseUnityPlugin
         HotbarSlots = CategoryConfigFile.Bind($"Hotbar", "Enable Section", false, "This will circumvent the Hotbar progression and enable this section, disable to return to default Hotbar slots");
         HotbarRightSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Right Slots", 1, "Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)");
         HotbarDownSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)");
+
+        // Crafting
+        CraftingSlots = CategoryConfigFile.Bind($"Crafting", "Enable Section", true, "Enable this section of the mod, disable to return to default Crafting slots, warning: disabling this while having custom items on will break your game as there are too many items to display in the crafting window");
+        CraftingOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window Offset", 1000f, "Pixels offset for the workbench crafting window, no longer requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
+        CraftingRightSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Right Slots", 7, "Number that determines slots in Crafting window to the right.");
+        CraftingDownSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Down Slots", 7, "Number that determines slots in Crafting window downward.");
 
         // Character values
         CategoryConfigFile = CharacterConfigFile;

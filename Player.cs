@@ -1,4 +1,3 @@
-using System.IO;
 using HarmonyLib;
 using UnityEngine;
 
@@ -25,6 +24,7 @@ public class PlayerPatch
     [HarmonyPostfix]
     public static void PlayerRegistered(Player __instance)
     {
+        RefreshPlayer = true;
         __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
     }
 

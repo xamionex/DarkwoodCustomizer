@@ -29,7 +29,7 @@ public class InventoryPatch
 
 	public static float GetWorkbenchCraftingOffset()
 	{
-		return Plugin.WorkbenchCraftingOffset.Value; // Return the actual value
+		return Plugin.CraftingOffset.Value; // Return the actual value
 	}
 
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
@@ -40,29 +40,60 @@ public class InventoryPatch
 
 		if (labelName == "Storage")
 		{
-			__instance.maxColumns = Plugin.RightSlots.Value;
-			maxSlots = __instance.maxColumns * Plugin.DownSlots.Value;
+			if (Plugin.WorkbenchInventoryModification.Value)
+			{
+				__instance.maxColumns = Plugin.RightSlots.Value;
+				maxSlots = __instance.maxColumns * Plugin.DownSlots.Value;
+			}
+			else
+			{
+				__instance.maxColumns = 6;
+				maxSlots = 48; // 6*8
+			}
 		}
-		else if (Plugin.HotbarSlots.Value && __instance.isHotbar())
+		else
 		{
-			__instance.maxColumns = Plugin.HotbarRightSlots.Value;
-			maxSlots = __instance.maxColumns * Plugin.HotbarDownSlots.Value;
+			switch (__instance.invType)
+			{
+				case Inventory.InvType.crafting:
+					if (Plugin.CraftingSlots.Value)
+					{
+						__instance.maxColumns = Plugin.CraftingRightSlots.Value;
+						maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
+					}
+					else
+					{
+						__instance.maxColumns = 5;
+						maxSlots = 35; // 5*7
+					}
+					break;
+				case Inventory.InvType.hotbar:
+					if (Plugin.HotbarSlots.Value)
+					{
+						__instance.maxColumns = Plugin.HotbarRightSlots.Value;
+						maxSlots = __instance.maxColumns * Plugin.HotbarDownSlots.Value;
+					}
+					else
+					{
+						__instance.maxColumns = 1;
+						maxSlots = 3 + Player.Instance.hotbarUpgrades;
+					}
+					break;
+				case Inventory.InvType.playerInv:
+					if (Plugin.InventorySlots.Value)
+					{
+						__instance.maxColumns = Plugin.InventoryRightSlots.Value;
+						maxSlots = __instance.maxColumns * Plugin.InventoryDownSlots.Value;
+					}
+					else
+					{
+						__instance.maxColumns = 2;
+						maxSlots = 12 + (2 * Player.Instance.inventoryUpgrades);
+					}
+					break;
+			}
 		}
-		else if (Plugin.InventorySlots.Value && __instance.invType == Inventory.InvType.playerInv)
-		{
-			__instance.maxColumns = Plugin.InventoryRightSlots.Value;
-			maxSlots = __instance.maxColumns * Plugin.InventoryDownSlots.Value;
-		}
-		else if (__instance.invType == Inventory.InvType.playerInv)
-		{
-			__instance.maxColumns = 2;
-			maxSlots = 12 + (2 * Player.Instance.inventoryUpgrades);
-		}
-		else if (__instance.isHotbar())
-		{
-			__instance.maxColumns = 1;
-			maxSlots = 3 + Player.Instance.hotbarUpgrades;
-		}
+
 
 		if (maxSlots > 0 && maxSlots != __instance.slots.Count)
 		{
