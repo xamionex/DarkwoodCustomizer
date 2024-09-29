@@ -1,3 +1,4 @@
+using System.IO;
 using HarmonyLib;
 using UnityEngine;
 
@@ -6,6 +7,19 @@ namespace DarkwoodCustomizer;
 public class PlayerPatch
 {
     public static bool RefreshPlayer = true;
+
+
+    [HarmonyPatch(typeof(Player), "fireWeapon")]
+    [HarmonyPostfix]
+    private static void PlayerFiresWeapon()
+    {
+        if (!Plugin.ItemsModification.Value) return;
+        if (Player.Instance.currentItem.type == "weapon_flamethrower_homeMade")
+        {
+            //Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
+            Player.Instance.currentItem.drainDurability(1f);
+        }
+    }
 
     [HarmonyPatch(typeof(Player), nameof(Player.registerMe))]
     [HarmonyPostfix]

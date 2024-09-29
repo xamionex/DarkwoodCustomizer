@@ -9,8 +9,7 @@ public static class ItemPatch
     public static void PickingUpGroundItem(Item __instance)
     {
         // Since this includes mushrooms and more dont exit if it isnt beartrap, for future code if needed
-        if (!Plugin.EnableItemsModification.Value) return;
-        Plugin.Log.LogInfo(__instance.name);
+        if (!Plugin.ItemsModification.Value) return;
         if (Plugin.BearTrapRecovery.Value && __instance.name == "bearTrap")
         {
             __instance.invItemAmount = 3;

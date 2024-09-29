@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.2.8";
+    public const string PluginVersion = "1.2.9";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -32,35 +32,66 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> LogCharacters;
     public static ConfigEntry<bool> LogWorkbench;
 
-    // Stack Resize Values
-    public static ConfigFile StacksConfigFile = new(Path.Combine(ConfigPath, "Stacks.cfg"), true);
-    public static ConfigEntry<bool> ChangeStacks;
-    public static ConfigEntry<bool> UseGlobalStackSize;
-    public static ConfigEntry<int> StackResize;
-    public static ConfigEntry<bool> CustomStacksUseDefaults;
-    public static string CustomStacksPath => Path.Combine(JsonConfigPath, "CustomStacks.json");
-    public static string DefaultsCustomStacksPath = Path.Combine(DefaultsConfigPath, "CustomStacks.json");
-    public static JObject CustomStacks;
-    public static JObject DefaultCustomStacks = JObject.FromObject(new
-    {
-        nail = 500,
-        wood = 500,
-    });
-
     // Items Values
     public static ConfigFile ItemsConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Items.cfg"), true);
-    public static ConfigEntry<bool> EnableItemsModification;
+    public static ConfigEntry<bool> UseGlobalStackSize;
+    public static ConfigEntry<int> StackResize;
+    public static ConfigEntry<bool> ItemsModification;
     public static ConfigEntry<bool> BearTrapRecovery;
     public static ConfigEntry<bool> BearTrapRecoverySwitch;
     public static ConfigEntry<bool> ChainTrapRecovery;
     public static ConfigEntry<bool> ChainTrapRecoverySwitch;
-
-    // Lantern Repair Values
-    public static ConfigFile LanternConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Lantern.cfg"), true);
-    public static ConfigEntry<bool> RepairLantern;
-    public static ConfigEntry<string> LanternRepairConfig;
-    public static ConfigEntry<int> LanternAmountRepairConfig;
-    public static ConfigEntry<float> LanternDurabilityRepairConfig;
+    public static ConfigEntry<bool> CustomItemsUseDefaults;
+    public static string CustomItemsPath => Path.Combine(JsonConfigPath, "CustomItems.json");
+    public static string DefaultsCustomItemsPath = Path.Combine(DefaultsConfigPath, "CustomItems.json");
+    public static JObject CustomItems;
+    public static JObject DefaultCustomItems = JObject.FromObject(new
+    {
+        weapon_flamethrower_homeMade = new
+        {
+            name = "Flamethrower",
+            description = "It's a flamethrower!",
+            iconType = "weapon_flamethrower_military_01",
+            fireMode = "fullAuto",
+            hasAmmo = false,
+            canBeReloaded = true,
+            ammoReloadType = "magazine",
+            ammoType = "gasoline",
+            hasDurability = true,
+            maxDurability = 200f,
+            ignoreDurabilityInValue = true,
+            repairable = true,
+            requirements = new
+            {
+                gasoline = 1,
+            },
+            damage = 60,
+            flamethrowerdrag = 0.4f,
+            flamethrowercontactDamage = 20,
+            clipSize = 1000,
+            value = 100,
+        },
+        lantern = new
+        {
+            hasDurability = true,
+            maxDurability = 1200f,
+            repairable = true,
+            requirements = new
+            {
+                gasoline = 0.2,
+            },
+        },
+        nail = new
+        {
+            isStackable = true,
+            maxAmount = 50,
+        },
+        wood = new
+        {
+            isStackable = true,
+            maxAmount = 50,
+        },
+    });
 
     // Inventory Resize Values
     public static ConfigFile InventoriesConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Inventories.cfg"), true);
@@ -207,8 +238,18 @@ public class Plugin : BaseUnityPlugin
                 nail = 1,
             },
         },
+        weapon_flamethrower_homeMade = new
+        {
+            requiredlevel = 4,
+            resource = "weapon_flamethrower_homeMade",
+            givesamount = 1,
+            requirements = new
+            {
+                firecraft_weaponParts = 2,
+                gasoline = 2,
+            },
+        },
     });
-
     private void BepinexBindings()
     {
         // Base Plugin config
@@ -219,28 +260,17 @@ public class Plugin : BaseUnityPlugin
         LogCharacters = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
         LogWorkbench = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Workbench", false, "Whether to log every time a custom recipe is added to the workbench");
 
-        // Stacks config
-        CategoryConfigFile = StacksConfigFile;
-        ChangeStacks = CategoryConfigFile.Bind($"Stack Sizes", "Enable Section", false, "Whether or not stack sizes will be changed by the mod.");
-        UseGlobalStackSize = CategoryConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
-        StackResize = CategoryConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to. Requires reload of save for most items to take effect (Return to Menu > Load Save)");
-        CustomStacksUseDefaults = CategoryConfigFile.Bind($"Stack Sizes", "Load Mod Defaults First", true, "Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten");
-        CustomStacks = (JObject)GetJsonConfig(CustomStacksPath, new JObject { });
-
         // Items config
         CategoryConfigFile = ItemsConfigFile;
-        EnableItemsModification = CategoryConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does not require restarts");
+        ItemsModification = CategoryConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does require save reloads for everything except trap recoveries");
         BearTrapRecovery = CategoryConfigFile.Bind($"Items", "BearTrap Recovery", true, "Whether or not you recover a beartrap when disarming it");
         BearTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "BearTrap Recover Items", true, "false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal");
         ChainTrapRecovery = CategoryConfigFile.Bind($"Items", "ChainTrap Recovery", true, "Whether or not you recover a chaintrap when disarming it");
         ChainTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "ChainTrap Recover Items", true, "false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal");
-
-        // Lantern config
-        CategoryConfigFile = LanternConfigFile;
-        RepairLantern = CategoryConfigFile.Bind($"Lantern", "Enable Section", true, "Whether or not lantern can be repaired using gasoline on the workbench");
-        LanternRepairConfig = CategoryConfigFile.Bind($"Lantern", "Lantern Repair Item", "gasoline", "What item will be used for repairing the lantern. (recommended: gasoline or molotov)");
-        LanternAmountRepairConfig = CategoryConfigFile.Bind($"Lantern", "Lantern Amount of Item Used", 1, "Item amount of item to use? Ex. 1 molotov to repair");
-        LanternDurabilityRepairConfig = CategoryConfigFile.Bind($"Lantern", "Lantern Durability of Item Used", 0.2f, "Item durability amount to use? Ex. 0.2 of a gasoline to repair");
+        UseGlobalStackSize = CategoryConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
+        StackResize = CategoryConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to.");
+        CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
+        CustomItemsUseDefaults = CategoryConfigFile.Bind($"Items", "Load Mod Defaults First", true, "Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten");
 
         // Inventories config
         CategoryConfigFile = InventoriesConfigFile;
@@ -259,8 +289,8 @@ public class Plugin : BaseUnityPlugin
 
         // Hotbar
         HotbarSlots = CategoryConfigFile.Bind($"Hotbar", "Enable Section", false, "This will circumvent the Hotbar progression and enable this section, disable to return to default Hotbar slots");
-        HotbarRightSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Right Slots", 1, "Number that determines slots in Hotbar to the right, requires reload of save (Return to Menu > Load Save)");
-        HotbarDownSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward, requires reload of save (Return to Menu > Load Save)");
+        HotbarRightSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Right Slots", 1, "Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)");
+        HotbarDownSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)");
 
         // Character values
         CategoryConfigFile = CharacterConfigFile;
@@ -342,10 +372,10 @@ public class Plugin : BaseUnityPlugin
         if (!File.Exists(DefaultsCustomCraftingRecipesPath))
             File.WriteAllText(DefaultsCustomCraftingRecipesPath, JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented));
 
-        if (File.Exists(DefaultsCustomStacksPath) && !File.ReadAllText(DefaultsCustomStacksPath).Equals(JsonConvert.SerializeObject(DefaultCustomStacks, Formatting.Indented)))
-            File.Delete(DefaultsCustomStacksPath);
-        if (!File.Exists(DefaultsCustomStacksPath))
-            File.WriteAllText(DefaultsCustomStacksPath, JsonConvert.SerializeObject(DefaultCustomStacks, Formatting.Indented));
+        if (File.Exists(DefaultsCustomItemsPath) && !File.ReadAllText(DefaultsCustomItemsPath).Equals(JsonConvert.SerializeObject(DefaultCustomItems, Formatting.Indented)))
+            File.Delete(DefaultsCustomItemsPath);
+        if (!File.Exists(DefaultsCustomItemsPath))
+            File.WriteAllText(DefaultsCustomItemsPath, JsonConvert.SerializeObject(DefaultCustomItems, Formatting.Indented));
     }
 
     private void Awake()
@@ -353,9 +383,11 @@ public class Plugin : BaseUnityPlugin
         Log = Logger;
 
         // 1.1.9 migration check
-        MigrateConfigFiles();
+        Migrate119Configs();
         // 1.2.6 migration check
-        MigrateJsonFiles();
+        Migrate126Configs();
+        // 1.2.8 migration check
+        Migrate128Configs();
 
         BepinexBindings();
         MakeDefaults();
@@ -381,6 +413,8 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(CamMainPatch));
         Log.LogInfo($"Patching in WorkbenchPatch! (Recipes)");
         Harmony.PatchAll(typeof(WorkbenchPatch));
+        Log.LogInfo($"Patching in LanguagePatch! (Item Names)");
+        Harmony.PatchAll(typeof(LanguagePatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
@@ -418,10 +452,6 @@ public class Plugin : BaseUnityPlugin
             case "Items.cfg":
                 ItemsConfigFile.Reload();
                 break;
-            case "Lantern.cfg":
-                InvItemClassPatch.RefreshLantern = true;
-                LanternConfigFile.Reload();
-                break;
             case "Player.cfg":
                 PlayerPatch.RefreshPlayer = true;
                 PlayerConfigFile.Reload();
@@ -431,9 +461,6 @@ public class Plugin : BaseUnityPlugin
                 break;
             case "Characters.json":
                 CharacterConfigFile.Reload();
-                break;
-            case "Stacks.cfg":
-                StacksConfigFile.Reload();
                 break;
             case "Time.cfg":
                 TimeConfigFile.Reload();
@@ -448,14 +475,14 @@ public class Plugin : BaseUnityPlugin
             case "Workbench.cfg":
                 WorkbenchConfigFile.Reload();
                 break;
-            case "CustomStacks.json":
-                CustomStacks = (JObject)GetJsonConfig(CustomStacksPath, new JObject { });
-                break;
             case "CustomCharacters.json":
                 CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
                 break;
             case "CustomCraftingRecipes.json":
                 CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
+                break;
+            case "CustomItems.json":
+                CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
                 break;
             default:
                 Log.LogInfo($"Unknown file was edited.");
@@ -504,13 +531,13 @@ public class Plugin : BaseUnityPlugin
 
     public static JObject CreateNewJsonFile(string FilePath, JObject DefaultJson)
     {
-        var i = 0;
-        var NewFilePath = FilePath;
         if (File.Exists(FilePath))
         {
+            var i = 0;
+            var NewFilePath = FilePath;
             while (File.Exists(NewFilePath))
             {
-                NewFilePath = $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}";
+                NewFilePath = Path.Combine(Path.GetDirectoryName(FilePath), $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}");
             }
             File.Move(FilePath, NewFilePath);
             File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
@@ -549,7 +576,7 @@ public class Plugin : BaseUnityPlugin
     }
 
 
-    private void MigrateConfigFiles()
+    private void Migrate119Configs()
     {
         // 1.1.9 migration check
         string loggingConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID + ".cfg");
@@ -578,18 +605,16 @@ public class Plugin : BaseUnityPlugin
         }
         InventoriesConfigFile.Reload();
         ItemsConfigFile.Reload();
-        LanternConfigFile.Reload();
         PlayerConfigFile.Reload();
         CharacterConfigFile.Reload();
         CharacterConfigFile.Reload();
-        StacksConfigFile.Reload();
         TimeConfigFile.Reload();
         GeneratorConfigFile.Reload();
         CameraConfigFile.Reload();
         Log.LogInfo("Reloaded all configs!");
     }
 
-    private void MigrateJsonFiles()
+    private void Migrate126Configs()
     {
         // 1.2.6 migration check
         // Move JSON files
@@ -614,6 +639,39 @@ public class Plugin : BaseUnityPlugin
                 Directory.Delete(OldDefaultsFolder, true);
                 Log.LogInfo($"Deleted old defaults folder at \"{OldDefaultsFolder}\"");
             }
+        }
+    }
+
+
+    private void Migrate128Configs()
+    {
+        // 1.2.8 migration check
+        string OldLanternConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "Lantern.cfg");
+        if (File.Exists(OldLanternConfig))
+        {
+            File.Delete(OldLanternConfig);
+            Log.LogInfo($"Deleted old Lantern config file at {OldLanternConfig}");
+        }
+        string OldDefaultStacksJson = Path.Combine(DefaultsConfigPath, "CustomStacks.json");
+        if (File.Exists(OldDefaultStacksJson))
+        {
+            File.Delete(OldDefaultStacksJson);
+            Log.LogInfo($"Old Default CustomStacks Json was deleted at {OldDefaultStacksJson}");
+        }
+        string NewPathConfig;
+        string OldStacksConfig = Path.Combine(ConfigPath, "CustomStacks.cfg");
+        if (File.Exists(OldStacksConfig))
+        {
+            NewPathConfig = Path.Combine(ConfigPath, "CustomStacks_Unused_From_128_DeletePlease.cfg");
+            File.Move(OldStacksConfig, NewPathConfig);
+            Log.LogInfo($"Old CustomStacks config can be found at at {NewPathConfig}");
+        }
+        string OldStacksJson = Path.Combine(JsonConfigPath, "CustomStacks.json");
+        if (File.Exists(OldStacksJson))
+        {
+            NewPathConfig = Path.Combine(JsonConfigPath, "CustomStacks_Unused_From_128_DeletePlease.json");
+            File.Move(OldStacksJson, NewPathConfig);
+            Log.LogInfo($"Old CustomStacks Json file can be found at {NewPathConfig}");
         }
     }
 }

@@ -23,23 +23,11 @@ public class WorkbenchPatch
         {
             LogTypeFlag = "[DEFAULTCUSTOMRECIPES]";
             foreach (var RecipeProperty in Plugin.DefaultCustomCraftingRecipes.Properties())
-            {
-                var RecipeObject = RecipeProperty.Value as JObject;
-                if (RecipeObject != null)
-                {
-                    WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
-                }
-            }
+                if (RecipeProperty.Value is JObject RecipeObject) WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
         }
         LogTypeFlag = "[USERCUSTOMRECIPES]";
         foreach (var RecipeProperty in Plugin.CustomCraftingRecipes.Properties())
-        {
-            var RecipeObject = RecipeProperty.Value as JObject;
-            if (RecipeObject != null)
-            {
-                WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
-            }
-        }
+            if (RecipeProperty.Value is JObject RecipeObject) WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
     }
 
     public static void WorkbenchCraftingAddRecipe(string ItemName, JObject RecipeObject, Workbench instance)
@@ -66,7 +54,7 @@ public class WorkbenchPatch
 
         if (ItemResourceObject == null)
         {
-            Plugin.Log.LogError($"{LogTypeFlag} Item {ItemName} does not exist!");
+            Plugin.Log.LogError($"{LogTypeFlag} Item {ItemName} does not exist, stopping as to not break the plugin!");
             return;
         }
 
