@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.0";
+    public const string PluginVersion = "1.3.1";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -255,6 +255,7 @@ public class Plugin : BaseUnityPlugin
             },
         },
     });
+
     private void BepinexBindings()
     {
         // Base Plugin config
@@ -305,7 +306,7 @@ public class Plugin : BaseUnityPlugin
         // Character values
         CategoryConfigFile = CharacterConfigFile;
         CharacterModification = CategoryConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json");
-        CategoryConfigFile.Bind($"Characters", "Note", "ReadMePlease", "Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error");
+        CategoryConfigFile.Bind($"Characters", "Note", "ReadMePlease", "Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades");
         CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
 
         // Player values

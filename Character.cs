@@ -43,18 +43,18 @@ public class CharacterPatch
     public static void UpdateCharacterValues(Character __instance, JToken Stats, string name, bool UpdateHealth = false)
     {
         if (__instance == null) return;
-        float MaxHealth = float.Parse(Stats["Health"]?.ToString() ?? "1");
+        float MaxHealth = Stats["Health"]?.Value<float>() ?? __instance.maxHealth;
         if (MaxHealth != __instance.maxHealth)
         {
             __instance.maxHealth = MaxHealth;
             if (UpdateHealth) __instance.health = MaxHealth;
         }
-        float WalkSpeed = float.Parse(Stats["WalkSpeed"]?.ToString() ?? "1");
+        float WalkSpeed = Stats["WalkSpeed"]?.Value<float>() ?? __instance.idleWalkSpeed;
         if (WalkSpeed != __instance.idleWalkSpeed)
         {
             __instance.idleWalkSpeed = WalkSpeed;
         }
-        float ChaseSpeed = float.Parse(Stats["RunSpeed"]?.ToString() ?? "1");
+        float ChaseSpeed = Stats["RunSpeed"]?.Value<float>() ?? __instance.chaseSpeed;
         if (ChaseSpeed != __instance.chaseSpeed)
         {
             __instance.chaseSpeed = ChaseSpeed;
@@ -74,22 +74,38 @@ public class CharacterPatch
                     {
                         var attack = Attack[$"{i + 1}"] as JObject;
                         var damage = attack["Damage"]?.ToObject<int>() ?? null;
-                        if (damage == null)
+                        var barricadeDamage = attack["BarricadeDamage"]?.ToObject<int>() ?? null;
+                        if (damage == null || barricadeDamage == null)
                         {
+                            var newDamage = damage ?? __instance.sensorTypes[i]?.damage ?? null;
+                            var newBarricadeDamage = barricadeDamage ?? __instance.sensorTypes[i]?.barricadeDamage ?? null;
                             attack["AttackName(ReadOnly)"] = __instance.sensorTypes[i].name;
                             attack["AttackIsRanged(ReadOnly)"] = __instance.sensorTypes[i].isRanged;
-                            attack["Damage"] = __instance.sensorTypes[i].damage;
-                            damage = __instance.sensorTypes[i].damage;
+                            attack["Damage"] = newDamage;
+                            attack["BarricadeDamage"] = newBarricadeDamage;
+                            damage = newDamage;
+                            barricadeDamage = newBarricadeDamage;
                             File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
                         }
-                        if (damage == null)
+                        switch ((damage == null, barricadeDamage == null))
                         {
-                            Plugin.Log.LogError($"[CHARACTER] {name} has a corrupted attack damage, skipping!");
-                            return;
+                            case (true, true):
+                                Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted attack damage AND barricade damage, this most likely happened because this charracter is peaceful, skipping!");
+                                break;
+                            case (true, false):
+                                Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted attack damage, this most likely happened because this charracter isnt supposed to deal attack damage, skipping!");
+                                break;
+                            case (false, true):
+                                Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted barricade damage, this most likely happened because this charracter isnt supposed to deal barricade damage, skipping!");
+                                break;
                         };
-                        if (damage != __instance.sensorTypes[i].damage)
+                        if (damage != null && damage != __instance.sensorTypes[i].damage)
                         {
                             __instance.sensorTypes[i].damage = (int)damage;
+                        }
+                        if (barricadeDamage != null && barricadeDamage != 0 && barricadeDamage != __instance.sensorTypes[i].barricadeDamage)
+                        {
+                            __instance.sensorTypes[i].barricadeDamage = (int)barricadeDamage;
                         }
                     }
                 }
@@ -127,7 +143,8 @@ public class CharacterPatch
                         {
                             { "AttackName(ReadOnly)", s.name },
                             { "AttackIsRanged(ReadOnly)", s.isRanged },
-                            { "Damage", s.damage }
+                            { "Damage", s.damage },
+                            { "BarricadeDamage", s.barricadeDamage }
                         }
                     }
                 }).ToArray());
@@ -147,7 +164,8 @@ public class CharacterPatch
                     {
                         { "AttackName(ReadOnly)", s.name },
                         { "AttackIsRanged(ReadOnly)", s.isRanged },
-                        { "Damage", s.damage }
+                        { "Damage", s.damage },
+                        { "BarricadeDamage", s.barricadeDamage }
                     }
                 }
             }).ToArray()
