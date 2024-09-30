@@ -172,6 +172,6 @@ public class CharacterPatch
             });
             Changed = true;
         }
-        if (Changed) File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
+        if (Changed) Plugin.SaveCharacters = true;
     }
 }

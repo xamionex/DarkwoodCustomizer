@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -18,8 +18,14 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.4";
+    public const string PluginVersion = "1.3.5";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
+    public static float LastItemsSaveTime = 0f;
+    public static bool SaveItems = false;
+    public static float SavedItemsCooldown = 0f;
+    public static float LastCharactersSaveTime = 0f;
+    public static bool SaveCharacters = false;
+    public static float SavedCharactersCooldown = 0f;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
     public static FileSystemWatcher fileWatcherJson;
@@ -30,6 +36,7 @@ public class Plugin : BaseUnityPlugin
     public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "ModDefaults");
     public static ConfigEntry<string> ModVersion;
     public static ConfigEntry<bool> LogDebug;
+    public static ConfigEntry<bool> LogJsonReload;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
     public static ConfigEntry<bool> LogWorkbench;
@@ -280,10 +287,11 @@ public class Plugin : BaseUnityPlugin
     private void BepinexBindings()
     {
         // Base Plugin
-        Config.Bind($"!Mod", "Thank you", "no prob!", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.", null, new ConfigurationManagerAttributes { Order = 5 }));
-        ModVersion = Config.Bind($"!Mod", "Version", PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = 4 }));
-        LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = 3 }));
-        LogItems = Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nWhen enabled logs will be saved in ItemLog.log", null, new ConfigurationManagerAttributes { Order = 2 }));
+        Config.Bind($"!Mod", "Thank you", "no prob!", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.", null, new ConfigurationManagerAttributes { Order = 6 }));
+        ModVersion = Config.Bind($"!Mod", "Version", PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = 5 }));
+        LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = 4 }));
+        LogJsonReload = Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = 3 }));
+        LogItems = Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nThis setting does nothing, it is just to say that logs will be saved in ItemLog.log", null, new ConfigurationManagerAttributes { Order = 2 }));
         LogCharacters = Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = 1 }));
         LogWorkbench = Config.Bind($"!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = 0 }));
         ModVersion.Value = PluginVersion;
@@ -489,6 +497,29 @@ public class Plugin : BaseUnityPlugin
             Log.LogInfo($"Time Stop toggled!");
         }
     }
+
+    public void FixedUpdate()
+    {
+        if (SavedItemsCooldown < 0f) SavedItemsCooldown = 0f;
+        else SavedItemsCooldown -= 0.1f;
+        if (SavedCharactersCooldown < 0f) SavedCharactersCooldown = 0f;
+        else SavedCharactersCooldown -= 0.1f;
+        if (Time.time - LastItemsSaveTime > 0.8f && SaveItems)
+        {
+            SaveJsonFile(CustomItemsPath, CustomItems);
+            LastItemsSaveTime = Time.time;
+            SavedItemsCooldown += 1f;
+            SaveItems = false;
+        }
+        if (Time.time - LastCharactersSaveTime > 0.8f && SaveCharacters)
+        {
+            SaveJsonFile(CustomCharactersPath, CustomCharacters);
+            LastCharactersSaveTime = Time.time;
+            SavedCharactersCooldown += 1f;
+            SaveCharacters = false;
+        }
+    }
+
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         switch (e.Name)
@@ -499,16 +530,24 @@ public class Plugin : BaseUnityPlugin
                 Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             case "CustomCharacters.json":
-                CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
-                Log.LogInfo($"{e.Name} was reloaded!");
+                if (SavedCharactersCooldown <= 0f)
+                {
+                    CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
+                    if (LogJsonReload.Value) Log.LogInfo($"{e.Name} was reloaded!");
+                }
+                else return;
                 break;
             case "CustomCraftingRecipes.json":
                 CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
-                Log.LogInfo($"{e.Name} was reloaded!");
+                if (LogJsonReload.Value) Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             case "CustomItems.json":
-                CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
-                Log.LogInfo($"{e.Name} was reloaded!");
+                if (SavedItemsCooldown <= 0f)
+                {
+                    CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
+                    if (LogJsonReload.Value) Log.LogInfo($"{e.Name} was reloaded!");
+                }
+                else return;
                 break;
             default:
                 break;
@@ -537,34 +576,32 @@ public class Plugin : BaseUnityPlugin
 
     public static object GetJsonConfig(string FilePath, JObject DefaultJson)
     {
-        try
-        {
-            // Try to load the existing file
-            var jsonData = GetJsonFile(FilePath);
-
-            if (jsonData == null) return CreateNewJsonFile(FilePath, DefaultJson);
-            return jsonData;
-        }
-        catch (Exception)
-        {
-            // If the file exists and it errors out, rename it to the same name with an increment and make a new default config
-            return CreateNewJsonFile(FilePath, DefaultJson);
-        }
+        return CreateNewJsonFile(FilePath, DefaultJson);
     }
 
     public static JObject CreateNewJsonFile(string FilePath, JObject DefaultJson)
     {
         if (File.Exists(FilePath))
         {
-            var i = 0;
-            var NewFilePath = FilePath;
-            while (File.Exists(NewFilePath))
+            try
             {
-                NewFilePath = Path.Combine(Path.GetDirectoryName(FilePath), $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}");
+                var fileContents = File.ReadAllText(FilePath);
+                JObject jsonObject = JObject.Parse(fileContents);
+
+                return jsonObject;
             }
-            File.Move(FilePath, NewFilePath);
-            File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
-            Log.LogInfo($"Renamed {FilePath} to {NewFilePath} and created new default config because it was erroring out.");
+            catch (Exception ex)
+            {
+                var i = 0;
+                var NewFilePath = FilePath;
+                while (File.Exists(NewFilePath))
+                {
+                    NewFilePath = Path.Combine(Path.GetDirectoryName(FilePath), $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}");
+                }
+                File.Move(FilePath, NewFilePath);
+                Log.LogInfo($"Error loading JSON file: {ex.Message}, using default config, your config has been renamed to {Path.GetFileName(NewFilePath)}");
+                return DefaultJson;
+            }
         }
         else
         {
@@ -579,23 +616,14 @@ public class Plugin : BaseUnityPlugin
         return DefaultJson;
     }
 
-    public static JObject GetJsonFile(string JsonPath)
+    public static void SaveJsonFile(string JsonPath, JObject JsonData)
     {
-        try
+        var directory = Path.GetDirectoryName(JsonPath);
+        if (!Directory.Exists(directory))
         {
-            // Read the file contents
-            var fileContents = File.ReadAllText(JsonPath);
-
-            // Parse the cleaned JSON string
-            JObject jsonObject = JObject.Parse(fileContents);
-
-            return jsonObject;
+            Directory.CreateDirectory(directory);
         }
-        catch (Exception ex)
-        {
-            Log.LogInfo($"Error loading JSON file: {ex.Message}");
-            return null;
-        }
+        File.WriteAllText(JsonPath, JsonConvert.SerializeObject(JsonData, Formatting.Indented));
     }
 
     private void Migrate126Configs()
@@ -716,18 +744,15 @@ public class Plugin : BaseUnityPlugin
                 }
             }
         }
-        if (ConfigFilesPreviousVersions.Count > 0)
+        foreach (string ConfigPreviousVersion in ConfigFilesPreviousVersions)
         {
-            foreach (string ConfigPreviousVersion in ConfigFilesPreviousVersions)
+            if (File.Exists(ConfigPreviousVersion))
             {
                 string oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginGUID, "YourOldConfigs");
                 if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
                 string newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(ConfigPreviousVersion)}.cfg");
-                if (File.Exists(ConfigPreviousVersion))
-                {
-                    File.Move(ConfigPreviousVersion, newConfigFile);
-                    Log.LogInfo($"Old config file at {ConfigPreviousVersion} was moved to {newConfigFile} as its not used anymore");
-                }
+                File.Move(ConfigPreviousVersion, newConfigFile);
+                Log.LogInfo($"Old config file at {ConfigPreviousVersion} was moved to {newConfigFile} as its not used anymore");
             }
         }
         if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginGUID}.cfg"), newConfig);

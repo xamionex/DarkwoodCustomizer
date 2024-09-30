@@ -21,35 +21,44 @@ public class InvItemClassPatch
             return;
         }
         var type = __instance.baseClass.type ?? __instance.type;
-        if (Plugin.LogItems.Value)
+        var icon = __instance.baseClass?.iconType ?? __instance.baseClass.name;
+        var CustomItems = Plugin.CustomItems;
+        if (!CustomItems.ContainsKey(type))
         {
-            if (!LogItem.Contains(type))
+            CustomItems[type] = new JObject
             {
-                LogItem.Add(type);
-                LogStats += $"\n----------------------------------------\n[ITEM] ID [{type}] Stats:\n";
-                LogStats += $"{type}.iconType = {__instance.baseClass.iconType}\n";
-                LogStats += $"{type}.hasAmmo = {__instance.baseClass.hasAmmo}\n";
-                LogStats += $"{type}.canBeReloaded = {__instance.baseClass.canBeReloaded}\n";
-                LogStats += $"{type}.ammoReloadType = {__instance.baseClass.ammoReloadType}\n";
-                LogStats += $"{type}.ammoType = {__instance.baseClass.ammoType}\n";
-                LogStats += $"{type}.hasDurability = {__instance.baseClass.hasDurability}\n";
-                LogStats += $"{type}.maxDurability = {__instance.baseClass.maxDurability}\n";
-                LogStats += $"{type}.ignoreDurabilityInValue = {__instance.baseClass.ignoreDurabilityInValue}\n";
-                LogStats += $"{type}.repairable = {__instance.baseClass.repairable}\n";
-                LogStats += $"{type}.repairrequirements = {__instance.baseClass.gameObject.GetComponent<RepairRequirements>()?.requirements?.Count}\n";
-                LogStats += $"{type}.flamethrowerdrag = {((GameObject)__instance.baseClass.item)?.GetComponent<Rigidbody>()?.drag}\n";
-                LogStats += $"{type}.flamethrowercontactDamage = {((GameObject)__instance.baseClass.item)?.GetComponent<Flame>()?.contactDamage}\n";
-                LogStats += $"{type}.damage = {__instance.baseClass.damage}\n";
-                LogStats += $"{type}.clipSize = {__instance.baseClass.clipSize}\n";
-                LogStats += $"{type}.value = {__instance.baseClass.value}\n";
-                LogStats += $"{type}.maxAmount = {__instance.baseClass.maxAmount}\n";
-                LogStats += $"{type}.stackable = {__instance.baseClass.stackable}\n----------------------------------------\n";
-            }
-            string logPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
-            if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
-            {
-                File.WriteAllText(logPath, LogStats);
-            }
+                { "iconType", icon },
+                { "maxAmount", __instance.baseClass?.maxAmount ?? 0 },
+                { "stackable", __instance.baseClass?.stackable ?? false }
+            };
+            Plugin.SaveItems = true;
+        }
+        if (!LogItem.Contains(type))
+        {
+            LogItem.Add(type);
+            LogStats += $"\n----------------------------------------\n[ITEM] ID [{type}] Stats:\n";
+            LogStats += $"{type}.iconType = {__instance.baseClass.iconType}\n";
+            LogStats += $"{type}.hasAmmo = {__instance.baseClass.hasAmmo}\n";
+            LogStats += $"{type}.canBeReloaded = {__instance.baseClass.canBeReloaded}\n";
+            LogStats += $"{type}.ammoReloadType = {__instance.baseClass.ammoReloadType}\n";
+            LogStats += $"{type}.ammoType = {__instance.baseClass.ammoType}\n";
+            LogStats += $"{type}.hasDurability = {__instance.baseClass.hasDurability}\n";
+            LogStats += $"{type}.maxDurability = {__instance.baseClass.maxDurability}\n";
+            LogStats += $"{type}.ignoreDurabilityInValue = {__instance.baseClass.ignoreDurabilityInValue}\n";
+            LogStats += $"{type}.repairable = {__instance.baseClass.repairable}\n";
+            LogStats += $"{type}.repairrequirements = {__instance.baseClass.gameObject.GetComponent<RepairRequirements>()?.requirements?.Count}\n";
+            LogStats += $"{type}.flamethrowerdrag = {((GameObject)__instance.baseClass.item)?.GetComponent<Rigidbody>()?.drag}\n";
+            LogStats += $"{type}.flamethrowercontactDamage = {((GameObject)__instance.baseClass.item)?.GetComponent<Flame>()?.contactDamage}\n";
+            LogStats += $"{type}.damage = {__instance.baseClass.damage}\n";
+            LogStats += $"{type}.clipSize = {__instance.baseClass.clipSize}\n";
+            LogStats += $"{type}.value = {__instance.baseClass.value}\n";
+            LogStats += $"{type}.maxAmount = {__instance.baseClass.maxAmount}\n";
+            LogStats += $"{type}.stackable = {__instance.baseClass.stackable}\n----------------------------------------\n";
+        }
+        string logPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
+        if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
+        {
+            File.WriteAllText(logPath, LogStats);
         }
         if (!Plugin.ItemsModification.Value) return;
         if (Plugin.UseGlobalStackSize.Value)

@@ -13,14 +13,68 @@ public class LanguagePatch
         if (Plugin.CustomItemsUseDefaults.Value && Plugin.DefaultCustomItems[cleankey] != null)
         {
             var data = (JObject)Plugin.DefaultCustomItems[cleankey];
-            if (key.EndsWith("_name")) __result = data["name"]?.Value<string>() ?? __result;
-            if (key.EndsWith("_desc")) __result = data["description"]?.Value<string>() ?? __result;
+            var name = data["name"]?.Value<string>() ?? null;
+            var desc = data["description"]?.Value<string>() ?? null;
+            if (key.EndsWith("_name") && name != null && name != key) __result = name;
+            if (key.EndsWith("_desc") && desc != null && desc != key) __result = desc;
         }
         if (Plugin.CustomItems[cleankey] != null)
         {
             var data = (JObject)Plugin.CustomItems[cleankey];
-            if (key.EndsWith("_name")) __result = data["name"]?.Value<string>() ?? __result;
-            if (key.EndsWith("_desc")) __result = data["description"]?.Value<string>() ?? __result;
+            var name = data["name"]?.Value<string>() ?? null;
+            var desc = data["description"]?.Value<string>() ?? null;
+            if (key.EndsWith("_name"))
+            {
+                if (name == null)
+                {
+                    if (__result == key) data["name"] = "";
+                    else data["name"] = __result;
+                    Plugin.SaveItems = true;
+                }
+                name = data["name"]?.Value<string>() ?? null;
+                if (name != null && name != key) __result = name;
+            };
+            if (key.EndsWith("_desc"))
+            {
+                if (desc == null)
+                {
+                    if (__result == key) data["description"] = "";
+                    else data["description"] = __result;
+                    Plugin.SaveItems = true;
+                }
+                desc = data["description"]?.Value<string>() ?? null;
+                if (desc != null && desc != key) __result = desc;
+            };
+        }
+        __result ??= "Unset Name Property";
+    }
+
+    [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string)])]
+    [HarmonyPostfix]
+    public static void LanguageGet(string key, ref string __result)
+    {
+        var cleankey = key.Replace("_name", "").Replace("_desc", "");
+        if (Plugin.CustomItems[cleankey] != null)
+        {
+            var data = (JObject)Plugin.CustomItems[cleankey];
+            if (key.EndsWith("_name"))
+            {
+                var name = data["name"]?.Value<string>();
+                if (name == null | name == $"{key}_name")
+                {
+                    data["name"] = __result;
+                    Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
+                }
+            };
+            if (key.EndsWith("_desc"))
+            {
+                var description = data["description"]?.Value<string>();
+                if (description == null | description == $"{key}_desc")
+                {
+                    data["description"] = __result;
+                    Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
+                }
+            };
         }
         __result ??= "Unset Name Property";
     }
