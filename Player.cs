@@ -115,7 +115,7 @@ public class PlayerPatch
             __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
             __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
         }
-        if (Plugin.PlayerModification.Value)
+        if (Plugin.PlayerFOVModification.Value)
         {
             __instance.defaultFOV = Plugin.PlayerFOV.Value;
             __instance.currentDestFOV = Plugin.PlayerFOV.Value;

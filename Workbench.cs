@@ -17,7 +17,7 @@ public class WorkbenchPatch
     [HarmonyPrefix]
     public static void WorkbenchRecipes(Workbench __instance)
     {
-        if (!Plugin.WorkbenchModification.Value) return;
+        if (!Plugin.CraftingModification.Value) return;
         OnFirst = true;
         if (Plugin.CustomCraftingRecipesUseDefaults.Value)
         {
@@ -48,7 +48,7 @@ public class WorkbenchPatch
         {
             _ = Singleton<ItemsDatabase>.Instance.getItem(ItemName, true);
             Plugin.Log.LogWarning($"{LogTypeFlag} Item {ItemName} is unused and will not be loaded!");
-            if (!Plugin.WorkbenchUnusedContinue.Value) return;
+            if (!Plugin.CraftingUnusedContinue.Value) return;
             Plugin.Log.LogWarning($"{LogTypeFlag} Trying to load {ItemName} anyway because trying to load unused is enabled!");
         }
 

@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -44,7 +45,7 @@ public class InvItemClassPatch
                 LogStats += $"{type}.maxAmount = {__instance.baseClass.maxAmount}\n";
                 LogStats += $"{type}.stackable = {__instance.baseClass.stackable}\n----------------------------------------\n";
             }
-            string logPath = Path.Combine(Plugin.ConfigPath, "ItemLog.log");
+            string logPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
             if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
             {
                 File.WriteAllText(logPath, LogStats);

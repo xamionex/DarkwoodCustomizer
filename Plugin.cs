@@ -5,7 +5,10 @@ using HarmonyLib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
@@ -15,7 +18,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.3";
+    public const string PluginVersion = "1.3.4";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -23,10 +26,8 @@ public class Plugin : BaseUnityPlugin
     public static FileSystemWatcher fileWatcherDefaults;
 
     // Base Plugin Values
-    public static string ConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID);
-    public static string JsonConfigPath = Path.Combine(ConfigPath, "Customs");
-    public static string DefaultsConfigPath = Path.Combine(ConfigPath, "ModDefaults");
-    public static ConfigFile ConfigFile = new(Path.Combine(ConfigPath, "Logging.cfg"), true);
+    public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Customs");
+    public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "ModDefaults");
     public static ConfigEntry<string> ModVersion;
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
@@ -34,7 +35,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> LogWorkbench;
 
     // Items Values
-    public static ConfigFile ItemsConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Items.cfg"), true);
     public static ConfigEntry<bool> UseGlobalStackSize;
     public static ConfigEntry<int> StackResize;
     public static ConfigEntry<bool> ItemsModification;
@@ -43,6 +43,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ChainTrapRecovery;
     public static ConfigEntry<bool> ChainTrapRecoverySwitch;
     public static ConfigEntry<bool> CustomItemsUseDefaults;
+
     public static string CustomItemsPath => Path.Combine(JsonConfigPath, "CustomItems.json");
     public static string DefaultsCustomItemsPath = Path.Combine(DefaultsConfigPath, "CustomItems.json");
     public static JObject CustomItems;
@@ -116,7 +117,6 @@ public class Plugin : BaseUnityPlugin
     });
 
     // Inventory Resize Values
-    public static ConfigFile InventoriesConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Inventories.cfg"), true);
     public static ConfigEntry<bool> RemoveExcess;
 
     // Workbench values
@@ -137,71 +137,11 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> HotbarSlots;
 
     // Crafting values
+    public static ConfigEntry<bool> CraftingModification;
     public static ConfigEntry<int> CraftingRightSlots;
     public static ConfigEntry<int> CraftingDownSlots;
-    public static ConfigEntry<bool> CraftingSlots;
-
-    // Character Values
-    public static ConfigFile CharacterConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Characters.cfg"), true);
-    public static ConfigEntry<bool> CharacterModification;
-    public static string CustomCharactersPath => Path.Combine(JsonConfigPath, "CustomCharacters.json");
-    public static JObject CustomCharacters;
-
-    // Player Values
-    public static ConfigFile PlayerConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Player.cfg"), true);
-    public static ConfigEntry<bool> PlayerModification;
-    public static ConfigEntry<float> PlayerFOV;
-    public static ConfigEntry<bool> PlayerCantGetInterrupted;
-
-    // Player Stamina Values
-    public static ConfigEntry<bool> PlayerStaminaModification;
-    public static ConfigEntry<int> PlayerStaminaUpgrades;
-    public static ConfigEntry<float> PlayerMaxStamina;
-    public static ConfigEntry<float> PlayerStaminaRegenInterval;
-    public static ConfigEntry<float> PlayerStaminaRegenValue;
-    public static ConfigEntry<bool> PlayerInfiniteStamina;
-    public static ConfigEntry<bool> PlayerInfiniteStaminaEffect;
-
-    // Player Health Values
-    public static ConfigEntry<bool> PlayerHealthModification;
-    public static ConfigEntry<int> PlayerHealthUpgrades;
-    public static ConfigEntry<float> PlayerMaxHealth;
-    public static ConfigEntry<float> PlayerHealthRegenInterval;
-    public static ConfigEntry<float> PlayerHealthRegenModifier;
-    public static ConfigEntry<float> PlayerHealthRegenValue;
-    public static ConfigEntry<bool> PlayerGodmode;
-
-    // Player Speed Values
-    public static ConfigEntry<bool> PlayerSpeedModification;
-    public static ConfigEntry<float> PlayerWalkSpeed;
-    public static ConfigEntry<float> PlayerRunSpeed;
-    public static ConfigEntry<float> PlayerRunSpeedModifier;
-
-    // Time values
-    public static ConfigFile TimeConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Time.cfg"), true);
-    public static ConfigEntry<bool> TimeModification;
-    public static ConfigEntry<float> DaytimeFlow;
-    public static ConfigEntry<float> NighttimeFlow;
-    public static ConfigEntry<bool> UseCurrentTime;
-    public static ConfigEntry<int> CurrentTime;
-    public static ConfigEntry<bool> ResetWell;
-
-    // Generator values
-    public static ConfigFile GeneratorConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Generator.cfg"), true);
-    public static ConfigEntry<bool> GeneratorModification;
-    public static ConfigEntry<float> GeneratorModifier;
-    public static ConfigEntry<bool> GeneratorInfiniteFuel;
-
-    // Camera values
-    public static ConfigFile CameraConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Camera.cfg"), true);
-    public static ConfigEntry<bool> CameraModification;
-    public static ConfigEntry<float> CameraFoV;
-
-    // Workbench values
-    public static ConfigFile WorkbenchConfigFile = new ConfigFile(Path.Combine(ConfigPath, "Workbench.cfg"), true);
-    public static ConfigEntry<bool> WorkbenchModification;
     public static ConfigEntry<bool> CustomCraftingRecipesUseDefaults;
-    public static ConfigEntry<bool> WorkbenchUnusedContinue;
+    public static ConfigEntry<bool> CraftingUnusedContinue;
     public static string CustomCraftingRecipesPath => Path.Combine(JsonConfigPath, "CustomCraftingRecipes.json");
     public static string DefaultsCustomCraftingRecipesPath = Path.Combine(DefaultsConfigPath, "CustomCraftingRecipes.json");
     public static JObject CustomCraftingRecipes;
@@ -279,118 +219,172 @@ public class Plugin : BaseUnityPlugin
         },
     });
 
+    // Character Values
+    public static ConfigEntry<bool> CharacterModification;
+    public static string CustomCharactersPath => Path.Combine(JsonConfigPath, "CustomCharacters.json");
+    public static JObject CustomCharacters;
+
+    // Player Values
+    public static ConfigEntry<bool> PlayerModification;
+    public static ConfigEntry<bool> PlayerFOVModification;
+    public static ConfigEntry<float> PlayerFOV;
+    public static ConfigEntry<bool> PlayerCantGetInterrupted;
+
+    // Player Stamina Values
+    public static ConfigEntry<bool> PlayerStaminaModification;
+    public static ConfigEntry<int> PlayerStaminaUpgrades;
+    public static ConfigEntry<float> PlayerMaxStamina;
+    public static ConfigEntry<float> PlayerStaminaRegenInterval;
+    public static ConfigEntry<float> PlayerStaminaRegenValue;
+    public static ConfigEntry<bool> PlayerInfiniteStamina;
+    public static ConfigEntry<bool> PlayerInfiniteStaminaEffect;
+
+    // Player Health Values
+    public static ConfigEntry<bool> PlayerHealthModification;
+    public static ConfigEntry<int> PlayerHealthUpgrades;
+    public static ConfigEntry<float> PlayerMaxHealth;
+    public static ConfigEntry<float> PlayerHealthRegenInterval;
+    public static ConfigEntry<float> PlayerHealthRegenModifier;
+    public static ConfigEntry<float> PlayerHealthRegenValue;
+    public static ConfigEntry<bool> PlayerGodmode;
+
+    // Player Speed Values
+    public static ConfigEntry<bool> PlayerSpeedModification;
+    public static ConfigEntry<float> PlayerWalkSpeed;
+    public static ConfigEntry<float> PlayerRunSpeed;
+    public static ConfigEntry<float> PlayerRunSpeedModifier;
+
+    // Time values
+    public static ConfigEntry<bool> TimeModification;
+    public static ConfigEntry<float> DaytimeFlow;
+    public static ConfigEntry<float> NighttimeFlow;
+    public static ConfigEntry<bool> UseCurrentTime;
+    public static ConfigEntry<int> CurrentTime;
+    public static ConfigEntry<bool> TimeStop;
+    public static ConfigEntry<bool> ResetWell;
+
+    // Generator values
+    public static ConfigEntry<bool> GeneratorModification;
+    public static ConfigEntry<float> GeneratorModifier;
+    public static ConfigEntry<bool> GeneratorInfiniteFuel;
+
+    // Camera values
+    public static ConfigEntry<bool> CameraModification;
+    public static ConfigEntry<float> CameraFoV;
+
+    // Keybinds values
+    public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
+    public static ConfigEntry<KeyboardShortcut> KeybindStamina;
+    public static ConfigEntry<KeyboardShortcut> KeybindTime;
+
     private void BepinexBindings()
     {
-        // Base Plugin config
-        ConfigFile CategoryConfigFile = ConfigFile;
-        CategoryConfigFile.Bind($"Note", "Thank you", "no prob!", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
-        ModVersion = CategoryConfigFile.Bind($"Mod", "Version", PluginVersion, "The mods' version, read only value for you");
-        LogDebug = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
-        LogItems = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nWhen enabled logs will be saved in ItemLog.log");
-        LogCharacters = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
-        LogWorkbench = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Workbench", false, "Whether to log every time a custom recipe is added to the workbench");
+        // Base Plugin
+        Config.Bind($"!Mod", "Thank you", "no prob!", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.", null, new ConfigurationManagerAttributes { Order = 5 }));
+        ModVersion = Config.Bind($"!Mod", "Version", PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = 4 }));
+        LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = 3 }));
+        LogItems = Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nWhen enabled logs will be saved in ItemLog.log", null, new ConfigurationManagerAttributes { Order = 2 }));
+        LogCharacters = Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = 1 }));
+        LogWorkbench = Config.Bind($"!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = 0 }));
         ModVersion.Value = PluginVersion;
-        CategoryConfigFile.Save();
+        Config.Save();
 
-        // Items config
-        CategoryConfigFile = ItemsConfigFile;
-        ItemsModification = CategoryConfigFile.Bind($"Items", "Enable Section", true, "Enable this section of the mod, This section does require save reloads for everything except trap recoveries");
-        BearTrapRecovery = CategoryConfigFile.Bind($"Items", "BearTrap Recovery", true, "Enables the option below");
-        BearTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "BearTrap Recover Items", true, "false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal");
-        ChainTrapRecovery = CategoryConfigFile.Bind($"Items", "ChainTrap Recovery", true, "Enables the option below");
-        ChainTrapRecoverySwitch = CategoryConfigFile.Bind($"Items", "ChainTrap Recover Items", true, "false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal");
-        UseGlobalStackSize = CategoryConfigFile.Bind($"Stack Sizes", "Enable Global Stack Size", true, "Whether to use a global stack size for all items.");
-        StackResize = CategoryConfigFile.Bind($"Stack Sizes", "Global Stack Resize", 50, "Number for all item stack sizes to be set to.");
+        // Items
+        ItemsModification = Config.Bind($"Items", "Enable Section", true, new ConfigDescription("Enable this section of the mod, This section does require save reloads for everything except trap recoveries", null, new ConfigurationManagerAttributes { Order = 8 }));
+        BearTrapRecovery = Config.Bind($"Items", "BearTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = 7 }));
+        BearTrapRecoverySwitch = Config.Bind($"Items", "BearTrap Recover Items", true, new ConfigDescription("false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal", null, new ConfigurationManagerAttributes { Order = 6 }));
+        ChainTrapRecovery = Config.Bind($"Items", "ChainTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = 5 }));
+        ChainTrapRecoverySwitch = Config.Bind($"Items", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = 4 }));
+        UseGlobalStackSize = Config.Bind($"Items", "Enable Global Stack Size", false, new ConfigDescription("Whether to use a global stack size for all items.", null, new ConfigurationManagerAttributes { Order = 3 }));
+        StackResize = Config.Bind($"Items", "Global Stack Resize", 50, new ConfigDescription("Number for all item stack sizes to be set to.", null, new ConfigurationManagerAttributes { Order = 2 }));
         CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
-        CustomItemsUseDefaults = CategoryConfigFile.Bind($"Items", "Load Mod Defaults First", true, "Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten");
+        CustomItemsUseDefaults = Config.Bind($"Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = 0 }));
 
-        // Inventories config
-        CategoryConfigFile = InventoriesConfigFile;
-        RemoveExcess = CategoryConfigFile.Bind($"Inventories", "Remove Excess Slots", true, "Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)");
+        // Inventories
+        WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = 14 }));
+        RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = 13 }));
 
         // Workbench
-        WorkbenchInventoryModification = CategoryConfigFile.Bind($"Workbench", "Enable Section", false, "Enables this section of the mod, warning: disabling will return the workbench to vanilla, if you have items on the slots that will be removed, they will be gone");
-        RightSlots = CategoryConfigFile.Bind($"Workbench", "Storage Right Slots", 12, "Number that determines slots in workbench to the right");
-        DownSlots = CategoryConfigFile.Bind($"Workbench", "Storage Down Slots", 9, "Number that determines slots in workbench downward");
+        RightSlots = Config.Bind($"Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = 12 }));
+        DownSlots = Config.Bind($"Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = 11 }));
 
         // Inventory
-        InventorySlots = CategoryConfigFile.Bind($"Inventory", "Enable Section", false, "This will circumvent the inventory progression and enable this section, disable to return to default Inventory slots");
-        InventoryRightSlots = CategoryConfigFile.Bind($"Inventory", "Inventory Right Slots", 2, "Number that determines slots in inventory to the right");
-        InventoryDownSlots = CategoryConfigFile.Bind($"Inventory", "Inventory Down Slots", 9, "Number that determines slots in inventory downward");
+        InventorySlots = Config.Bind($"Inventories", "Enable Inventory Modification", false, new ConfigDescription("Enable Inventory Modification", null, new ConfigurationManagerAttributes { Order = 10 }));
+        InventoryRightSlots = Config.Bind($"Inventories", "Inventory Right Slots", 2, new ConfigDescription("Number that determines slots in inventory to the right", null, new ConfigurationManagerAttributes { Order = 9 }));
+        InventoryDownSlots = Config.Bind($"Inventories", "Inventory Down Slots", 9, new ConfigDescription("Number that determines slots in inventory downward", null, new ConfigurationManagerAttributes { Order = 8 }));
 
         // Hotbar
-        HotbarSlots = CategoryConfigFile.Bind($"Hotbar", "Enable Section", false, "This will circumvent the Hotbar progression and enable this section, disable to return to default Hotbar slots");
-        HotbarRightSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Right Slots", 1, "Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)");
-        HotbarDownSlots = CategoryConfigFile.Bind($"Hotbar", "Hotbar Down Slots", 6, "Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)");
+        HotbarSlots = Config.Bind($"Inventories", "Enable Hotbar Modification", false, new ConfigDescription("Enable Hotbar Modification\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 7 }));
+        HotbarRightSlots = Config.Bind($"Inventories", "Hotbar Right Slots", 1, new ConfigDescription("Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 6 }));
+        HotbarDownSlots = Config.Bind($"Inventories", "Hotbar Down Slots", 6, new ConfigDescription("Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 5 }));
 
         // Crafting
-        CraftingSlots = CategoryConfigFile.Bind($"Crafting", "Enable Section", true, "Enable this section of the mod, disable to return to default Crafting slots, warning: disabling this while having custom items on will break your game as there are too many items to display in the crafting window");
-        CraftingXOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window X Offset", 1000f, "Pixels offset on the X axis (left negative/right positive) for the workbench crafting window");
-        CraftingZOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window Z Offset", -100f, "Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window");
-        CraftingRightSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Right Slots", 7, "Number that determines slots in Crafting window to the right.");
-        CraftingDownSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Down Slots", 7, "Number that determines slots in Crafting window downward.");
+        CraftingModification = Config.Bind($"Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = 4 }));
+        CraftingXOffset = Config.Bind($"Inventories", "Crafting Window X Offset", 1000f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = 3 }));
+        CraftingZOffset = Config.Bind($"Inventories", "Crafting Window Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = 2 }));
+        CraftingRightSlots = Config.Bind($"Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = 1 }));
+        CraftingDownSlots = Config.Bind($"Inventories", "Crafting Window Down Slots", 7, new ConfigDescription("Number that determines slots in Crafting window downward.", null, new ConfigurationManagerAttributes { Order = 0 }));
+        CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
+        CustomCraftingRecipesUseDefaults = Config.Bind($"Crafting", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = 1 }));
+        CraftingUnusedContinue = Config.Bind($"Crafting", "Try to load unused items", false, new ConfigDescription("Try to load unused items anyway\nWARNING: This will most likely result in your workbench breaking, use at your own risk", null, new ConfigurationManagerAttributes { Order = 0 }));
+        Config.Bind($"Crafting", "Note1", "okay", new ConfigDescription("This section is responsible for custom recipes.", null, new ConfigurationManagerAttributes { Order = 2 }));
+        Config.Bind($"Crafting", "Note2", "okay", new ConfigDescription("givesamount only works for some items, not sure what dictates this.", null, new ConfigurationManagerAttributes { Order = 2 }));
 
-        // Character values
-        CategoryConfigFile = CharacterConfigFile;
-        CharacterModification = CategoryConfigFile.Bind($"Characters", "Enable Section", false, "Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json");
-        CategoryConfigFile.Bind($"Characters", "Note", "ReadMePlease", "Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades");
+        // Character
+        CharacterModification = Config.Bind($"Characters", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json", null, new ConfigurationManagerAttributes { Order = 1 }));
+        Config.Bind($"Characters", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades", null, new ConfigurationManagerAttributes { Order = 0 }));
         CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
 
-        // Player values
-        CategoryConfigFile = PlayerConfigFile;
-        PlayerModification = CategoryConfigFile.Bind($"Player", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        PlayerFOV = CategoryConfigFile.Bind($"Player", "Player FoV", 90f, "Set your players' FoV (370 recommended, set to 720 if you want to always see everything)");
-        PlayerCantGetInterrupted = CategoryConfigFile.Bind($"Player", "Cant Get Interrupted", true, "If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it");
+        // Player
+        PlayerModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 18 }));
+        PlayerFOVModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 17 }));
+        PlayerStaminaModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 17 }));
+        PlayerHealthModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 16 }));
+        PlayerSpeedModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 15 }));
+        PlayerFOV = Config.Bind($"Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = 14 }));
+        PlayerCantGetInterrupted = Config.Bind($"Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = 13 }));
 
-        // Player Stamina config
-        PlayerStaminaModification = CategoryConfigFile.Bind($"Stamina", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        PlayerMaxStamina = CategoryConfigFile.Bind($"Stamina", "Max Stamina", 100f, "Set your max stamina");
-        PlayerStaminaRegenInterval = CategoryConfigFile.Bind($"Stamina", "Stamina Regen Interval", 0.05f, "Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.");
-        PlayerStaminaRegenValue = CategoryConfigFile.Bind($"Stamina", "Stamina Regen Value", 30f, "Amount of stamina regenerated per tick. I believe this is the amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.");
-        PlayerInfiniteStamina = CategoryConfigFile.Bind($"Stamina", "Infinite Stamina", false, "On every update makes your stamina maximized");
-        PlayerInfiniteStaminaEffect = CategoryConfigFile.Bind($"Stamina", "Infinite Stamina Effect", false, "Whether to draw the infinite stamina effect");
+        // Player Stamina
+        PlayerMaxStamina = Config.Bind($"Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = 12 }));
+        PlayerStaminaRegenInterval = Config.Bind($"Player", "Stamina Regen Interval", 0.05f, new ConfigDescription("Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.", null, new ConfigurationManagerAttributes { Order = 11 }));
+        PlayerStaminaRegenValue = Config.Bind($"Player", "Stamina Regen Value", 30f, new ConfigDescription("Amount of stamina regenerated per tick. I believe this is the amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.", null, new ConfigurationManagerAttributes { Order = 10 }));
+        PlayerInfiniteStamina = Config.Bind($"Player", "Infinite Stamina", false, new ConfigDescription("On every update makes your stamina maximized", null, new ConfigurationManagerAttributes { Order = 9 }));
+        PlayerInfiniteStaminaEffect = Config.Bind($"Player", "Infinite Stamina Effect", false, new ConfigDescription("Whether to draw the infinite stamina effect", null, new ConfigurationManagerAttributes { Order = 8 }));
 
-        // Player Health config
-        PlayerHealthModification = CategoryConfigFile.Bind($"Health", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        PlayerMaxHealth = CategoryConfigFile.Bind($"Health", "Max Health", 100f, "Set your max health");
-        PlayerHealthRegenInterval = CategoryConfigFile.Bind($"Health", "Health Regen Interval", 5f, "Theoretically: Interval in seconds between health regeneration ticks, feel free to experiment I didn't test this out yet");
-        PlayerHealthRegenModifier = CategoryConfigFile.Bind($"Health", "Health Regen Modifier", 1f, "Theoretically: Multiplier for health regen value, feel free to experiment I didn't test this out yet");
-        PlayerHealthRegenValue = CategoryConfigFile.Bind($"Health", "Health Regen Value", 0f, "Theoretically: Amount of health regenerated per tick, feel free to experiment I didn't test this out yet");
-        PlayerGodmode = CategoryConfigFile.Bind($"Health", "Enable Godmode", false, "Makes you invulnerable and on every update makes your health maximized");
+        // Player Health
+        PlayerMaxHealth = Config.Bind($"Player", "Max Health", 100f, new ConfigDescription("Set your max health", null, new ConfigurationManagerAttributes { Order = 7 }));
+        PlayerHealthRegenInterval = Config.Bind($"Player", "Health Regen Interval", 5f, new ConfigDescription("Theoretically: Interval in seconds between health regeneration ticks, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = 6 }));
+        PlayerHealthRegenModifier = Config.Bind($"Player", "Health Regen Modifier", 1f, new ConfigDescription("Theoretically: Multiplier for health regen value, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = 5 }));
+        PlayerHealthRegenValue = Config.Bind($"Player", "Health Regen Value", 0f, new ConfigDescription("Theoretically: Amount of health regenerated per tick, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = 4 }));
+        PlayerGodmode = Config.Bind($"Player", "Enable Godmode", false, new ConfigDescription("Makes you invulnerable and on every update makes your health maximized", null, new ConfigurationManagerAttributes { Order = 3 }));
 
-        // Player Speed config
-        PlayerSpeedModification = CategoryConfigFile.Bind($"Speed", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        PlayerWalkSpeed = CategoryConfigFile.Bind($"Speed", "Walk Speed", 7.5f, "Set your walk speed");
-        PlayerRunSpeed = CategoryConfigFile.Bind($"Speed", "Run Speed", 15f, "Set your run speed");
-        PlayerRunSpeedModifier = CategoryConfigFile.Bind($"Speed", "Run Speed Modifier", 1f, "Multiplies your run speed by this value");
+        // Player Speed
+        PlayerWalkSpeed = Config.Bind($"Player", "Walk Speed", 7.5f, new ConfigDescription("Set your walk speed", null, new ConfigurationManagerAttributes { Order = 2 }));
+        PlayerRunSpeed = Config.Bind($"Player", "Run Speed", 15f, new ConfigDescription("Set your run speed", null, new ConfigurationManagerAttributes { Order = 1 }));
+        PlayerRunSpeedModifier = Config.Bind($"Player", "Run Speed Modifier", 1f, new ConfigDescription("Multiplies your run speed by this value", null, new ConfigurationManagerAttributes { Order = 0 }));
 
-        // Time config
-        CategoryConfigFile = TimeConfigFile;
-        TimeModification = CategoryConfigFile.Bind($"Time", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        DaytimeFlow = CategoryConfigFile.Bind($"Time", "Daytime Flow", 1f, "Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.");
-        NighttimeFlow = CategoryConfigFile.Bind($"Time", "Nighttime Flow", 0.75f, "Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.");
-        UseCurrentTime = CategoryConfigFile.Bind($"Time", "Set Time", false, "Enable this to use the config for time of day below");
-        CurrentTime = CategoryConfigFile.Bind($"Time", "Set Current Time", 1, "(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)");
-        ResetWell = CategoryConfigFile.Bind($"Time", "Reset Well", false, "Whether or not to reset well constantly");
+        // Time
+        TimeModification = Config.Bind($"Time", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 5 }));
+        DaytimeFlow = Config.Bind($"Time", "Daytime Flow", 1f, new ConfigDescription("Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.", null, new ConfigurationManagerAttributes { Order = 4 }));
+        NighttimeFlow = Config.Bind($"Time", "Nighttime Flow", 0.75f, new ConfigDescription("Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.", null, new ConfigurationManagerAttributes { Order = 3 }));
+        UseCurrentTime = Config.Bind($"Time", "Set Time", false, new ConfigDescription("Enable this to use the config for time of day below", null, new ConfigurationManagerAttributes { Order = 2 }));
+        CurrentTime = Config.Bind($"Time", "Set Current Time", 1, new ConfigDescription("(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)", null, new ConfigurationManagerAttributes { Order = 1 }));
+        TimeStop = Config.Bind($"Time", "Stop Time", false, new ConfigDescription("Doesn't let time get any higher", null, new ConfigurationManagerAttributes { Order = 1 }));
+        ResetWell = Config.Bind($"Time", "Reset Well", false, new ConfigDescription("Whether or not to reset well constantly", null, new ConfigurationManagerAttributes { Order = 0 }));
 
-        // Generator config
-        CategoryConfigFile = GeneratorConfigFile;
-        GeneratorModification = CategoryConfigFile.Bind($"Generator", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        GeneratorModifier = CategoryConfigFile.Bind($"Generator", "Generator Modifier", 1f, "2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast");
-        GeneratorInfiniteFuel = CategoryConfigFile.Bind($"Generator", "Generator Infinte Fuel", false, "Enable this to make the generator have infinite fuel");
+        // Generator
+        GeneratorModification = Config.Bind($"Generator", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 2 }));
+        GeneratorModifier = Config.Bind($"Generator", "Generator Modifier", 1f, new ConfigDescription("2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast", null, new ConfigurationManagerAttributes { Order = 1 }));
+        GeneratorInfiniteFuel = Config.Bind($"Generator", "Generator Infinte Fuel", false, new ConfigDescription("Enable this to make the generator have infinite fuel", null, new ConfigurationManagerAttributes { Order = 0 }));
 
-        // Camera config
-        CategoryConfigFile = CameraConfigFile;
-        CameraModification = CategoryConfigFile.Bind($"Camera", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        CameraFoV = CategoryConfigFile.Bind($"Camera", "Camera Zoom Factor", 1f, "Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in");
+        // Camera
+        CameraModification = Config.Bind($"Camera", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 1 }));
+        CameraFoV = Config.Bind($"Camera", "Camera Zoom Factor", 1f, new ConfigDescription("Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in", null, new ConfigurationManagerAttributes { Order = 0 }));
 
-        // Workbench config
-        CategoryConfigFile = WorkbenchConfigFile;
-        WorkbenchModification = CategoryConfigFile.Bind($"Workbench", "Enable Section", false, "Enable this section of the mod, This section does not require restarts");
-        CategoryConfigFile.Bind($"Workbench", "Note", "okay", "givesamount only works for some items, not sure what dictates this.");
-        CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
-        CustomCraftingRecipesUseDefaults = CategoryConfigFile.Bind($"Workbench", "Load Mod Defaults First", true, "Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten");
-        WorkbenchUnusedContinue = CategoryConfigFile.Bind($"Workbench", "Try to load unused items", false, "Try to load unused items anyway\nWARNING: This will most likely result in your workbench breaking, use at your own risk");
+        // Keybinds
+        KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
+        KeybindStamina = Config.Bind("Hotkeys", "Toggle Infinite Stamina", new KeyboardShortcut(KeyCode.H, KeyCode.LeftShift));
+        KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
     }
 
     private void MakeDefaults()
@@ -420,8 +414,6 @@ public class Plugin : BaseUnityPlugin
     {
         Log = Logger;
 
-        // 1.1.9 migration check
-        Migrate119Configs();
         // 1.2.6 migration check
         Migrate126Configs();
         // 1.2.8 migration check
@@ -457,7 +449,7 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
 
-        fileWatcher = new FileSystemWatcher(ConfigPath, "*.cfg");
+        fileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
         fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
         fileWatcher.Changed += OnFileChanged;
         fileWatcher.Deleted += OnFileDeleted;
@@ -474,60 +466,53 @@ public class Plugin : BaseUnityPlugin
         fileWatcherJson.Changed += OnFileChanged;
         fileWatcherJson.Deleted += OnFileDeleted;
         fileWatcherJson.EnableRaisingEvents = true;
+
+        // 1.3.3 migration check
+        Migrate133Configs();
     }
 
+    public void Update()
+    {
+        if (KeybindGodmode.Value.IsDown())
+        {
+            PlayerGodmode.Value = !PlayerGodmode.Value;
+            Log.LogInfo($"Player Godmode toggled!");
+        }
+        if (KeybindStamina.Value.IsDown())
+        {
+            PlayerInfiniteStamina.Value = !PlayerInfiniteStamina.Value;
+            Log.LogInfo($"Player Infinite Stamina toggled!");
+        }
+        if (KeybindTime.Value.IsDown())
+        {
+            TimeStop.Value = !TimeStop.Value;
+            Log.LogInfo($"Time Stop toggled!");
+        }
+    }
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        var UnknownFile = false;
         switch (e.Name)
         {
-            case "Logging.cfg":
-                ConfigFile.Reload();
-                break;
-            case "Inventories.cfg":
-                InventoriesConfigFile.Reload();
-                break;
-            case "Items.cfg":
-                ItemsConfigFile.Reload();
-                break;
-            case "Player.cfg":
-                PlayerPatch.RefreshPlayer = true;
-                PlayerConfigFile.Reload();
-                break;
-            case "Characters.cfg":
-                CharacterConfigFile.Reload();
-                break;
-            case "Characters.json":
-                CharacterConfigFile.Reload();
-                break;
-            case "Time.cfg":
-                TimeConfigFile.Reload();
-                break;
-            case "Generator.cfg":
+            case "amione.DarkwoodCustomizer.cfg":
+                Config.Reload();
                 GeneratorPatch.RefreshGenerator = true;
-                GeneratorConfigFile.Reload();
-                break;
-            case "Camera.cfg":
-                CameraConfigFile.Reload();
-                break;
-            case "Workbench.cfg":
-                WorkbenchConfigFile.Reload();
+                Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             case "CustomCharacters.json":
                 CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
+                Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             case "CustomCraftingRecipes.json":
                 CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
+                Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             case "CustomItems.json":
                 CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
+                Log.LogInfo($"{e.Name} was reloaded!");
                 break;
             default:
-                Log.LogInfo($"Unknown file was edited.");
-                UnknownFile = true;
                 break;
         }
-        if (!UnknownFile) Log.LogInfo($"{e.Name} was reloaded!");
     }
 
     private void OnFileDeleted(object sender, FileSystemEventArgs e)
@@ -613,45 +598,6 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
-
-    private void Migrate119Configs()
-    {
-        // 1.1.9 migration check
-        string loggingConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID + ".cfg");
-        string[] oldConfigFiles = Directory.GetFiles(Paths.ConfigPath, PluginGUID + ".*.cfg");
-
-        // Special case for logging config
-        if (File.Exists(loggingConfigPath))
-        {
-            string newLoggingConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg");
-            if (File.Exists(newLoggingConfigPath)) File.Delete(newLoggingConfigPath);
-            File.Move(loggingConfigPath, newLoggingConfigPath);
-            Log.LogInfo($"Moved old logging config file from {loggingConfigPath} to {newLoggingConfigPath}");
-            ConfigFile.Reload();
-        }
-
-        if (oldConfigFiles.Length == 0) return;
-
-        // Move other config files
-        foreach (string oldConfigFile in oldConfigFiles)
-        {
-            string configFileCategory = Path.GetFileNameWithoutExtension(oldConfigFile).Replace(PluginGUID + ".", string.Empty).Replace(".cfg", string.Empty);
-            string newConfigFile = Path.Combine(Paths.ConfigPath, PluginGUID, configFileCategory + ".cfg");
-            if (File.Exists(newConfigFile)) File.Delete(newConfigFile);
-            File.Move(oldConfigFile, newConfigFile);
-            Log.LogInfo($"Moved old config file from {oldConfigFile} to {newConfigFile}");
-        }
-        InventoriesConfigFile.Reload();
-        ItemsConfigFile.Reload();
-        PlayerConfigFile.Reload();
-        CharacterConfigFile.Reload();
-        CharacterConfigFile.Reload();
-        TimeConfigFile.Reload();
-        GeneratorConfigFile.Reload();
-        CameraConfigFile.Reload();
-        Log.LogInfo("Reloaded all configs!");
-    }
-
     private void Migrate126Configs()
     {
         // 1.2.6 migration check
@@ -669,7 +615,7 @@ public class Plugin : BaseUnityPlugin
         }
 
         // Remove old defaults folders
-        string[] OldDefaultsFolders = [Path.Combine(ConfigPath, "defaults"), Path.Combine(ConfigPath, "VanillaDefaults")];
+        string[] OldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginGUID, "defaults"), Path.Combine(Paths.ConfigPath, PluginGUID, "VanillaDefaults")];
         foreach (string OldDefaultsFolder in OldDefaultsFolders)
         {
             if (Directory.Exists(OldDefaultsFolder))
@@ -697,10 +643,10 @@ public class Plugin : BaseUnityPlugin
             Log.LogInfo($"Old Default CustomStacks Json was deleted at {OldDefaultStacksJson}");
         }
         string NewPathConfig;
-        string OldStacksConfig = Path.Combine(ConfigPath, "CustomStacks.cfg");
+        string OldStacksConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "CustomStacks.cfg");
         if (File.Exists(OldStacksConfig))
         {
-            NewPathConfig = Path.Combine(ConfigPath, "CustomStacks_Unused_From_128_DeletePlease.cfg");
+            NewPathConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "CustomStacks_Unused_From_128_DeletePlease.cfg");
             File.Move(OldStacksConfig, NewPathConfig);
             Log.LogInfo($"Old CustomStacks config can be found at at {NewPathConfig}");
         }
@@ -711,5 +657,79 @@ public class Plugin : BaseUnityPlugin
             File.Move(OldStacksJson, NewPathConfig);
             Log.LogInfo($"Old CustomStacks Json file can be found at {NewPathConfig}");
         }
+    }
+
+    private void Migrate133Configs()
+    {
+        List<string> ConfigFiles = new List<string>{
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Items.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Inventories.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Characters.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Player.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Time.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Generator.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Camera.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Workbench.cfg"),
+        };
+        List<string> ConfigFilesPreviousVersions = new List<string>{
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Items.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Inventories.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Characters.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Player.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Time.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Generator.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Camera.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Workbench.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Repairs.cfg"),
+            Path.Combine(Paths.ConfigPath, PluginGUID, "Stacks.cfg"),
+        };
+        string newConfig = "";
+        bool changed = false;
+        if (ConfigFiles.Count == 9)
+        {
+            foreach (string ConfigFile in ConfigFiles)
+            {
+                if (File.Exists(ConfigFile))
+                {
+                    string category = Path.GetFileNameWithoutExtension(ConfigFile);
+                    string[] lines = File.ReadAllLines(ConfigFile);
+                    if (category == "Logging") category = "!Mod";
+                    if (category == "Workbench") category = "Crafting";
+                    newConfig += $"[{category}]\n";
+                    foreach (string line in lines)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+                        {
+                            string newLine = line.Trim();
+                            if (newLine.Contains("="))
+                            {
+                                string key = newLine.Split('=')[0].Trim();
+                                string value = newLine.Split('=')[1].Trim();
+                                newConfig += $"\n{key} = {value}\n";
+                                changed = true;
+                            }
+                        }
+                    }
+                    Log.LogInfo($"Merged old config file at {ConfigFile} into {PluginGUID}.cfg");
+                }
+            }
+        }
+        if (ConfigFilesPreviousVersions.Count > 0)
+        {
+            foreach (string ConfigPreviousVersion in ConfigFilesPreviousVersions)
+            {
+                string oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginGUID, "YourOldConfigs");
+                if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
+                string newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(ConfigPreviousVersion)}.cfg");
+                if (File.Exists(ConfigPreviousVersion))
+                {
+                    File.Move(ConfigPreviousVersion, newConfigFile);
+                    Log.LogInfo($"Old config file at {ConfigPreviousVersion} was moved to {newConfigFile} as its not used anymore");
+                }
+            }
+        }
+        if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginGUID}.cfg"), newConfig);
     }
 }

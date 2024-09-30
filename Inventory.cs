@@ -10,6 +10,7 @@ public class InventoryPatch
 	[HarmonyPostfix]
 	public static void InventoryShow(Inventory __instance, string labelName = "")
 	{
+		if (!Plugin.CraftingModification.Value) return;
 		if (__instance.invType == Inventory.InvType.crafting)
 		{
 			GameObject gameObject = __instance.thisUI;
@@ -59,7 +60,7 @@ public class InventoryPatch
 			switch (__instance.invType)
 			{
 				case Inventory.InvType.crafting:
-					if (Plugin.CraftingSlots.Value)
+					if (Plugin.CraftingModification.Value)
 					{
 						__instance.maxColumns = Plugin.CraftingRightSlots.Value;
 						maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;

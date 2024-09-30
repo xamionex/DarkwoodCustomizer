@@ -8,9 +8,12 @@ public class ControllerPatch
     [HarmonyPostfix]
     public static void PatchTime(Controller __instance)
     {
-        // Lower value is slower time interval
         if (Plugin.TimeModification.Value)
         {
+            if (Plugin.TimeStop.Value)
+            {
+                __instance.CurrentTime -= 1;
+            }
             if (Plugin.UseCurrentTime.Value)
             {
                 __instance.CurrentTime = Plugin.CurrentTime.Value;
