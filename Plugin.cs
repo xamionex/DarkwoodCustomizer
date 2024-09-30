@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.2";
+    public const string PluginVersion = "1.3.3";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
@@ -27,6 +27,7 @@ public class Plugin : BaseUnityPlugin
     public static string JsonConfigPath = Path.Combine(ConfigPath, "Customs");
     public static string DefaultsConfigPath = Path.Combine(ConfigPath, "ModDefaults");
     public static ConfigFile ConfigFile = new(Path.Combine(ConfigPath, "Logging.cfg"), true);
+    public static ConfigEntry<string> ModVersion;
     public static ConfigEntry<bool> LogDebug;
     public static ConfigEntry<bool> LogItems;
     public static ConfigEntry<bool> LogCharacters;
@@ -52,8 +53,8 @@ public class Plugin : BaseUnityPlugin
             ReadMePlease = "Welcome to the default CustomItems.json I recommend editing these kind of files with something that has linting, which will tell you if you've made a mistake somewhere, I personally use VSCode.. because that's what I use to code this plugin but you can also use Notepad++",
             note = "This is an example for you, you don't need to add this many data types but you can, if you want",
             note2 = "Copy this whole file to Customs/CustomItems.json and change the values, they will take priority over the defaults, note that if defaults are enabled, these will still take effect and yours will just override them",
-            note4 = "Continuing off of last note, if you want to change just the name, make a copy of this in Customs/CustomItems.json and remove everything except the name and description, and then change them, you'll see that the item still works despite your json having basically nothing in it, that is if defaults are enabled",
-            note3 = "If you want to fully disable defaults, do that in Items.cfg",
+            note3 = "Continuing off of last note, if you want to change just the name, make a copy of this in Customs/CustomItems.json and remove everything except the name and description, and then change them, you'll see that the item still works despite your json having basically nothing in it, that is if defaults are enabled",
+            note4 = "If you want to fully disable defaults, do that in Items.cfg",
             note5 = "anyway, flamethrower is a bit finnicky and I've made it use ammo instead of durability but it still likes to be funky and will always say 'This item is broken'",
             name = "Flamethrower",
             description = "Makeshift flamethrower made with some kind of gun scraps and two tanks strapped to it, I better be careful with this.",
@@ -120,7 +121,8 @@ public class Plugin : BaseUnityPlugin
 
     // Workbench values
     public static ConfigEntry<bool> WorkbenchInventoryModification;
-    public static ConfigEntry<float> CraftingOffset;
+    public static ConfigEntry<float> CraftingXOffset;
+    public static ConfigEntry<float> CraftingZOffset;
     public static ConfigEntry<int> RightSlots;
     public static ConfigEntry<int> DownSlots;
 
@@ -282,10 +284,13 @@ public class Plugin : BaseUnityPlugin
         // Base Plugin config
         ConfigFile CategoryConfigFile = ConfigFile;
         CategoryConfigFile.Bind($"Note", "Thank you", "no prob!", "Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.");
+        ModVersion = CategoryConfigFile.Bind($"Mod", "Version", PluginVersion, "The mods' version, read only value for you");
         LogDebug = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs", true, "Whether to log debug messages, includes player information on load/change for now.");
         LogItems = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Items", false, "Whether to log every item, only called when the game is loading the specific item\nWhen enabled logs will be saved in ItemLog.log");
         LogCharacters = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Characters", false, "Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config");
         LogWorkbench = CategoryConfigFile.Bind($"Logging", "Enable Debug Logs for Workbench", false, "Whether to log every time a custom recipe is added to the workbench");
+        ModVersion.Value = PluginVersion;
+        CategoryConfigFile.Save();
 
         // Items config
         CategoryConfigFile = ItemsConfigFile;
@@ -320,7 +325,8 @@ public class Plugin : BaseUnityPlugin
 
         // Crafting
         CraftingSlots = CategoryConfigFile.Bind($"Crafting", "Enable Section", true, "Enable this section of the mod, disable to return to default Crafting slots, warning: disabling this while having custom items on will break your game as there are too many items to display in the crafting window");
-        CraftingOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window Offset", 1000f, "Pixels offset for the workbench crafting window, no longer requires restart, 1550 is the almost the edge of the screen on fullhd which looks nice");
+        CraftingXOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window X Offset", 1000f, "Pixels offset on the X axis (left negative/right positive) for the workbench crafting window");
+        CraftingZOffset = CategoryConfigFile.Bind($"Crafting", "Crafting Window Z Offset", -100f, "Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window");
         CraftingRightSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Right Slots", 7, "Number that determines slots in Crafting window to the right.");
         CraftingDownSlots = CategoryConfigFile.Bind($"Crafting", "Crafting Window Down Slots", 7, "Number that determines slots in Crafting window downward.");
 

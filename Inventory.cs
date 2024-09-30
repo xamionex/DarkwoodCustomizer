@@ -1,35 +1,38 @@
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
 public class InventoryPatch
 {
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-	[HarmonyTranspiler]
-	public static IEnumerable<CodeInstruction> InventoryShow(IEnumerable<CodeInstruction> instructions)
+	[HarmonyPostfix]
+	public static void InventoryShow(Inventory __instance, string labelName = "")
 	{
-		var codes = new List<CodeInstruction>(instructions);
-		var targetMethod = GetWorkbenchCraftingOffset();
-
-		for (int i = 0; i < codes.Count; i++)
+		if (__instance.invType == Inventory.InvType.crafting)
 		{
-			// replaces 670 offset for workbench crafting with 1000
-			if (codes[i].opcode == OpCodes.Ldc_R4 && codes[i].operand.ToString() == "670")
+			GameObject gameObject = __instance.thisUI;
+			PositionMe positionMe = gameObject.GetComponent<PositionMe>();
+			positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
+			gameObject.name = "Crafting";
+			if (__instance.isWorkbench)
 			{
-				codes[i] = Transpilers.EmitDelegate(GetWorkbenchCraftingOffset);
-				Plugin.Log.LogInfo("Patched offset of workbench window");
-				break;
+				foreach (var child in gameObject.GetComponentsInChildren<Transform>())
+				{
+					if (child.name == "WorkbenchBackground")
+					{
+						UnityEngine.Object.Destroy(child.gameObject);
+						float extraSlots = Plugin.CraftingRightSlots.Value - 5f;
+						float xPosition = 119f + 31f * extraSlots;
+						float xScale = 1f + 0.21f * extraSlots;
+						GameObject workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject, false);
+						workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
+						break;
+					}
+				}
 			}
 		}
-		return codes;
-	}
-
-	public static float GetWorkbenchCraftingOffset()
-	{
-		return Plugin.CraftingOffset.Value; // Return the actual value
 	}
 
 	[HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]

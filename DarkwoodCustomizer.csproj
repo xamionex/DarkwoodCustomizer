@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>DarkwoodCustomizer</AssemblyName>
-    <Product>A mod for darkwood that changes inventory sizes, stack sizes among other things</Product>
-    <Version>1.3.2</Version>
+    <Product>DarkwoodCustomizer</Product>
+    <Version>1.3.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
