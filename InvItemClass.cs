@@ -104,6 +104,7 @@ public class InvItemClassPatch
     {
         if (data != null)
         {
+            if (Plugin.LogItems.Value) Plugin.Log.LogInfo($"Changing Item: {CurrentItem.type}");
             if (data.ContainsKey("iconType")) CurrentItem.baseClass.iconType = data["iconType"]?.Value<string>() ?? CurrentItem.baseClass.iconType;
             if (data.ContainsKey("fireMode"))
             {
@@ -129,18 +130,18 @@ public class InvItemClassPatch
                         break;
                 }
             }
-            if (data.ContainsKey("hasAmmo")) CurrentItem.baseClass.hasAmmo = data["hasAmmo"]?.Value<bool>() ?? CurrentItem.baseClass.hasAmmo;
-            if (data.ContainsKey("canBeReloaded")) CurrentItem.baseClass.canBeReloaded = data["canBeReloaded"]?.Value<bool>() ?? CurrentItem.baseClass.canBeReloaded;
+            if (bool.TryParse(data["hasAmmo"]?.Value<string>(), out bool hasAmmo)) CurrentItem.baseClass.hasAmmo = hasAmmo;
+            if (bool.TryParse(data["canBeReloaded"]?.Value<string>(), out bool canBeReloaded)) CurrentItem.baseClass.canBeReloaded = canBeReloaded;
             if (data.ContainsKey("ammoReloadType"))
             {
                 if (data["ammoReloadType"].Value<string>() == "single") CurrentItem.baseClass.ammoReloadType = InvItem.AmmoReloadType.magazine;
                 else CurrentItem.baseClass.ammoReloadType = InvItem.AmmoReloadType.magazine;
             }
             if (data.ContainsKey("ammoType")) CurrentItem.baseClass.ammoType = data["ammoType"]?.Value<string>() ?? CurrentItem.baseClass.ammoType;
-            if (data.ContainsKey("hasDurability")) CurrentItem.baseClass.hasDurability = data["hasDurability"]?.Value<bool>() ?? CurrentItem.baseClass.hasDurability;
-            if (data.ContainsKey("maxDurability")) CurrentItem.baseClass.maxDurability = data["maxDurability"]?.Value<int>() ?? CurrentItem.baseClass.maxDurability;
-            if (data.ContainsKey("ignoreDurabilityInValue")) CurrentItem.baseClass.ignoreDurabilityInValue = data["ignoreDurabilityInValue"]?.Value<bool>() ?? false;
-            if (data.ContainsKey("repairable")) CurrentItem.baseClass.repairable = data["repairable"]?.Value<bool>() ?? false;
+            if (bool.TryParse(data["hasDurability"]?.Value<string>(), out bool hasDurability)) CurrentItem.baseClass.hasDurability = hasDurability;
+            if (int.TryParse(data["maxDurability"]?.Value<string>(), out int maxDurability)) CurrentItem.baseClass.maxDurability = maxDurability;
+            if (bool.TryParse(data["ignoreDurabilityInValue"]?.Value<string>(), out bool ignoreDurabilityInValue)) CurrentItem.baseClass.ignoreDurabilityInValue = ignoreDurabilityInValue;
+            if (bool.TryParse(data["repairable"]?.Value<string>(), out bool repairable)) CurrentItem.baseClass.repairable = repairable;
             if (data.ContainsKey("requirements"))
             {
                 var requirements = data["requirements"].Value<JObject>();
@@ -160,26 +161,26 @@ public class InvItemClassPatch
                     CurrentItem.baseClass.gameObject.AddComponent<RepairRequirements>().requirements = list;
                 }
             }
-            if (data.ContainsKey("flamethrowerdrag")) ((GameObject)CurrentItem.baseClass.item).GetComponent<Rigidbody>().drag = data["flamethrowerdrag"]?.Value<float>() ?? ((GameObject)CurrentItem.baseClass.item).GetComponent<Rigidbody>().drag;
-            if (data.ContainsKey("flamethrowercontactDamage")) ((GameObject)CurrentItem.baseClass.item).GetComponent<Flame>().contactDamage = data["flamethrowercontactDamage"]?.Value<int>() ?? ((GameObject)CurrentItem.baseClass.item).GetComponent<Flame>().contactDamage;
-            if (data.ContainsKey("damage")) CurrentItem.baseClass.damage = data["damage"]?.Value<int>() ?? CurrentItem.baseClass.damage;
-            if (data.ContainsKey("clipSize")) CurrentItem.baseClass.clipSize = data["clipSize"]?.Value<int>() ?? CurrentItem.baseClass.clipSize;
-            if (data.ContainsKey("value")) CurrentItem.baseClass.value = data["value"]?.Value<int>() ?? CurrentItem.baseClass.value;
-            if (data.ContainsKey("maxAmount")) CurrentItem.baseClass.maxAmount = data["maxAmount"]?.Value<int>() ?? CurrentItem.baseClass.maxAmount;
-            if (data.ContainsKey("stackable")) CurrentItem.baseClass.stackable = data["stackable"]?.Value<bool>() ?? CurrentItem.baseClass.stackable;
-            if (data.ContainsKey("clipSize")) CurrentItem.ammo = CurrentItem.baseClass.clipSize;
-            if (data.ContainsKey("ExpValue")) CurrentItem.baseClass.expValue = data["ExpValue"]?.Value<int>() ?? CurrentItem.baseClass.expValue;
-            if (data.ContainsKey("IsExpItem")) CurrentItem.baseClass.isExpItem = data["IsExpItem"]?.Value<bool>() ?? CurrentItem.baseClass.isExpItem;
+            if (float.TryParse(data["flamethrowerdrag"]?.Value<string>(), out float drag)) ((GameObject)CurrentItem.baseClass.item).GetComponent<Rigidbody>().drag = drag;
+            if (int.TryParse(data["flamethrowercontactDamage"]?.Value<string>(), out int contactDamage)) ((GameObject)CurrentItem.baseClass.item).GetComponent<Flame>().contactDamage = contactDamage;
+            if (int.TryParse(data["damage"]?.Value<string>(), out int damage)) CurrentItem.baseClass.damage = damage;
+            if (int.TryParse(data["clipSize"]?.Value<string>(), out int clipSize)) CurrentItem.baseClass.clipSize = clipSize;
+            if (int.TryParse(data["value"]?.Value<string>(), out int value)) CurrentItem.baseClass.value = value;
+            if (int.TryParse(data["maxAmount"]?.Value<string>(), out int maxAmount)) CurrentItem.baseClass.maxAmount = maxAmount;
+            if (bool.TryParse(data["stackable"]?.Value<string>(), out bool stackable)) CurrentItem.baseClass.stackable = stackable;
+            if (int.TryParse(data["clipSize"]?.Value<string>(), out int clipSizeParsed)) CurrentItem.ammo = clipSizeParsed;
+            if (int.TryParse(data["ExpValue"]?.Value<string>(), out int expValue)) CurrentItem.baseClass.expValue = expValue;
+            if (bool.TryParse(data["IsExpItem"]?.Value<string>(), out bool isExpItem)) CurrentItem.baseClass.isExpItem = isExpItem;
             if (data.ContainsKey("rottenItem"))
             {
                 InvItem RottenItem = ItemsDatabase.Instance.getItem(data["rottenItem"].Value<string>(), true);
                 if (RottenItem != null) CurrentItem.baseClass.rottenItem = RottenItem;
             }
-            if (data.ContainsKey("rottenItemMaxAmount")) CurrentItem.baseClass.rottenItem.maxAmount = data["rottenItemMaxAmount"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.maxAmount;
-            if (data.ContainsKey("rottenItemStackable")) CurrentItem.baseClass.rottenItem.stackable = data["rottenItemStackable"]?.Value<bool>() ?? CurrentItem.baseClass.rottenItem.stackable;
-            if (data.ContainsKey("rottenItemValue")) CurrentItem.baseClass.rottenItem.value = data["rottenItemValue"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.value;
-            if (data.ContainsKey("rottenItemExpValue")) CurrentItem.baseClass.rottenItem.expValue = data["rottenItemExpValue"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.expValue;
-            if (data.ContainsKey("rottenItemIsExpItem")) CurrentItem.baseClass.rottenItem.isExpItem = data["rottenItemIsExpItem"]?.Value<bool>() ?? CurrentItem.baseClass.rottenItem.isExpItem;
+            if (int.TryParse(data["rottenItemMaxAmount"]?.Value<string>(), out int rottenItemMaxAmount)) CurrentItem.baseClass.rottenItem.maxAmount = rottenItemMaxAmount;
+            if (bool.TryParse(data["rottenItemStackable"]?.Value<string>(), out bool rottenItemStackable)) CurrentItem.baseClass.rottenItem.stackable = rottenItemStackable;
+            if (int.TryParse(data["rottenItemValue"]?.Value<string>(), out int rottenItemValue)) CurrentItem.baseClass.rottenItem.value = rottenItemValue;
+            if (int.TryParse(data["rottenItemExpValue"]?.Value<string>(), out int rottenItemExpValue)) CurrentItem.baseClass.rottenItem.expValue = rottenItemExpValue;
+            if (bool.TryParse(data["rottenItemIsExpItem"]?.Value<string>(), out bool rottenItemIsExpItem)) CurrentItem.baseClass.rottenItem.isExpItem = rottenItemIsExpItem;
         }
     }
 }
