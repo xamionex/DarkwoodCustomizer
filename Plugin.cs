@@ -18,7 +18,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.5";
+    public const string PluginVersion = "1.3.6";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -56,6 +56,38 @@ public class Plugin : BaseUnityPlugin
     public static JObject CustomItems;
     public static JObject DefaultCustomItems = JObject.FromObject(new
     {
+        exampleItem = new
+        {
+            nome = "This data entry shows all available data of an item you can change",
+            hasAmmo = false,
+            canBeReloaded = false,
+            ammoReloadType = "magazine",
+            ammoType = "semi/burst/fullauto/auto/single",
+            hasDurability = false,
+            maxDurability = 10.0f,
+            ignoreDurabilityInValue = true,
+            repairable = true,
+            requirements = new
+            {
+                someitemid = 1,
+            },
+            flamethrowerdrag = 0.4f,
+            flamethrowercontactDamage = 20,
+            damage = 10,
+            clipSize = 100,
+            value = 100,
+            maxAmount = 100,
+            stackable = true,
+            ExpValue = 100,
+            IsExpItem = false,
+            rottenItemNote = "This is for mushrooms, as they have different types for their rotten counterpart",
+            rottenItem = "mushroom_rotten",
+            rottenItemMaxAmount = 100,
+            rottenItemStackable = true,
+            rottenItemValue = 100,
+            rottenItemExpValue = 100,
+            rottenItemIsExpItem = true,
+        },
         weapon_flamethrower_homeMade = new
         {
             ReadMePlease = "Welcome to the default CustomItems.json I recommend editing these kind of files with something that has linting, which will tell you if you've made a mistake somewhere, I personally use VSCode.. because that's what I use to code this plugin but you can also use Notepad++",

@@ -3,6 +3,7 @@ using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -21,6 +22,7 @@ public class InvItemClassPatch
             return;
         }
         var type = __instance.baseClass.type ?? __instance.type;
+        var typeRotten = __instance.baseClass?.rottenItem ?? null;
         var icon = __instance.baseClass?.iconType ?? __instance.baseClass.name;
         var CustomItems = Plugin.CustomItems;
         if (!CustomItems.ContainsKey(type))
@@ -32,6 +34,31 @@ public class InvItemClassPatch
                 { "stackable", __instance.baseClass?.stackable ?? false }
             };
             Plugin.SaveItems = true;
+        }
+        else
+        {
+            CustomItems[type]["iconType"] = CustomItems[type]["iconType"] ?? icon;
+            CustomItems[type]["maxAmount"] = CustomItems[type]["maxAmount"] ?? icon;
+            CustomItems[type]["stackable"] = CustomItems[type]["stackable"] ?? icon;
+            Plugin.SaveItems = true;
+        }
+        if (typeRotten != null && CustomItems.ContainsKey(type))
+        {
+            if (!((JObject)CustomItems[type]).ContainsKey("rottenItem"))
+            {
+                CustomItems[type]["rottenItem"] = typeRotten.type;
+                Plugin.SaveItems = true;
+            }
+            if (!((JObject)CustomItems[type]).ContainsKey("rottenItemMaxAmount"))
+            {
+                CustomItems[type]["rottenItemMaxAmount"] = typeRotten.maxAmount;
+                Plugin.SaveItems = true;
+            }
+            if (!((JObject)CustomItems[type]).ContainsKey("rottenItemStackable"))
+            {
+                CustomItems[type]["rottenItemStackable"] = typeRotten.stackable;
+                Plugin.SaveItems = true;
+            }
         }
         if (!LogItem.Contains(type))
         {
@@ -53,7 +80,10 @@ public class InvItemClassPatch
             LogStats += $"{type}.clipSize = {__instance.baseClass.clipSize}\n";
             LogStats += $"{type}.value = {__instance.baseClass.value}\n";
             LogStats += $"{type}.maxAmount = {__instance.baseClass.maxAmount}\n";
-            LogStats += $"{type}.stackable = {__instance.baseClass.stackable}\n----------------------------------------\n";
+            LogStats += $"{type}.stackable = {__instance.baseClass.stackable}\n";
+            LogStats += $"{type}.expValue = {__instance.baseClass.expValue}\n";
+            LogStats += $"{type}.isExpItem = {__instance.baseClass.isExpItem}\n";
+            LogStats += "----------------------------------------\n";
         }
         string logPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
         if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
@@ -66,17 +96,15 @@ public class InvItemClassPatch
             __instance.baseClass.maxAmount = Plugin.StackResize.Value;
         }
 
-        if (Plugin.CustomItemsUseDefaults.Value) SetItemValues(__instance, Plugin.DefaultCustomItems);
-        SetItemValues(__instance, Plugin.CustomItems);
+        if (Plugin.CustomItemsUseDefaults.Value) SetItemValues(__instance, (JObject)Plugin.DefaultCustomItems[__instance.type]);
+        SetItemValues(__instance, (JObject)Plugin.CustomItems[__instance.type]);
     }
 
 
-    private static void SetItemValues(InvItemClass CurrentItem, JObject CustomItems)
+    private static void SetItemValues(InvItemClass CurrentItem, JObject data)
     {
-        if (CustomItems[CurrentItem.type] != null)
+        if (data != null)
         {
-            var data = (JObject)CustomItems[CurrentItem.type];
-
             if (data.ContainsKey("iconType")) CurrentItem.baseClass.iconType = data["iconType"]?.Value<string>() ?? CurrentItem.baseClass.iconType;
             if (data.ContainsKey("fireMode"))
             {
@@ -141,6 +169,18 @@ public class InvItemClassPatch
             if (data.ContainsKey("maxAmount")) CurrentItem.baseClass.maxAmount = data["maxAmount"]?.Value<int>() ?? CurrentItem.baseClass.maxAmount;
             if (data.ContainsKey("stackable")) CurrentItem.baseClass.stackable = data["stackable"]?.Value<bool>() ?? CurrentItem.baseClass.stackable;
             if (data.ContainsKey("clipSize")) CurrentItem.ammo = CurrentItem.baseClass.clipSize;
+            if (data.ContainsKey("ExpValue")) CurrentItem.baseClass.expValue = data["ExpValue"]?.Value<int>() ?? CurrentItem.baseClass.expValue;
+            if (data.ContainsKey("IsExpItem")) CurrentItem.baseClass.isExpItem = data["IsExpItem"]?.Value<bool>() ?? CurrentItem.baseClass.isExpItem;
+            if (data.ContainsKey("rottenItem"))
+            {
+                InvItem RottenItem = ItemsDatabase.Instance.getItem(data["rottenItem"].Value<string>(), true);
+                if (RottenItem != null) CurrentItem.baseClass.rottenItem = RottenItem;
+            }
+            if (data.ContainsKey("rottenItemMaxAmount")) CurrentItem.baseClass.rottenItem.maxAmount = data["rottenItemMaxAmount"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.maxAmount;
+            if (data.ContainsKey("rottenItemStackable")) CurrentItem.baseClass.rottenItem.stackable = data["rottenItemStackable"]?.Value<bool>() ?? CurrentItem.baseClass.rottenItem.stackable;
+            if (data.ContainsKey("rottenItemValue")) CurrentItem.baseClass.rottenItem.value = data["rottenItemValue"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.value;
+            if (data.ContainsKey("rottenItemExpValue")) CurrentItem.baseClass.rottenItem.expValue = data["rottenItemExpValue"]?.Value<int>() ?? CurrentItem.baseClass.rottenItem.expValue;
+            if (data.ContainsKey("rottenItemIsExpItem")) CurrentItem.baseClass.rottenItem.isExpItem = data["rottenItemIsExpItem"]?.Value<bool>() ?? CurrentItem.baseClass.rottenItem.isExpItem;
         }
     }
 }
