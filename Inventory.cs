@@ -10,13 +10,15 @@ public class InventoryPatch
 	[HarmonyPostfix]
 	public static void InventoryShow(Inventory __instance, string labelName = "")
 	{
-		if (!Plugin.CraftingModification.Value) return;
-		if (__instance.invType == Inventory.InvType.crafting)
+		GameObject gameObject = __instance.thisUI;
+		PositionMe positionMe = gameObject.GetComponent<PositionMe>();
+		if (Plugin.WorkbenchInventoryModification.Value && labelName == "Storage")
 		{
-			GameObject gameObject = __instance.thisUI;
-			PositionMe positionMe = gameObject.GetComponent<PositionMe>();
+			positionMe.offset = new Vector2(__instance.position.x + Plugin.StorageXOffset.Value, __instance.position.z + Plugin.StorageZOffset.Value);
+		}
+		if (Plugin.CraftingModification.Value && __instance.invType == Inventory.InvType.crafting)
+		{
 			positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
-			gameObject.name = "Crafting";
 			if (__instance.isWorkbench)
 			{
 				foreach (var child in gameObject.GetComponentsInChildren<Transform>())
@@ -29,6 +31,9 @@ public class InventoryPatch
 						float xScale = 1f + 0.21f * extraSlots;
 						GameObject workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject, false);
 						workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
+						Singleton<InventoryController>.Instance.repairBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
+						Singleton<InventoryController>.Instance.upgradeBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
+						Singleton<InventoryController>.Instance.upgradeWorkbenchBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -503f);
 						break;
 					}
 				}

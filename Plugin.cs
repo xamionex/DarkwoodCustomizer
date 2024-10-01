@@ -7,7 +7,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -18,7 +17,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.6";
+    public const string PluginVersion = "1.3.7";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -160,8 +159,8 @@ public class Plugin : BaseUnityPlugin
 
     // Workbench values
     public static ConfigEntry<bool> WorkbenchInventoryModification;
-    public static ConfigEntry<float> CraftingXOffset;
-    public static ConfigEntry<float> CraftingZOffset;
+    public static ConfigEntry<float> StorageXOffset;
+    public static ConfigEntry<float> StorageZOffset;
     public static ConfigEntry<int> RightSlots;
     public static ConfigEntry<int> DownSlots;
 
@@ -177,6 +176,8 @@ public class Plugin : BaseUnityPlugin
 
     // Crafting values
     public static ConfigEntry<bool> CraftingModification;
+    public static ConfigEntry<float> CraftingXOffset;
+    public static ConfigEntry<float> CraftingZOffset;
     public static ConfigEntry<int> CraftingRightSlots;
     public static ConfigEntry<int> CraftingDownSlots;
     public static ConfigEntry<bool> CustomCraftingRecipesUseDefaults;
@@ -341,10 +342,12 @@ public class Plugin : BaseUnityPlugin
         CustomItemsUseDefaults = Config.Bind($"Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = 0 }));
 
         // Inventories
-        WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = 14 }));
-        RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = 13 }));
+        WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = 16 }));
+        RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = 15 }));
 
         // Workbench
+        StorageXOffset = Config.Bind($"Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 14 }));
+        StorageZOffset = Config.Bind($"Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 13 }));
         RightSlots = Config.Bind($"Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = 12 }));
         DownSlots = Config.Bind($"Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = 11 }));
 
@@ -485,6 +488,9 @@ public class Plugin : BaseUnityPlugin
         Harmony.PatchAll(typeof(WorkbenchPatch));
         Log.LogInfo($"Patching in LanguagePatch! (Item Names)");
         Harmony.PatchAll(typeof(LanguagePatch));
+        // TODO: Fix upgrade Menu
+        //Log.LogInfo($"Patching in ItemPopupPatch! (Upgrade Menu)");
+        //Harmony.PatchAll(typeof(ItemPopupPatch));
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
