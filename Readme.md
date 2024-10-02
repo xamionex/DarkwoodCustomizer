@@ -47,6 +47,14 @@ It doesn't matter how you install the mod into the plugin folder just so long as
   - plugins
     - DarkwoodCustomizer.dll
 
+## Versions 1.3.4+ Configuration
+### I recommend also installing ConfigurationManager
+### [(Download here)](https://github.com/BepInEx/BepInEx.ConfigurationManager/releases/download/v18.3/BepInEx.ConfigurationManager.BepInEx5_v18.3.zip)﻿ which will help in configuring my mod.
+You just extract that zip into your game folder and press F1 in-game and you
+can configure everything except custom items/characters, those you will
+have to edit manually, which I recommend to use VSCode or notepad++
+for.
+
 ## Configuration
 
 You can change configurations of the mod inside Bepinex/Config and opening the .cfg with a text editor, yes, you can use notepad.\
