@@ -78,23 +78,21 @@ public class WorkbenchPatch
             foreach (var requirement in RequirementsToken.Children<JProperty>())
             {
                 var itemName = requirement.Name;
-                var amount = requirement.Value.Value<int>();
 
                 var item = Singleton<ItemsDatabase>.Instance.getItem(itemName, true);
 
                 if (item == null)
                 {
-                    if (Plugin.LogWorkbench.Value) Plugin.Log.LogError($"Item {itemName} does not exist!");
+                    if (Plugin.LogWorkbench.Value) Plugin.Log.LogError($"{LogTypeFlag} Item {itemName} does not exist!");
                     continue;
                 }
 
-                if (!item.stackable && item.maxDurability > 0)
+                if (item.maxDurability > 0 && requirement.Value.Value<string>().Contains("."))
                 {
                     CustomizedRecipes[ItemName].recipes[0].requirements.Add(new CraftingRequirement
-
                     {
                         item = item,
-                        durabilityAmount = amount
+                        durabilityAmount = requirement.Value?.Value<float>() ?? 0.5f
                     });
                 }
                 else
@@ -102,7 +100,7 @@ public class WorkbenchPatch
                     CustomizedRecipes[ItemName].recipes[0].requirements.Add(new CraftingRequirement
                     {
                         item = item,
-                        amount = amount
+                        amount = requirement.Value?.Value<int>() ?? 1
                     });
                 }
             }

@@ -17,7 +17,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.3.8";
+    public const string PluginVersion = "1.3.9";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
