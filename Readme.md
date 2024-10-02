@@ -58,4 +58,4 @@ for.
 ## Configuration
 
 You can change configurations of the mod inside Bepinex/Config and opening the .cfg with a text editor, yes, you can use notepad.\
-Notice: For this mod specifically the stacks for some items won't reload until you exit and enter your save
+Notice: Not every value in the mod is double checked to be certain that you dont need to reload your save for it to take effect
