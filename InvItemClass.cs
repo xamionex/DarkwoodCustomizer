@@ -90,13 +90,12 @@ public class InvItemClassPatch
             File.WriteAllText(logPath, LogStats);
         }
         if (!Plugin.ItemsModification.Value) return;
+        if (Plugin.CustomItemsUseDefaults.Value) SetItemValues(__instance, (JObject)Plugin.DefaultCustomItems[__instance.type]);
+        SetItemValues(__instance, (JObject)Plugin.CustomItems[__instance.type]);
         if (Plugin.UseGlobalStackSize.Value)
         {
             __instance.baseClass.maxAmount = Plugin.StackResize.Value;
         }
-
-        if (Plugin.CustomItemsUseDefaults.Value) SetItemValues(__instance, (JObject)Plugin.DefaultCustomItems[__instance.type]);
-        SetItemValues(__instance, (JObject)Plugin.CustomItems[__instance.type]);
     }
 
 
