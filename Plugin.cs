@@ -17,7 +17,7 @@ public class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.4.1";
+    public const string PluginVersion = "1.4.2";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -408,8 +408,8 @@ public class Plugin : BaseUnityPlugin
 
         // Time
         TimeModification = Config.Bind($"Time", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = 5 }));
-        DaytimeFlow = Config.Bind($"Time", "Daytime Flow", 1f, new ConfigDescription("Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.", null, new ConfigurationManagerAttributes { Order = 4 }));
-        NighttimeFlow = Config.Bind($"Time", "Nighttime Flow", 0.75f, new ConfigDescription("Set the day time interval. Lower values make time pass faster, higher values make time pass slower. Be cautious: very high values can cause these options to update extremely slowly.", null, new ConfigurationManagerAttributes { Order = 3 }));
+        DaytimeFlow = Config.Bind($"Time", "Daytime Flow", 1f, new ConfigDescription("Set the day time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower.", null, new ConfigurationManagerAttributes { Order = 4 }));
+        NighttimeFlow = Config.Bind($"Time", "Nighttime Flow", 0.75f, new ConfigDescription("Set the night time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower, which includes calculating when the night starts.", null, new ConfigurationManagerAttributes { Order = 3 }));
         UseCurrentTime = Config.Bind($"Time", "Set Time", false, new ConfigDescription("Enable this to use the config for time of day below", null, new ConfigurationManagerAttributes { Order = 2 }));
         CurrentTime = Config.Bind($"Time", "Set Current Time", 1, new ConfigDescription("(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)", null, new ConfigurationManagerAttributes { Order = 1 }));
         TimeStop = Config.Bind($"Time", "Stop Time", false, new ConfigDescription("Doesn't let time get any higher", null, new ConfigurationManagerAttributes { Order = 1 }));
