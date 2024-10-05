@@ -97,8 +97,6 @@ public class InvItemClassPatch
             __instance.baseClass.maxAmount = Plugin.StackResize.Value;
         }
     }
-
-
     private static void SetItemValues(InvItemClass CurrentItem, JObject data)
     {
         if (data != null)

@@ -19,6 +19,8 @@ public class InventoryPatch
 		if (Plugin.CraftingModification.Value && __instance.invType == Inventory.InvType.crafting)
 		{
 			positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
+			UpgradeItemMenuPatch.craftingPos.x = positionMe.offset.x;
+			UpgradeItemMenuPatch.craftingPos.y = positionMe.offset.y;
 			if (__instance.isWorkbench)
 			{
 				foreach (var child in gameObject.GetComponentsInChildren<Transform>())
