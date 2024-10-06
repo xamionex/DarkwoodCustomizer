@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
-public class InvItemClassPatch
+internal class InvItemClassPatch
 {
     public static List<string> LogItem = [];
     public static string LogStats = "";
@@ -37,8 +37,8 @@ public class InvItemClassPatch
         else
         {
             CustomItems[type]["iconType"] = CustomItems[type]["iconType"] ?? icon;
-            CustomItems[type]["maxAmount"] = CustomItems[type]["maxAmount"] ?? icon;
-            CustomItems[type]["stackable"] = CustomItems[type]["stackable"] ?? icon;
+            CustomItems[type]["maxAmount"] = CustomItems[type]["maxAmount"] ?? __instance.baseClass.maxAmount;
+            CustomItems[type]["stackable"] = CustomItems[type]["stackable"] ?? __instance.baseClass.stackable;
             Plugin.SaveItems = true;
         }
         if (typeRotten != null && CustomItems.ContainsKey(type))
@@ -84,7 +84,7 @@ public class InvItemClassPatch
             LogStats += $"{type}.isExpItem = {__instance.baseClass.isExpItem}\n";
             LogStats += "----------------------------------------\n";
         }
-        string logPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
+        string logPath = Path.Combine(Paths.ConfigPath, Plugin.PluginGUID, "ItemLog.log");
         if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
         {
             File.WriteAllText(logPath, LogStats);
@@ -101,7 +101,6 @@ public class InvItemClassPatch
     {
         if (data != null)
         {
-            if (Plugin.LogItems.Value) Plugin.Log.LogInfo($"Changing Item: {CurrentItem.type}");
             if (data.ContainsKey("iconType")) CurrentItem.baseClass.iconType = data["iconType"]?.Value<string>() ?? CurrentItem.baseClass.iconType;
             if (data.ContainsKey("fireMode"))
             {

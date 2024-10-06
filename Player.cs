@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
-public class PlayerPatch
+internal class PlayerPatch
 {
     public static bool RefreshPlayer = true;
 

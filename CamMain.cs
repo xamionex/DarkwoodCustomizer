@@ -2,7 +2,7 @@ using HarmonyLib;
 
 namespace DarkwoodCustomizer;
 
-public class CamMainPatch
+internal class CamMainPatch
 {
     [HarmonyPatch(typeof(CamMain), "Update")]
     [HarmonyPostfix]

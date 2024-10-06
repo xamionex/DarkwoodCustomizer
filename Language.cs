@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace DarkwoodCustomizer;
 
-public class LanguagePatch
+internal class LanguagePatch
 {
     [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string), typeof(string)])]
     [HarmonyPostfix]

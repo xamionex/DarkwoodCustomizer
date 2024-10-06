@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
-public class WorkbenchPatch
+internal class WorkbenchPatch
 {
     private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipesLog = [];
     private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipes = [];

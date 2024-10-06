@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace DarkwoodCustomizer;
 
-public class CharacterPatch
+internal class CharacterPatch
 {
     public static List<string> CustomCharactersList = [];
 

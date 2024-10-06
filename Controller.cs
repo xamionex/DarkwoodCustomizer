@@ -2,7 +2,7 @@ using HarmonyLib;
 
 namespace DarkwoodCustomizer;
 
-public class ControllerPatch
+internal class ControllerPatch
 {
     [HarmonyPatch(typeof(Controller), nameof(Controller.refreshTime))]
     [HarmonyPostfix]

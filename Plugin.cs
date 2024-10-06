@@ -13,11 +13,11 @@ namespace DarkwoodCustomizer;
 
 [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
 [BepInProcess("Darkwood.exe")]
-public class Plugin : BaseUnityPlugin
+internal class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.4.2";
+    public const string PluginVersion = "1.4.3";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -25,6 +25,9 @@ public class Plugin : BaseUnityPlugin
     public static float LastCharactersSaveTime = 0f;
     public static bool SaveCharacters = false;
     public static float SavedCharactersCooldown = 0f;
+    public static float LastRandomInventoriesSaveTime = 0f;
+    public static bool SaveRandomInventories = false;
+    public static float SavedRandomInventoriesCooldown = 0f;
     public static ManualLogSource Log;
     public static FileSystemWatcher fileWatcher;
     public static FileSystemWatcher fileWatcherJson;
@@ -272,7 +275,6 @@ public class Plugin : BaseUnityPlugin
 
     // Player Stamina Values
     public static ConfigEntry<bool> PlayerStaminaModification;
-    public static ConfigEntry<int> PlayerStaminaUpgrades;
     public static ConfigEntry<float> PlayerMaxStamina;
     public static ConfigEntry<float> PlayerStaminaRegenInterval;
     public static ConfigEntry<float> PlayerStaminaRegenValue;
@@ -281,7 +283,6 @@ public class Plugin : BaseUnityPlugin
 
     // Player Health Values
     public static ConfigEntry<bool> PlayerHealthModification;
-    public static ConfigEntry<int> PlayerHealthUpgrades;
     public static ConfigEntry<float> PlayerMaxHealth;
     public static ConfigEntry<float> PlayerHealthRegenInterval;
     public static ConfigEntry<float> PlayerHealthRegenModifier;
@@ -316,6 +317,11 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
     public static ConfigEntry<KeyboardShortcut> KeybindStamina;
     public static ConfigEntry<KeyboardShortcut> KeybindTime;
+
+    // Random Inventories Values
+    public static ConfigEntry<bool> RandomInventoriesModification;
+    public static string CustomRandomInventoriesPath => Path.Combine(JsonConfigPath, "CustomRandomInventories.json");
+    public static JObject CustomRandomInventories;
 
     private void BepinexBindings()
     {
@@ -428,6 +434,11 @@ public class Plugin : BaseUnityPlugin
         KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
         KeybindStamina = Config.Bind("Hotkeys", "Toggle Infinite Stamina", new KeyboardShortcut(KeyCode.H, KeyCode.LeftShift));
         KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
+
+        // Character
+        RandomInventoriesModification = Config.Bind($"RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = 1 }));
+        Config.Bind($"RandomInventories", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section also dictates the items traders have", null, new ConfigurationManagerAttributes { Order = 0 }));
+        CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject { });
     }
 
     private void MakeDefaults()
@@ -457,6 +468,10 @@ public class Plugin : BaseUnityPlugin
     {
         Log = Logger;
 
+        string LogItemsPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
+        if (File.Exists(LogItemsPath))
+            File.Delete(LogItemsPath);
+
         // 1.2.6 migration check
         Migrate126Configs();
         // 1.2.8 migration check
@@ -468,28 +483,30 @@ public class Plugin : BaseUnityPlugin
         LogDivider();
 
         Harmony Harmony = new Harmony($"{PluginGUID}");
-        Log.LogInfo($"Patching in ItemPatch! (beartrap disarm)");
-        Harmony.PatchAll(typeof(ItemPatch));
-        Log.LogInfo($"Patching in InvItemClassPatch! (Items)");
-        Harmony.PatchAll(typeof(InvItemClassPatch));
-        Log.LogInfo($"Patching in InventoryPatch! (Storage)");
-        Harmony.PatchAll(typeof(InventoryPatch));
-        Log.LogInfo($"Patching in CharacterPatch! (Soontm)");
-        Harmony.PatchAll(typeof(CharacterPatch));
-        Log.LogInfo($"Patching in PlayerPatch! (Player Update)");
-        Harmony.PatchAll(typeof(PlayerPatch));
-        Log.LogInfo($"Patching in ControllerPatch! (Time)");
-        Harmony.PatchAll(typeof(ControllerPatch));
-        Log.LogInfo($"Patching in GeneratorPatch! (Generator Fuel)");
-        Harmony.PatchAll(typeof(GeneratorPatch));
-        Log.LogInfo($"Patching in CamMainPatch! (Camera)");
         Harmony.PatchAll(typeof(CamMainPatch));
-        Log.LogInfo($"Patching in WorkbenchPatch! (Recipes)");
-        Harmony.PatchAll(typeof(WorkbenchPatch));
-        Log.LogInfo($"Patching in LanguagePatch! (Item Names)");
+        Log.LogInfo($"Patching in CamMainPatch! (Camera)");
+        Harmony.PatchAll(typeof(CharacterPatch));
+        Log.LogInfo($"Patching in CharacterPatch! (Soontm)");
+        Harmony.PatchAll(typeof(ControllerPatch));
+        Log.LogInfo($"Patching in ControllerPatch! (Time)");
+        Harmony.PatchAll(typeof(GeneratorPatch));
+        Log.LogInfo($"Patching in GeneratorPatch! (Generator Fuel)");
+        Harmony.PatchAll(typeof(InventoryPatch));
+        Log.LogInfo($"Patching in InventoryPatch! (Storage)");
+        Harmony.PatchAll(typeof(InventoryRandomizePatch));
+        Log.LogInfo($"Patching in InventoryRandomizePatch! (Traders and Loot)");
+        Harmony.PatchAll(typeof(InvItemClassPatch));
+        Log.LogInfo($"Patching in InvItemClassPatch! (Items)");
+        Harmony.PatchAll(typeof(ItemPatch));
+        Log.LogInfo($"Patching in ItemPatch! (beartrap disarm)");
         Harmony.PatchAll(typeof(LanguagePatch));
-        Log.LogInfo($"Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
+        Log.LogInfo($"Patching in LanguagePatch! (Item Names)");
+        Harmony.PatchAll(typeof(PlayerPatch));
+        Log.LogInfo($"Patching in PlayerPatch! (Player Update)");
         Harmony.PatchAll(typeof(UpgradeItemMenuPatch));
+        Log.LogInfo($"Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
+        Harmony.PatchAll(typeof(WorkbenchPatch));
+        Log.LogInfo($"Patching in WorkbenchPatch! (Recipes)");
 
         Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
         LogDivider();
@@ -541,6 +558,8 @@ public class Plugin : BaseUnityPlugin
         else SavedItemsCooldown -= 0.1f;
         if (SavedCharactersCooldown < 0f) SavedCharactersCooldown = 0f;
         else SavedCharactersCooldown -= 0.1f;
+        if (SavedRandomInventoriesCooldown < 0f) SavedRandomInventoriesCooldown = 0f;
+        else SavedRandomInventoriesCooldown -= 0.1f;
         if (Time.time - LastItemsSaveTime > 0.8f && SaveItems)
         {
             SaveJsonFile(CustomItemsPath, CustomItems);
@@ -554,6 +573,13 @@ public class Plugin : BaseUnityPlugin
             LastCharactersSaveTime = Time.time;
             SavedCharactersCooldown += 1f;
             SaveCharacters = false;
+        }
+        if (Time.time - LastRandomInventoriesSaveTime > 0.8f && SaveRandomInventories)
+        {
+            SaveJsonFile(CustomRandomInventoriesPath, CustomRandomInventories);
+            LastRandomInventoriesSaveTime = Time.time;
+            SavedRandomInventoriesCooldown += 1f;
+            SaveRandomInventories = false;
         }
     }
 
@@ -570,6 +596,14 @@ public class Plugin : BaseUnityPlugin
                 if (SavedCharactersCooldown <= 0f)
                 {
                     CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
+                    if (LogJsonReload.Value) Log.LogInfo($"{e.Name} was reloaded!");
+                }
+                else return;
+                break;
+            case "CustomRandomInventories.json":
+                if (SavedRandomInventoriesCooldown <= 0f)
+                {
+                    CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject { });
                     if (LogJsonReload.Value) Log.LogInfo($"{e.Name} was reloaded!");
                 }
                 else return;
