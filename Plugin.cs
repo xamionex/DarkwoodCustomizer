@@ -17,7 +17,7 @@ internal class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.4.3";
+    public const string PluginVersion = "1.4.4";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -437,7 +437,7 @@ internal class Plugin : BaseUnityPlugin
 
         // Character
         RandomInventoriesModification = Config.Bind($"RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = 1 }));
-        Config.Bind($"RandomInventories", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section also dictates the items traders have", null, new ConfigurationManagerAttributes { Order = 0 }));
+        Config.Bind($"RandomInventories", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section also dictates the items traders have\nNew objects will be added when they load, ex. wolfman wont be added until the game loads their randominventory\nAdditional Note: You won't see changes until the next appearance of that type of inventory, I recommend starting a new save with 0.01 time scaling to generate NightTrader and WolfMan trades", null, new ConfigurationManagerAttributes { Order = 0 }));
         CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject { });
     }
 
