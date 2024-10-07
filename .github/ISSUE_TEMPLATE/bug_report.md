@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
 **Versions:**
 
 - Mod: x.x.x
-- Game: 1.4.4
+- Game: 1.4.2
 
 **Additional context**
 Add any other context about the problem here.
