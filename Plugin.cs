@@ -17,7 +17,7 @@ internal class Plugin : BaseUnityPlugin
 {
     public const string PluginAuthor = "amione";
     public const string PluginName = "DarkwoodCustomizer";
-    public const string PluginVersion = "1.4.4";
+    public const string PluginVersion = "1.4.5";
     public const string PluginGUID = PluginAuthor + "." + PluginName;
     public static float LastItemsSaveTime = 0f;
     public static bool SaveItems = false;
@@ -60,7 +60,8 @@ internal class Plugin : BaseUnityPlugin
     {
         exampleItem = new
         {
-            nome = "This data entry shows all available data of an item you can change",
+            note = "This data entry shows all available data of an item you can change",
+            note2 = "I recommend reading the wiki on github for more variables you can change",
             hasAmmo = false,
             canBeReloaded = false,
             ammoReloadType = "magazine",
@@ -134,6 +135,11 @@ internal class Plugin : BaseUnityPlugin
             drainNotes = "The two above values dictate whether or not my mod will drain the ammo/durability of this item when its fired, only enable this when the item doesnt do that by default",
             InfiniteAmmo = false,
             InfiniteDurability = false,
+        },
+        weapon_rifle_02_boltAction = new
+        {
+            iconType = "weapon_rifle_01_boltAction",
+            InfiniteAmmo = false,
         },
         lantern = new
         {
