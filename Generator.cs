@@ -4,22 +4,22 @@ namespace DarkwoodCustomizer;
 
 public static class GeneratorPatch
 {
-    public static bool RefreshGenerator = true;
+  public static bool RefreshGenerator = true;
 
-    [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
-    [HarmonyPrefix]
-    public static void DrainPatch(Generator __instance)
+  [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
+  [HarmonyPrefix]
+  public static void DrainPatch(Generator __instance)
+  {
+    if (Plugin.GeneratorModification.Value)
     {
-        if (Plugin.GeneratorModification.Value)
-        {
-            if (RefreshGenerator)
-            {
-                Player.Instance.electricityModifier = Plugin.GeneratorModifier.Value;
-            }
-            if (Plugin.GeneratorInfiniteFuel.Value)
-            {
-                __instance.fuel = __instance.maxFuel;
-            }
-        }
+      if (RefreshGenerator)
+      {
+        Player.Instance.electricityModifier = Plugin.GeneratorModifier.Value;
+      }
+      if (Plugin.GeneratorInfiniteFuel.Value)
+      {
+        __instance.fuel = __instance.maxFuel;
+      }
     }
+  }
 }
