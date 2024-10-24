@@ -1,61 +1,29 @@
 # DarkwoodCustomizer
 
-A mod for darkwood that lets you customize a lot of things about your game\
-There is too many things that you can customize to be listed here\
-The mod has full documentation on every option in the config, don't miss those!\
-Most options are set to vanilla by default with a few exceptions like:\
-Trap materials are recovered when disarming them\
-Custom Items added by default like the unused items\
-Lantern repair\
-Workbench inventory is 9x12\
-And more, check out the cfgs to get the most out of this mod and make your game to your liking.
+DarkwoodCustomizer is a versatile mod that lets you tailor nearly every aspect of your Darkwood experience. From item tweaks to crafting recipes, character stats, and more, this mod offers deep customization options that allow you to fine-tune the game to your preferences.
+
+With comprehensive documentation for every configuration option, the mod is easy to navigate and modify. Most settings stay true to the vanilla game by default, but a few key changes include:
+
+- Recovering materials when disarming traps
+- Custom Items added, including unused content
+- Lantern repair functionality
+- Expanded workbench inventory (9x12)
 
 ## WARNING
 
-This mod by default will remove excess slots!
-What this means: If you had a larger inventory/storage than what you set in this mod the extra inventory slots will be removed unless you disable the config option!
+By default, this mod will **remove excess slots** from your inventory or storage! If your current inventory or storage size exceeds what’s set in the mod, those extra slots will be removed unless you disable this config option.
 
-Another warning! Please do check out the config before loading your save, do not blame me if you get your items or anything deleted.
+Another important warning: **Check the config before loading your save!** If any items or inventory slots are missing, make sure not to save the game (don’t interact with characters, progress, or pass a day). Simply exit the game and increase your inventory or storage slots to avoid losing items.
 
-## INVENTORY WARNING
+Explore the config files to unlock the full potential of the mod and craft your perfect Darkwood experience!
 
-If you do enable this, the changes are permanent! You can change it back by remembering ~~at what inventory upgrade you are at but that's only if you remember
-Other way to change it back is to practically guess or if you're on max upgrade then it's 9 down slots (2x9)~~
-
-~~Upgrade 0 is 6 slots down (no upgrades)\
-Upgrade 1 is 7\
-Upgrade 2 is 8\
-Upgrade 3 is 9~~
-
-~~Another warning is because to me my modification for this looks very sketchy do make issues if you find it modifying something other than the player inventory,
-do not let this persuade you though, there is nothing to lose and it'll just look funny and make some work for me.~~
-
-No longer the case for version 1.0.4
-If you set the hotbar and inventory toggles to false the plugin will look at your player upgrades and set them accordingly
+For full documentation, visit the wiki: [DarkwoodCustomizer Wiki](https://github.com/xamionex/DarkwoodCustomizer/wiki).
 
 ## Installation
 
-This mod uses BepInEx for it's loader, you can download BepInEx [here](https://github.com/BepInEx/BepInEx/releases)\
-The mod was made on [BepInEx version 5.4.23.2](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.2)\
-Download BepInEx and unzip it into your game folder and then put this mod (DarkwoodCustomizer.dll) into BepInEx/plugins/\
-The directory should look like this:\
-![Game Folder](tutorial1.png)
-
-It doesn't matter how you install the mod into the plugin folder just so long as it's there BepInEx will look for DLLs in that folder
-
-- BepInEx
-  - plugins
-    - DarkwoodCustomizer.dll
-
-## Versions 1.3.4+ Configuration
-### I recommend also installing ConfigurationManager
-### [(Download here)](https://github.com/BepInEx/BepInEx.ConfigurationManager/releases/download/v18.3/BepInEx.ConfigurationManager.BepInEx5_v18.3.zip)﻿ which will help in configuring my mod.
-You just extract that zip into your game folder and press F1 in-game and you
-can configure everything except custom items/characters, those you will
-have to edit manually, which I recommend to use VSCode or notepad++
-for.
+To install the mod, follow the steps outlined here: [Installation Guide](https://github.com/xamionex/DarkwoodCustomizer/wiki/Installation)
 
 ## Configuration
 
-You can change configurations of the mod inside Bepinex/Config and opening the .cfg with a text editor, yes, you can use notepad.\
-Notice: Not every value in the mod is double checked to be certain that you dont need to reload your save for it to take effect
+Once installed, be sure to configure the mod according to your preferences.\
+Full details can be found here: [Configuration using the Manager](https://github.com/xamionex/DarkwoodCustomizer/wiki/Configuration-using-ConfigurationManager) or [Manual Configuration](https://github.com/xamionex/DarkwoodCustomizer/wiki/Configuration)
