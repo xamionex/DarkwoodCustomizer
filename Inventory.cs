@@ -10,7 +10,7 @@ internal class InventoryPatch
 {
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
   [HarmonyPostfix]
-  public static void InventoryShow(Inventory __instance, string labelName = "")
+  public static void InventoryBackgrounds(Inventory __instance, string labelName = "")
   {
     GameObject gameObject = __instance.thisUI;
     PositionMe positionMe = gameObject.GetComponent<PositionMe>();
@@ -47,7 +47,7 @@ internal class InventoryPatch
 
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
   [HarmonyPrefix]
-  public static void ModifyInventorySlots(Inventory __instance, string labelName = "")
+  public static void InventorySlots(Inventory __instance, string labelName = "")
   {
     int maxSlots = 0;
 
@@ -115,10 +115,10 @@ internal class InventoryPatch
         Plugin.LogDivider();
         Plugin.Log.LogInfo($"Player has {Player.Instance.inventoryUpgrades} inventory upgrades and {Player.Instance.hotbarUpgrades} hotbar upgrades.");
       }
-      ModifySlots(__instance, maxSlots);
+      ChangeSlots(__instance, maxSlots);
     }
   }
-  public static void ModifySlots(Inventory __instance, int MaximumSlots)
+  public static void ChangeSlots(Inventory __instance, int MaximumSlots)
   {
     int difference = MaximumSlots - __instance.slots.Count;
     if (Plugin.LogDebug.Value)
@@ -156,10 +156,9 @@ internal class InventoryPatch
   }
 
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.initSlots))]
-  [HarmonyPostfix]
-  static void InitSlots(ref Inventory __instance)
+  [HarmonyPrefix]
+  static void InventoryItems(ref Inventory __instance)
   {
-    string location = __instance.transform.root.name;
     string name = __instance.gameObject.name;
 
     // Check if the inventory name exists in CustomLoot
@@ -171,14 +170,11 @@ internal class InventoryPatch
       // Loop through slots and add items dynamically
       for (int i = 0; i < __instance.slots.Count; i++)
       {
-        // Check if the slot and the item in the slot are not null
-        if (__instance.slots[i].item == null) continue;
-
         var itemObject = new JObject
         {
-          { "item", __instance.slots[i].item.type },  // Safely access item type
+          { "item", __instance.slots[i].item?.type ?? "Empty" },
           { "minAmount", 1 },
-          { "maxAmount", __instance.slots[i].itemAmount }, // Safely access itemAmount
+          { "maxAmount", 1 },
           { "chance", 1f },
         };
 
@@ -186,7 +182,7 @@ internal class InventoryPatch
         itemsList.Add(itemObject);
       }
 
-      // If not, create the default structure for this inventory
+      // Default structure for this inventory
       Plugin.CustomLoot[name] = new JObject
       {
         { "enabled", false },
@@ -205,22 +201,32 @@ internal class InventoryPatch
 
     if (!(bool)lootEntry.Value["enabled"]) return;
 
-
     for (int i = 0; i < __instance.slots.Count; i++)
     {
-      if ((bool)replaceSlot) __instance.slots[i].item = null;
+      if (!(bool)replaceSlot && __instance.slots[i] != null) continue;
 
       // Get the item data for the current slot
-      var itemData = (JObject)lootItems[i];
+      // lootItems can have less or more than this inventories slots
+      JObject itemData;
+      try
+      {
+        itemData = (JObject)lootItems[i];
+      }
+      catch
+      {
+        continue;
+      }
       string itemName = itemData["item"].ToString();
       float chance = (float)itemData["chance"];
+
+      if (itemName == "Empty") continue;
 
       // Determine if the item should be added based on its chance
       if (UnityEngine.Random.value <= chance)
       {
         // Add the item to the inventories slots
         int amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
-        __instance.slots.Add(new() { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount });
+        __instance.slots[i] = new() { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
       }
     }
   }

@@ -340,7 +340,7 @@ internal class Plugin : BaseUnityPlugin
   private void BepinexBindings()
   {
     // Base Plugin
-    Config.Bind($"!Mod", "Thank you", "no prob!", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it, if a config doesn't have comments above it, it's probably an old config that was in a previous version.", null, new ConfigurationManagerAttributes { Order = 6 }));
+    Config.Bind($"!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = 6 }));
     ModVersion = Config.Bind($"!Mod", "Version", PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = 5 }));
     LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = 4 }));
     LogJsonReload = Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = 3 }));
