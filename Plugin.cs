@@ -17,7 +17,7 @@ internal class Plugin : BaseUnityPlugin
 {
   public const string PluginAuthor = "amione";
   public const string PluginName = "DarkwoodCustomizer";
-  public const string PluginVersion = "1.4.6";
+  public const string PluginVersion = "1.4.7";
   public const string PluginGUID = PluginAuthor + "." + PluginName;
   public static float LastItemsSaveTime = 0f;
   public static bool SaveItems = false;
@@ -267,6 +267,52 @@ internal class Plugin : BaseUnityPlugin
       {
         firecraft_weaponParts = 2,
         gasoline = 2,
+      },
+    },
+    weapon_submachine_01_full = new
+    {
+      requiredlevel = 4,
+      resource = "weapon_submachine_01_full",
+      givesamount = 1,
+      requirements = new
+      {
+        pipe_metal = 1,
+        firecraft_weaponParts = 2,
+        ammo_clip_smallCal = 1,
+      },
+    },
+    weapon_pistol_01_pellet = new
+    {
+      requiredlevel = 3,
+      resource = "weapon_pistol_01_pellet",
+      givesamount = 1,
+      requirements = new
+      {
+        pipe_metal = 1,
+        firecraft_weaponParts = 1,
+        ammo_single_pellet = 1,
+      },
+    },
+    weapon_assault_01_burst = new
+    {
+      requiredlevel = 4,
+      resource = "weapon_assault_01_burst",
+      givesamount = 1,
+      requirements = new
+      {
+        pipe_metal = 2,
+        firecraft_weaponParts = 2,
+        ammo_clip_mediumCal = 1,
+      },
+    },
+    ammo_single_pellet = new
+    {
+      requiredlevel = 4,
+      resource = "ammo_single_pellet",
+      givesamount = 8,
+      requirements = new
+      {
+        ammo_clip_smallCal = 1,
       },
     },
   });
