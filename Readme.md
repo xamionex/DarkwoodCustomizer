@@ -9,15 +9,14 @@ With comprehensive documentation for every configuration option, the mod is easy
 - Lantern repair functionality
 - Expanded workbench inventory (9x12)
 
+Explore the config files to unlock the full potential of the mod and craft your perfect Darkwood experience!\
+For full documentation, visit the wiki: [DarkwoodCustomizer Wiki](https://github.com/xamionex/DarkwoodCustomizer/wiki).
+
 ## WARNING
 
 By default, this mod will **remove excess slots** from your inventory or storage! If your current inventory or storage size exceeds what’s set in the mod, those extra slots will be removed unless you disable this config option.
 
 Another important warning: **Check the config before loading your save!** If any items or inventory slots are missing, make sure not to save the game (don’t interact with characters, progress, or pass a day). Simply exit the game and increase your inventory or storage slots to avoid losing items.
-
-Explore the config files to unlock the full potential of the mod and craft your perfect Darkwood experience!
-
-For full documentation, visit the wiki: [DarkwoodCustomizer Wiki](https://github.com/xamionex/DarkwoodCustomizer/wiki).
 
 ## Installation
 
