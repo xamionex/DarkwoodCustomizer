@@ -104,10 +104,21 @@ internal class InventoryPatch
             maxSlots = 12 + (2 * Player.Instance.inventoryUpgrades);
           }
           break;
+        case Inventory.InvType.shop:
+          if (Plugin.TraderSlots.Value)
+          {
+            __instance.maxColumns = Plugin.TraderRightSlots.Value;
+            maxSlots = __instance.maxColumns * Plugin.TraderDownSlots.Value;
+          }
+          else
+          {
+            __instance.maxColumns = 6;
+            maxSlots = 42; // 6*7
+          }
+          break;
       }
     }
-
-
+    
     if (maxSlots > 0 && maxSlots != __instance.slots.Count)
     {
       if (Plugin.LogDebug.Value)

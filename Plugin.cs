@@ -17,7 +17,7 @@ internal class Plugin : BaseUnityPlugin
 {
   public const string PluginAuthor = "amione";
   public const string PluginName = "DarkwoodCustomizer";
-  public const string PluginVersion = "1.4.7";
+  public const string PluginVersion = "1.4.8";
   public const string PluginGUID = PluginAuthor + "." + PluginName;
   public static float LastItemsSaveTime = 0f;
   public static bool SaveItems = false;
@@ -185,6 +185,11 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<int> HotbarRightSlots;
   public static ConfigEntry<int> HotbarDownSlots;
   public static ConfigEntry<bool> HotbarSlots;
+  
+  // Trader values
+  public static ConfigEntry<int> TraderRightSlots;
+  public static ConfigEntry<int> TraderDownSlots;
+  public static ConfigEntry<bool> TraderSlots;
 
   // Crafting values
   public static ConfigEntry<bool> CraftingModification;
@@ -408,24 +413,29 @@ internal class Plugin : BaseUnityPlugin
     CustomItemsUseDefaults = Config.Bind($"Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = 0 }));
 
     // Inventories
-    WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = 18 }));
-    RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = 17 }));
+    WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = 19 }));
+    RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = 18 }));
 
     // Workbench
-    StorageXOffset = Config.Bind($"Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 16 }));
-    StorageZOffset = Config.Bind($"Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 15 }));
-    RightSlots = Config.Bind($"Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = 12 }));
-    DownSlots = Config.Bind($"Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = 11 }));
+    StorageXOffset = Config.Bind($"Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 17 }));
+    StorageZOffset = Config.Bind($"Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = 16 }));
+    RightSlots = Config.Bind($"Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = 15 }));
+    DownSlots = Config.Bind($"Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = 14 }));
 
     // Inventory
-    InventorySlots = Config.Bind($"Inventories", "Enable Inventory Modification", false, new ConfigDescription("Enable Inventory Modification", null, new ConfigurationManagerAttributes { Order = 10 }));
-    InventoryRightSlots = Config.Bind($"Inventories", "Inventory Right Slots", 2, new ConfigDescription("Number that determines slots in inventory to the right", null, new ConfigurationManagerAttributes { Order = 9 }));
-    InventoryDownSlots = Config.Bind($"Inventories", "Inventory Down Slots", 9, new ConfigDescription("Number that determines slots in inventory downward", null, new ConfigurationManagerAttributes { Order = 8 }));
+    InventorySlots = Config.Bind($"Inventories", "Enable Inventory Modification", false, new ConfigDescription("Enable Inventory Modification", null, new ConfigurationManagerAttributes { Order = 13 }));
+    InventoryRightSlots = Config.Bind($"Inventories", "Inventory Right Slots", 2, new ConfigDescription("Number that determines slots in inventory to the right", null, new ConfigurationManagerAttributes { Order = 12 }));
+    InventoryDownSlots = Config.Bind($"Inventories", "Inventory Down Slots", 9, new ConfigDescription("Number that determines slots in inventory downward", null, new ConfigurationManagerAttributes { Order = 11 }));
 
     // Hotbar
-    HotbarSlots = Config.Bind($"Inventories", "Enable Hotbar Modification", false, new ConfigDescription("Enable Hotbar Modification\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 7 }));
-    HotbarRightSlots = Config.Bind($"Inventories", "Hotbar Right Slots", 1, new ConfigDescription("Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 6 }));
-    HotbarDownSlots = Config.Bind($"Inventories", "Hotbar Down Slots", 6, new ConfigDescription("Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 5 }));
+    HotbarSlots = Config.Bind($"Inventories", "Enable Hotbar Modification", false, new ConfigDescription("Enable Hotbar Modification\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 10 }));
+    HotbarRightSlots = Config.Bind($"Inventories", "Hotbar Right Slots", 1, new ConfigDescription("Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 9 }));
+    HotbarDownSlots = Config.Bind($"Inventories", "Hotbar Down Slots", 6, new ConfigDescription("Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = 8 }));
+
+    // Trader
+    TraderSlots = Config.Bind($"Inventories", "Enable Trader Modification", false, new ConfigDescription("Enable Traders Modification", null, new ConfigurationManagerAttributes { Order = 7 }));
+    TraderRightSlots = Config.Bind($"Inventories", "Trader Right Slots", 6, new ConfigDescription("Number that determines slots in Traders to the right.", null, new ConfigurationManagerAttributes { Order = 6 }));
+    TraderDownSlots = Config.Bind($"Inventories", "Trader Down Slots", 7, new ConfigDescription("Number that determines slots in Traders downward.", null, new ConfigurationManagerAttributes { Order = 5 }));
 
     // Crafting
     CraftingModification = Config.Bind($"Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = 4 }));
