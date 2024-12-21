@@ -106,7 +106,7 @@
   </Target>
 
   <Target Name="ZipProjectDirectory" AfterTargets="Build">
-    <Exec Command="zip -r '$(ProjectDir)$(RootNamespace).zip' '$(ProjectDir)$(RootNamespace)'" Condition="'$(OS)' == 'Unix'" />
-    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="zip -r '$(ProjectDir)$(RootNamespace).zip' '$(ProjectDir)$(RootNamespace)\plugins\*.dll'" Condition="'$(OS)' == 'Unix'" />
+    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)\plugins\*.dll' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />
   </Target>
 </Project>
