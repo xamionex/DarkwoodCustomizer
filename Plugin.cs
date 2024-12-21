@@ -190,8 +190,14 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> TraderSlots;
   public static ConfigEntry<int> TraderRightSlots;
   public static ConfigEntry<int> TraderDownSlots;
-  public static ConfigEntry<float> TraderXOffset;
-  public static ConfigEntry<float> TraderZOffset;
+  public static ConfigEntry<float> TraderInventoryXOffset;
+  public static ConfigEntry<float> TraderInventoryZOffset;
+  public static ConfigEntry<float> TraderSellXOffset;
+  public static ConfigEntry<float> TraderSellZOffset;
+  public static ConfigEntry<float> TraderBuyXOffset;
+  public static ConfigEntry<float> TraderBuyZOffset;
+  public static ConfigEntry<float> TraderCloseXOffset;
+  public static ConfigEntry<float> TraderCloseZOffset;
 
   // Crafting values
   public static ConfigEntry<bool> CraftingModification;
@@ -439,9 +445,15 @@ internal class Plugin : BaseUnityPlugin
     TraderSlots = Config.Bind($"Inventories", "Enable Trader Modification", false, new ConfigDescription("Enable Traders Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     TraderRightSlots = Config.Bind($"Inventories", "Trader Right Slots", 6, new ConfigDescription("Number that determines slots in Traders to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     TraderDownSlots = Config.Bind($"Inventories", "Trader Down Slots", 7, new ConfigDescription("Number that determines slots in Traders downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderXOffset = Config.Bind($"Inventories", "Trader Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the shop window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderZOffset = Config.Bind($"Inventories", "Trader Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the shop window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-
+    TraderInventoryXOffset = Config.Bind($"Inventories", "TraderInventory Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderInventoryZOffset = Config.Bind($"Inventories", "TraderInventory Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderSellXOffset = Config.Bind($"Inventories", "TraderSell Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderSellZOffset = Config.Bind($"Inventories", "TraderSell Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderBuyXOffset = Config.Bind($"Inventories", "TraderBuy Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderBuyZOffset = Config.Bind($"Inventories", "TraderBuy Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderCloseXOffset = Config.Bind($"Inventories", "TraderClose Button X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderCloseZOffset = Config.Bind($"Inventories", "TraderClose Button Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    
     // Crafting
     CraftingModification = Config.Bind($"Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingXOffset = Config.Bind($"Inventories", "Crafting Window X Offset", 1000f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -564,31 +576,33 @@ internal class Plugin : BaseUnityPlugin
 
     Harmony Harmony = new Harmony($"{PluginGUID}");
     Harmony.PatchAll(typeof(CamMainPatch));
-    Log.LogInfo($"Patching in CamMainPatch! (Camera)");
+    Log.LogInfo("Patching in CamMainPatch! (Camera)");
     Harmony.PatchAll(typeof(CharacterPatch));
-    Log.LogInfo($"Patching in CharacterPatch! (Soontm)");
+    Log.LogInfo("Patching in CharacterPatch! (Soontm)");
     Harmony.PatchAll(typeof(ControllerPatch));
-    Log.LogInfo($"Patching in ControllerPatch! (Time)");
+    Log.LogInfo("Patching in ControllerPatch! (Time)");
     Harmony.PatchAll(typeof(GeneratorPatch));
-    Log.LogInfo($"Patching in GeneratorPatch! (Generator Fuel)");
+    Log.LogInfo("Patching in GeneratorPatch! (Generator Fuel)");
     Harmony.PatchAll(typeof(InventoryPatch));
-    Log.LogInfo($"Patching in InventoryPatch! (Storage)");
+    Log.LogInfo("Patching in InventoryPatch! (Storage)");
     Harmony.PatchAll(typeof(InventoryRandomizePatch));
-    Log.LogInfo($"Patching in InventoryRandomizePatch! (Traders and Loot)");
+    Log.LogInfo("Patching in InventoryRandomizePatch! (Traders and Loot)");
     Harmony.PatchAll(typeof(InvItemClassPatch));
-    Log.LogInfo($"Patching in InvItemClassPatch! (Items)");
+    Log.LogInfo("Patching in InvItemClassPatch! (Items)");
     Harmony.PatchAll(typeof(ItemPatch));
-    Log.LogInfo($"Patching in ItemPatch! (beartrap disarm)");
+    Log.LogInfo("Patching in ItemPatch! (beartrap disarm)");
     Harmony.PatchAll(typeof(LanguagePatch));
-    Log.LogInfo($"Patching in LanguagePatch! (Item Names)");
+    Log.LogInfo("Patching in LanguagePatch! (Item Names)");
     Harmony.PatchAll(typeof(PlayerPatch));
-    Log.LogInfo($"Patching in PlayerPatch! (Player Update)");
+    Log.LogInfo("Patching in PlayerPatch! (Player Update)");
     Harmony.PatchAll(typeof(UpgradeItemMenuPatch));
-    Log.LogInfo($"Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
+    Log.LogInfo("Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
     Harmony.PatchAll(typeof(WorkbenchPatch));
-    Log.LogInfo($"Patching in WorkbenchPatch! (Recipes)");
+    Log.LogInfo("Patching in WorkbenchPatch! (Recipes)");
     Harmony.PatchAll(typeof(DialogueWindowPatch));
-    Log.LogInfo($"Patching in DialogueWindowPatch! (Trader windows)");
+    Log.LogInfo("Patching in DialogueWindowPatch! (Trader windows)");
+    Harmony.PatchAll(typeof(LevelingMenuPatch));
+    Log.LogInfo("Patching in LevelingMenuPatch! (Inventory in cooking menu)");
 
     Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
     LogDivider();
