@@ -84,7 +84,7 @@ internal class InvItemClassPatch
       LogStats += $"{type}.isExpItem = {__instance.baseClass.isExpItem}\n";
       LogStats += "----------------------------------------\n";
     }
-    string logPath = Path.Combine(Paths.ConfigPath, Plugin.PluginGUID, "ItemLog.log");
+    string logPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "ItemLog.log");
     if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
     {
       File.WriteAllText(logPath, LogStats);

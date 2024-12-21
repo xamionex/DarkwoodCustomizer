@@ -2,9 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>DarkwoodCustomizer</AssemblyName>
+    <AssemblyName>amione.DarkwoodCustomizer</AssemblyName>
     <Product>DarkwoodCustomizer</Product>
-    <Version>1.4.8</Version>
+    <ProductDescription>A mod for darkwood that lets you customize: Any Player or Enemy (HP,Stamina,Speed,etc.), Item stats (dmg,stacks,etc.), Inventory Sizes, Generator Drain Speed, Time Speed, and more!</ProductDescription>
+    <Version>1.4.9</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -37,17 +38,75 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>F:\SteamLibrary\steamapps\common\Darkwood\Darkwood_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>F:\SteamLibrary\steamapps\common\Darkwood\Darkwood_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Darkwood\Darkwood_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\Darkwood\Darkwood_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-    </Reference>
+    <Reference Include="lib\*.dll" Private="False" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="DarkwoodCustomizer\manifest.json" />
+  </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <ItemGroup>
+      <PluginInfoLines Include="internal static class PluginInfo {" />
+      <PluginInfoLines Include="    public const string PluginGUID = &quot;$(AssemblyName)&quot;%3B" />
+      <PluginInfoLines Include="    public const string PluginName = &quot;$(Product)&quot;%3B" />
+      <PluginInfoLines Include="    public const string PluginVersion = &quot;$(Version)&quot;%3B" />
+      <PluginInfoLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(ProjectDir)PluginInfo.cs" Lines="@(PluginInfoLines)" Overwrite="true" />
+  </Target>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <ItemGroup>
+      <BuildFiles Include="$(Outdir)\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BuildFiles)" DestinationFolder="$(ProjectDir)$(RootNamespace)\plugins" />
+  </Target>
+
+  <UsingTask TaskName="RegexReplaceTask" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll" TaskFactory="RoslynCodeTaskFactory">
+    <ParameterGroup>
+      <InputFile />
+      <VersionValue Required="true" />
+      <AssemblyName Required="true" />
+      <ProductDescription Required="true" />
+      <Product Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+          string content = File.ReadAllText(InputFile);
+
+          // Replace "version"
+          content = Regex.Replace(content, @"""version"":\s*""[^""]*""", $@"""version"": ""{VersionValue}""");
+
+          // Replace "id"
+          content = Regex.Replace(content, @"""id"":\s*""[^""]*""", $@"""id"": ""{AssemblyName}""");
+
+          // Replace "name"
+          content = Regex.Replace(content, @"""name"":\s*""[^""]*""", $@"""name"": ""{Product}""");
+
+          // Replace "description"
+          content = Regex.Replace(content, @"""description"":\s*""[^""]*""", $@"""description"": ""{ProductDescription}""");
+
+          File.WriteAllText(InputFile, content);
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="UpdateModInfo" AfterTargets="Build">
+    <RegexReplaceTask
+            InputFile="$(ProjectDir)$(RootNamespace)\manifest.json"
+            VersionValue="$(Version)"
+            AssemblyName="$(AssemblyName)"
+            ProductDescription="$(ProductDescription)"
+            Product="$(Product)" />
+  </Target>
+
+  <Target Name="ZipProjectDirectory" AfterTargets="Build">
+    <Exec Command="zip -r '$(ProjectDir)$(RootNamespace).zip' '$(ProjectDir)$(RootNamespace)'" Condition="'$(OS)' == 'Unix'" />
+    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />
+  </Target>
 </Project>

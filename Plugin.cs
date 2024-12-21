@@ -11,14 +11,10 @@ using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
-[BepInPlugin(PluginGUID, PluginName, PluginVersion)]
+[BepInPlugin(PluginInfo.PluginGUID, PluginInfo.PluginName, PluginInfo.PluginVersion)]
 [BepInProcess("Darkwood.exe")]
 internal class Plugin : BaseUnityPlugin
 {
-  public const string PluginAuthor = "amione";
-  public const string PluginName = "DarkwoodCustomizer";
-  public const string PluginVersion = "1.4.8";
-  public const string PluginGUID = PluginAuthor + "." + PluginName;
   public static float LastItemsSaveTime = 0f;
   public static bool SaveItems = false;
   public static float SavedItemsCooldown = 0f;
@@ -37,8 +33,8 @@ internal class Plugin : BaseUnityPlugin
   public static FileSystemWatcher fileWatcherDefaults;
 
   // Base Plugin Values
-  public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Customs");
-  public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginGUID, "ModDefaults");
+  public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Customs");
+  public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "ModDefaults");
   public static ConfigEntry<string> ModVersion;
   public static ConfigEntry<bool> LogDebug;
   public static ConfigEntry<bool> LogJsonReload;
@@ -401,13 +397,13 @@ internal class Plugin : BaseUnityPlugin
     var i = 255;
     // Base Plugin
     Config.Bind($"!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ModVersion = Config.Bind($"!Mod", "Version", PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ModVersion = Config.Bind($"!Mod", "Version", PluginInfo.PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogJsonReload = Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogItems = Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogCharacters = Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogWorkbench = Config.Bind($"!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ModVersion.Value = PluginVersion;
+    ModVersion.Value = PluginInfo.PluginVersion;
     Config.Save();
 
     // Items
@@ -574,7 +570,7 @@ internal class Plugin : BaseUnityPlugin
 
     LogDivider();
 
-    Harmony Harmony = new Harmony($"{PluginGUID}");
+    Harmony Harmony = new Harmony($"{PluginInfo.PluginGUID}");
     Harmony.PatchAll(typeof(CamMainPatch));
     Log.LogInfo("Patching in CamMainPatch! (Camera)");
     Harmony.PatchAll(typeof(CharacterPatch));
@@ -604,7 +600,7 @@ internal class Plugin : BaseUnityPlugin
     Harmony.PatchAll(typeof(LevelingMenuPatch));
     Log.LogInfo("Patching in LevelingMenuPatch! (Inventory in cooking menu)");
 
-    Log.LogInfo($"[{PluginGUID} v{PluginVersion}] has fully loaded!");
+    Log.LogInfo($"[{PluginInfo.PluginGUID} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();
 
     fileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
@@ -809,8 +805,8 @@ internal class Plugin : BaseUnityPlugin
   {
     // 1.2.6 migration check
     // Move JSON files
-    string oldJsonPath = Path.Combine(Paths.ConfigPath, PluginGUID);
-    string newJsonPath = Path.Combine(Paths.ConfigPath, PluginGUID, "Customs");
+    string oldJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID);
+    string newJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Customs");
     if (!Directory.Exists(newJsonPath)) Directory.CreateDirectory(newJsonPath);
     foreach (string jsonFile in Directory.GetFiles(oldJsonPath, "*.json"))
     {
@@ -822,7 +818,7 @@ internal class Plugin : BaseUnityPlugin
     }
 
     // Remove old defaults folders
-    string[] OldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginGUID, "defaults"), Path.Combine(Paths.ConfigPath, PluginGUID, "VanillaDefaults")];
+    string[] OldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "defaults"), Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "VanillaDefaults")];
     foreach (string OldDefaultsFolder in OldDefaultsFolders)
     {
       if (Directory.Exists(OldDefaultsFolder))
@@ -837,7 +833,7 @@ internal class Plugin : BaseUnityPlugin
   private void Migrate128Configs()
   {
     // 1.2.8 migration check
-    string OldLanternConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "Lantern.cfg");
+    string OldLanternConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Lantern.cfg");
     if (File.Exists(OldLanternConfig))
     {
       File.Delete(OldLanternConfig);
@@ -850,10 +846,10 @@ internal class Plugin : BaseUnityPlugin
       Log.LogInfo($"Old Default CustomStacks Json was deleted at {OldDefaultStacksJson}");
     }
     string NewPathConfig;
-    string OldStacksConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "CustomStacks.cfg");
+    string OldStacksConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "CustomStacks.cfg");
     if (File.Exists(OldStacksConfig))
     {
-      NewPathConfig = Path.Combine(Paths.ConfigPath, PluginGUID, "CustomStacks_Unused_From_128_DeletePlease.cfg");
+      NewPathConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "CustomStacks_Unused_From_128_DeletePlease.cfg");
       File.Move(OldStacksConfig, NewPathConfig);
       Log.LogInfo($"Old CustomStacks config can be found at at {NewPathConfig}");
     }
@@ -870,29 +866,29 @@ internal class Plugin : BaseUnityPlugin
   {
     List<string> ConfigFiles =
     [
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Items.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Inventories.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Characters.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Player.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Time.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Generator.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Camera.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Workbench.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Logging.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Items.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Inventories.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Characters.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Player.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Time.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Generator.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Camera.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Workbench.cfg"),
     ];
     List<string> ConfigFilesPreviousVersions =
     [
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Logging.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Items.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Inventories.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Characters.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Player.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Time.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Generator.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Camera.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Workbench.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Repairs.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginGUID, "Stacks.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Logging.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Items.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Inventories.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Characters.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Player.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Time.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Generator.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Camera.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Workbench.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Repairs.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Stacks.cfg"),
     ];
     string newConfig = "";
     bool changed = false;
@@ -921,7 +917,7 @@ internal class Plugin : BaseUnityPlugin
               }
             }
           }
-          Log.LogInfo($"Merged old config file at {ConfigFile} into {PluginGUID}.cfg");
+          Log.LogInfo($"Merged old config file at {ConfigFile} into {PluginInfo.PluginGUID}.cfg");
         }
       }
     }
@@ -929,13 +925,13 @@ internal class Plugin : BaseUnityPlugin
     {
       if (File.Exists(ConfigPreviousVersion))
       {
-        string oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginGUID, "YourOldConfigs");
+        string oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "YourOldConfigs");
         if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
         string newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(ConfigPreviousVersion)}.cfg");
         File.Move(ConfigPreviousVersion, newConfigFile);
         Log.LogInfo($"Old config file at {ConfigPreviousVersion} was moved to {newConfigFile} as its not used anymore");
       }
     }
-    if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginGUID}.cfg"), newConfig);
+    if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGUID}.cfg"), newConfig);
   }
 }
