@@ -8,6 +8,53 @@ namespace DarkwoodCustomizer;
 
 internal class WorkbenchPatch
 {
+  private static readonly List<string> _chapter2Restricted =
+  [
+    "exp_bio2_meat_mutated",
+    "note_truck_01",
+    "map_bio2",
+    "piotrek_parts_3",
+    "piotrek_parts_6",
+    "piotrek_parts_1",
+    "krzyzyk_01",
+    "weapon_pistol_01_pellet",
+    "weapon_submachine_01_full",
+    "ammo_single_pellet",
+    "piotrek_parts_5",
+    "note_pigshed_flyer",
+    "note_pigshed_02",
+    "plank_nails",
+    "dead_rat",
+    "jajeczka_wilk",
+    "twins_church_01",
+    "note_gagarin",
+    "rocket_blueprint_01",
+    "violin",
+    "lesnyLudek",
+    "piotrek_parts_2",
+    "porterWhistle",
+    "kartkiEkspedycja",
+    "ring_wedding_babahunter",
+    "hunter_photo_1",
+    "weapon_flamethrower_homeMade",
+    "note_macius_1",
+    "magazynPan_01",
+    "kremCzekoladowy",
+    "doctor_wife_photo",
+    "key_bunker_act1",
+    "key_wolfmanHideout_01",
+    "shawl_sister_01",
+    "chicken_egg_red",
+    "chain_well",
+    "key_act1_biom3",
+    "magazynPlomyk_01",
+    "key_big_farm_02_shed",
+    "cable",
+    "map_bio3",
+    "piotrek_parts_4"
+  ];
+
+  public static bool Chapter2LoadOnNextOpen;
   private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipesLog = [];
   private static readonly Dictionary<string, CraftingRecipes> CustomizedRecipes = [];
   private static string LogTypeFlag = "";
@@ -17,7 +64,7 @@ internal class WorkbenchPatch
   [HarmonyPrefix]
   public static void WorkbenchRecipes(Workbench __instance)
   {
-    if (!Plugin.CraftingModification.Value) return;
+    if (!Plugin.CraftingRecipesModification.Value) return;
     OnFirst = true;
     if (Plugin.CustomCraftingRecipesUseDefaults.Value)
     {
@@ -28,10 +75,17 @@ internal class WorkbenchPatch
     LogTypeFlag = "[USERCUSTOMRECIPES]";
     foreach (var RecipeProperty in Plugin.CustomCraftingRecipes.Properties())
       if (RecipeProperty.Value is JObject RecipeObject) WorkbenchCraftingAddRecipe(RecipeProperty.Name, RecipeObject, __instance);
+    Chapter2LoadOnNextOpen = true;
   }
 
   public static void WorkbenchCraftingAddRecipe(string ItemName, JObject RecipeObject, Workbench instance)
   {
+    if (_chapter2Restricted.Contains(ItemName) && !Chapter2LoadOnNextOpen)
+    {
+      Plugin.Log.LogInfo($"Skipping {ItemName} since chapter 2 has to yet load it, open the workbench again for it to load");
+      return;
+    }
+    
     var ItemResource = RecipeObject["icon"]?.Value<string>() ?? RecipeObject["resource"]?.Value<string>();
     var LevelToAddTo = RecipeObject["requiredlevel"]?.Value<int>() - 1 ?? 0;
     var RequirementsToken = RecipeObject["requirements"];
@@ -42,11 +96,10 @@ internal class WorkbenchPatch
     GameObject ItemResourceObject = LoadResource(ItemResource, true);
     if (ItemResourceObject == null)
     {
-      ItemResourceObject = LoadResource(ItemResource);
+      ItemResourceObject = ItemsDatabase.Instance.getItem(ItemName, false).gameObject;
     }
     else
     {
-      _ = Singleton<ItemsDatabase>.Instance.getItem(ItemName, true);
       Plugin.Log.LogWarning($"{LogTypeFlag} Item {ItemName} is unused and will not be loaded!");
       if (!Plugin.CraftingUnusedContinue.Value) return;
       Plugin.Log.LogWarning($"{LogTypeFlag} Trying to load {ItemName} anyway because trying to load unused is enabled!");
@@ -60,15 +113,8 @@ internal class WorkbenchPatch
 
     CraftingRecipes ItemPath = ItemResourceObject.GetComponent<CraftingRecipes>() ?? ItemResourceObject.AddComponent<CraftingRecipes>();
 
-    if (CustomizedRecipesLog.ContainsKey(ItemName))
-      CustomizedRecipesLog[ItemName] = ItemPath;
-    else
-      CustomizedRecipesLog.Add(ItemName, ItemPath);
-
-    if (CustomizedRecipes.ContainsKey(ItemName))
-      CustomizedRecipes[ItemName] = ItemPath;
-    else
-      CustomizedRecipes.Add(ItemName, ItemPath);
+    CustomizedRecipesLog[ItemName] = ItemPath;
+    CustomizedRecipes[ItemName] = ItemPath;
 
     CustomizedRecipes[ItemName].recipes = [new CraftingRecipes.Recipe { requirements = [] }];
     CustomizedRecipes[ItemName].recipes[0].produceAmount = RecipeObject["givesamount"]?.Value<int>() ?? 1;
@@ -79,7 +125,7 @@ internal class WorkbenchPatch
       {
         var itemName = requirement.Name;
 
-        var item = Singleton<ItemsDatabase>.Instance.getItem(itemName, true);
+        var item = ItemsDatabase.Instance.getItem(itemName, true);
 
         if (item == null)
         {
@@ -128,10 +174,7 @@ internal class WorkbenchPatch
         };
     if (UnusedOnly)
     {
-      resourcePaths = new[]
-      {
-                $"InventoryItems_NotUsed/{itemName}",
-            };
+      resourcePaths = new[] { $"InventoryItems_NotUsed/{itemName}" };
     }
     foreach (var resourcePath in resourcePaths)
     {

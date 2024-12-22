@@ -201,6 +201,7 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<float> CraftingZOffset;
   public static ConfigEntry<int> CraftingRightSlots;
   public static ConfigEntry<int> CraftingDownSlots;
+  public static ConfigEntry<bool> CraftingRecipesModification;
   public static ConfigEntry<bool> CustomCraftingRecipesUseDefaults;
   public static ConfigEntry<bool> CraftingUnusedContinue;
   public static string CustomCraftingRecipesPath => Path.Combine(JsonConfigPath, "CustomCraftingRecipes.json");
@@ -457,9 +458,10 @@ internal class Plugin : BaseUnityPlugin
     CraftingRightSlots = Config.Bind($"Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingDownSlots = Config.Bind($"Inventories", "Crafting Window Down Slots", 7, new ConfigDescription("Number that determines slots in Crafting window downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject());
+    CraftingRecipesModification = Config.Bind($"Crafting", "Enable Crafting Recipes Modification", true, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCraftingRecipesUseDefaults = Config.Bind($"Crafting", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingUnusedContinue = Config.Bind($"Crafting", "Try to load unused items", false, new ConfigDescription("Try to load unused items anyway\nWARNING: This will most likely result in your workbench breaking, use at your own risk", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"Crafting", "Note1", "okay", new ConfigDescription("This section is responsible for custom recipes.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind($"Crafting", "Note1", "okay", new ConfigDescription("This section is responsible for custom recipes. If you're in chapter 2 keep in mind that some recipes might load on 2nd opening, it's because of how the game loads items", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind($"Crafting", "Note2", "okay", new ConfigDescription("givesamount only works for some items, not sure what dictates this.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Character
@@ -599,6 +601,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in DialogueWindowPatch! (Trader windows)");
     Harmony.PatchAll(typeof(LevelingMenuPatch));
     Log.LogInfo("Patching in LevelingMenuPatch! (Inventory in cooking menu)");
+    Harmony.PatchAll(typeof(WorldGeneratorPatch));
+    Log.LogInfo("Patching in WorldGeneratorPatch! (Bool when game loads)");
 
     Log.LogInfo($"[{PluginInfo.PluginGUID} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();

@@ -16,6 +16,7 @@ internal class InvItemClassPatch
   [HarmonyPostfix]
   public static void ItemPatch(InvItemClass __instance)
   {
+    if (!Plugin.ItemsModification.Value) return;
     if (Singleton<Dreams>.Instance.dreaming || __instance.baseClass == null)
     {
       return;
@@ -36,9 +37,9 @@ internal class InvItemClassPatch
     }
     else
     {
-      CustomItems[type]["iconType"] = CustomItems[type]["iconType"] ?? icon;
-      CustomItems[type]["maxAmount"] = CustomItems[type]["maxAmount"] ?? __instance.baseClass.maxAmount;
-      CustomItems[type]["stackable"] = CustomItems[type]["stackable"] ?? __instance.baseClass.stackable;
+      CustomItems[type]["iconType"] ??= icon;
+      CustomItems[type]["maxAmount"] ??= __instance.baseClass.maxAmount;
+      CustomItems[type]["stackable"] ??= __instance.baseClass.stackable;
       Plugin.SaveItems = true;
     }
     if (typeRotten != null && CustomItems.ContainsKey(type))
