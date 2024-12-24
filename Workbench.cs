@@ -62,23 +62,23 @@ internal class WorkbenchPatch
 
   [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
   [HarmonyPrefix]
-  public static void WorkbenchRecipes(Workbench instance)
+  public static void WorkbenchRecipes(Workbench __instance)
   {
     if (!Plugin.CraftingRecipesModification.Value) return;
     _onFirst = true;
     if (Plugin.CustomCraftingRecipesUseDefaults.Value)
     {
-      _logTypeFlag = "[DEFAULTCUSTOMRECIPES]";
+      _logTypeFlag = "[DefaultCustomCraftingRecipes]";
       foreach (var recipeProperty in Plugin.DefaultCustomCraftingRecipes.Properties())
-        if (recipeProperty.Value is JObject recipeObject) WorkbenchCraftingAddRecipe(recipeProperty.Name, recipeObject, instance);
+        if (recipeProperty.Value is JObject recipeObject) WorkbenchCraftingAddRecipe(recipeProperty.Name, recipeObject, __instance);
     }
-    _logTypeFlag = "[USERCUSTOMRECIPES]";
+    _logTypeFlag = "[UserCustomCraftingRecipes]";
     foreach (var recipeProperty in Plugin.CustomCraftingRecipes.Properties())
-      if (recipeProperty.Value is JObject recipeObject) WorkbenchCraftingAddRecipe(recipeProperty.Name, recipeObject, instance);
+      if (recipeProperty.Value is JObject recipeObject) WorkbenchCraftingAddRecipe(recipeProperty.Name, recipeObject, __instance);
     Chapter2LoadOnNextOpen = true;
   }
 
-  public static void WorkbenchCraftingAddRecipe(string itemName, JObject recipeObject, Workbench instance)
+  public static void WorkbenchCraftingAddRecipe(string itemName, JObject recipeObject, Workbench __instance)
   {
     if (Chapter2Restricted.Contains(itemName) && !Chapter2LoadOnNextOpen)
     {
@@ -154,15 +154,15 @@ internal class WorkbenchPatch
 
     for (var i = 0; i < 8; i++)
     {
-      var index = instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipesLog[itemName].name);
+      var index = __instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipesLog[itemName].name);
       if (index != -1)
       {
-        instance.levels[i].recipes.RemoveAt(index);
+        __instance.levels[i].recipes.RemoveAt(index);
       }
     }
 
     if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"{_logTypeFlag} Added recipe of {itemName} with {CustomizedRecipes[itemName].recipes[0].requirements.Count} requirements at level {levelToAddTo} workbench");
-    instance.levels[levelToAddTo].recipes.Add(CustomizedRecipes[itemName]);
+    __instance.levels[levelToAddTo].recipes.Add(CustomizedRecipes[itemName]);
   }
 
   public static GameObject LoadResource(string itemName, bool unusedOnly = false)

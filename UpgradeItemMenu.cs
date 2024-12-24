@@ -10,10 +10,10 @@ public static class UpgradeItemMenuPatch
 
   [HarmonyPatch(typeof(UpgradeItemMenu), nameof(UpgradeItemMenu.open))]
   [HarmonyPrefix]
-  public static void UpgradeMenuOpened(UpgradeItemMenu instance, InvItemClass invItemClass)
+  public static void UpgradeMenuOpened(UpgradeItemMenu __instance, InvItemClass invItemClass)
   {
-    var positionMe = instance.gameObject.GetComponent<PositionMe>();
-    if (VanillaValue.x == 0 && VanillaValue.y == 0)
+    if (!__instance.gameObject.TryGetComponent<PositionMe>(out var positionMe)) return;
+    if (VanillaValue is { x: 0, y: 0 })
     {
       VanillaValue.x = positionMe.offset.x;
       VanillaValue.y = positionMe.offset.y;

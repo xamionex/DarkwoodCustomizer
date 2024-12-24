@@ -15,55 +15,55 @@ internal class CharacterPatch
 
   [HarmonyPatch(typeof(Character), nameof(Character.Update))]
   [HarmonyPrefix]
-  public static void CharUpdate(Character instance)
+  public static void CharUpdate(Character __instance)
   {
-    SetCharacterValues(instance);
+    SetCharacterValues(__instance);
   }
 
   [HarmonyPatch(typeof(Character), "Awake")]
   [HarmonyPrefix]
-  public static void ChararcterAwake(Character instance)
+  public static void ChararcterAwake(Character __instance)
   {
-    SetCharacterValues(instance, true);
+    SetCharacterValues(__instance, true);
   }
 
-  public static void SetCharacterValues(Character instance, bool updateHealth = false)
+  public static void SetCharacterValues(Character __instance, bool updateHealth = false)
   {
-    var name = instance.name;
+    var name = __instance.name;
     if (name.Contains("(Clone)"))
     {
       name = name.Substring(0, name.IndexOf("(Clone)"));
     }
-    AddMissingStats(instance, name);
+    AddMissingStats(__instance, name);
     if (!Plugin.CharacterModification.Value) return;
     if (!Plugin.CustomCharacters.TryGetValue(name, out var stats)) return;
-    UpdateCharacterValues(instance, stats, name, updateHealth);
+    UpdateCharacterValues(__instance, stats, name, updateHealth);
   }
 
-  public static void UpdateCharacterValues(Character instance, JToken stats, string name, bool updateHealth = false)
+  public static void UpdateCharacterValues(Character __instance, JToken stats, string name, bool updateHealth = false)
   {
-    if (instance == null) return;
-    var maxHealth = stats["Health"]?.Value<float>() ?? instance.maxHealth;
-    if (maxHealth != instance.maxHealth)
+    if (__instance == null) return;
+    var maxHealth = stats["Health"]?.Value<float>() ?? __instance.maxHealth;
+    if (maxHealth != __instance.maxHealth)
     {
-      instance.maxHealth = maxHealth;
-      if (updateHealth) instance.health = maxHealth;
+      __instance.maxHealth = maxHealth;
+      if (updateHealth) __instance.health = maxHealth;
     }
-    var walkSpeed = stats["WalkSpeed"]?.Value<float>() ?? instance.idleWalkSpeed;
-    if (walkSpeed != instance.idleWalkSpeed)
+    var walkSpeed = stats["WalkSpeed"]?.Value<float>() ?? __instance.idleWalkSpeed;
+    if (walkSpeed != __instance.idleWalkSpeed)
     {
-      instance.idleWalkSpeed = walkSpeed;
+      __instance.idleWalkSpeed = walkSpeed;
     }
-    var chaseSpeed = stats["RunSpeed"]?.Value<float>() ?? instance.chaseSpeed;
-    if (chaseSpeed != instance.chaseSpeed)
+    var chaseSpeed = stats["RunSpeed"]?.Value<float>() ?? __instance.chaseSpeed;
+    if (chaseSpeed != __instance.chaseSpeed)
     {
-      instance.chaseSpeed = chaseSpeed;
+      __instance.chaseSpeed = chaseSpeed;
     }
     if (stats["Attacks"] is JArray attacks)
     {
-      if (attacks.Count > instance.sensorTypes.Count)
+      if (attacks.Count > __instance.sensorTypes.Count)
       {
-        Plugin.Log.LogError($"[CHARACTER] {name} has only {instance.sensorTypes.Count} attacks but the CustomCharacters file has {attacks.Count}! This won't work, Skipping!");
+        Plugin.Log.LogError($"[CHARACTER] {name} has only {__instance.sensorTypes.Count} attacks but the CustomCharacters file has {attacks.Count}! This won't work, Skipping!");
       }
       else
       {
@@ -77,10 +77,10 @@ internal class CharacterPatch
             var barricadeDamage = attackIndex["BarricadeDamage"]?.ToObject<int>() ?? null;
             if (damage == null || barricadeDamage == null)
             {
-              var newDamage = damage ?? instance.sensorTypes[i]?.damage ?? null;
-              var newBarricadeDamage = barricadeDamage ?? instance.sensorTypes[i]?.barricadeDamage ?? null;
-              attackIndex["AttackName(ReadOnly)"] = instance.sensorTypes[i].name;
-              attackIndex["AttackIsRanged(ReadOnly)"] = instance.sensorTypes[i].isRanged;
+              var newDamage = damage ?? __instance.sensorTypes[i]?.damage ?? null;
+              var newBarricadeDamage = barricadeDamage ?? __instance.sensorTypes[i]?.barricadeDamage ?? null;
+              attackIndex["AttackName(ReadOnly)"] = __instance.sensorTypes[i].name;
+              attackIndex["AttackIsRanged(ReadOnly)"] = __instance.sensorTypes[i].isRanged;
               attackIndex["Damage"] = newDamage;
               attackIndex["BarricadeDamage"] = newBarricadeDamage;
               damage = newDamage;
@@ -99,13 +99,13 @@ internal class CharacterPatch
                 Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted barricade damage, this most likely happened because this charracter isnt supposed to deal barricade damage, skipping!");
                 break;
             };
-            if (damage != null && damage != instance.sensorTypes[i].damage)
+            if (damage != null && damage != __instance.sensorTypes[i].damage)
             {
-              instance.sensorTypes[i].damage = (int)damage;
+              __instance.sensorTypes[i].damage = (int)damage;
             }
-            if (barricadeDamage != null && barricadeDamage != 0 && barricadeDamage != instance.sensorTypes[i].barricadeDamage)
+            if (barricadeDamage != null && barricadeDamage != 0 && barricadeDamage != __instance.sensorTypes[i].barricadeDamage)
             {
-              instance.sensorTypes[i].barricadeDamage = (int)barricadeDamage;
+              __instance.sensorTypes[i].barricadeDamage = (int)barricadeDamage;
             }
           }
         }
@@ -113,7 +113,7 @@ internal class CharacterPatch
     }
   }
 
-  private static void AddMissingStats(Character instance, string name)
+  private static void AddMissingStats(Character __instance, string name)
   {
     var changed = false;
     // Corrects the character stats if they are missing
@@ -122,22 +122,22 @@ internal class CharacterPatch
       var charStats = (JObject)character;
       if (!charStats.ContainsKey("Health"))
       {
-        charStats["Health"] = instance.maxHealth;
+        charStats["Health"] = __instance.maxHealth;
         changed = true;
       }
       if (!charStats.ContainsKey("WalkSpeed"))
       {
-        charStats["WalkSpeed"] = instance.idleWalkSpeed;
+        charStats["WalkSpeed"] = __instance.idleWalkSpeed;
         changed = true;
       }
       if (!charStats.ContainsKey("RunSpeed"))
       {
-        charStats["RunSpeed"] = instance.chaseSpeed;
+        charStats["RunSpeed"] = __instance.chaseSpeed;
         changed = true;
       }
-      if (!charStats.ContainsKey("Attacks") && instance.sensorTypes.Count > 0)
+      if (!charStats.ContainsKey("Attacks") && __instance.sensorTypes.Count > 0)
       {
-        charStats["Attacks"] = JArray.FromObject(instance.sensorTypes.Select((s, i) => new JObject
+        charStats["Attacks"] = JArray.FromObject(__instance.sensorTypes.Select((s, i) => new JObject
                 {
                     { $"{i + 1}", new JObject
                         {
@@ -155,10 +155,10 @@ internal class CharacterPatch
     {
       Plugin.CustomCharacters[name] = JObject.FromObject(new
       {
-        Health = instance.maxHealth,
-        WalkSpeed = instance.idleWalkSpeed,
-        RunSpeed = instance.chaseSpeed,
-        Attacks = instance.sensorTypes.Select((s, i) => new JObject
+        Health = __instance.maxHealth,
+        WalkSpeed = __instance.idleWalkSpeed,
+        RunSpeed = __instance.chaseSpeed,
+        Attacks = __instance.sensorTypes.Select((s, i) => new JObject
             {
                 { $"{i + 1}", new JObject
                     {

@@ -6,17 +6,17 @@ internal class ControllerPatch
 {
   [HarmonyPatch(typeof(Controller), nameof(Controller.refreshTime))]
   [HarmonyPostfix]
-  public static void PatchTime(Controller instance)
+  public static void PatchTime(Controller __instance)
   {
     if (Plugin.TimeModification.Value)
     {
       if (Plugin.TimeStop.Value)
       {
-        instance.CurrentTime -= 1;
+        __instance.CurrentTime -= 1;
       }
       if (Plugin.UseCurrentTime.Value)
       {
-        instance.CurrentTime = Plugin.CurrentTime.Value;
+        __instance.CurrentTime = Plugin.CurrentTime.Value;
       }
       if (Plugin.ResetWell.Value)
       {
@@ -27,17 +27,17 @@ internal class ControllerPatch
 
   [HarmonyPatch(typeof(Controller), nameof(Controller.setTimeChangeInterval))]
   [HarmonyPostfix]
-  public static void PatchTimeInterval(Controller instance)
+  public static void PatchTimeInterval(Controller __instance)
   {
     // Lower value is slower time interval
     if (Plugin.TimeModification.Value)
     {
-      if (instance.CurrentTime < instance.nightTime)
+      if (__instance.CurrentTime < __instance.nightTime)
       {
-        instance.timeChangeInterval = Plugin.DaytimeFlow.Value;
+        __instance.timeChangeInterval = Plugin.DaytimeFlow.Value;
         return;
       }
-      instance.timeChangeInterval = Plugin.NighttimeFlow.Value;
+      __instance.timeChangeInterval = Plugin.NighttimeFlow.Value;
     }
   }
 }

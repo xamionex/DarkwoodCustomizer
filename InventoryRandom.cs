@@ -8,36 +8,36 @@ internal class InventoryRandomizePatch
 {
   [HarmonyPatch(typeof(InventoryRandom), nameof(InventoryRandom.randomize))]
   [HarmonyPostfix]
-  static void PatchRandomizedInventory(InventoryRandom instance)
+  static void PatchRandomizedInventory(InventoryRandom __instance)
   {
     var customRandomInventories = Plugin.CustomRandomInventories;
-    if (!customRandomInventories.ContainsKey(instance.name))
+    if (!customRandomInventories.ContainsKey(__instance.name))
     {
-      customRandomInventories[instance.name] = new JObject
+      customRandomInventories[__instance.name] = new JObject
             {
                 { "presets", new JObject() }
             };
       Plugin.SaveRandomInventories = true;
     }
-    for (var i = 0; i < instance.presets.Count; i++)
+    for (var i = 0; i < __instance.presets.Count; i++)
     {
-      if (instance.presets[i] == null)
+      if (__instance.presets[i] == null)
       {
         continue;
       }
 
-      var token = customRandomInventories[instance.name]["presets"][i.ToString()];
+      var token = customRandomInventories[__instance.name]["presets"][i.ToString()];
       if (token == null || token.Type != JTokenType.Object)
       {
-        customRandomInventories[instance.name]["presets"][i.ToString()] = new JObject();
-        foreach (var item in instance.presets[i].permittedItems)
+        customRandomInventories[__instance.name]["presets"][i.ToString()] = new JObject();
+        foreach (var item in __instance.presets[i].permittedItems)
         {
           if (item.type == null)
           {
-            Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {instance.name} has an item ({item}) with no type, skipping");
+            Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item ({item}) with no type, skipping");
             continue;
           }
-          customRandomInventories[instance.name]["presets"][i.ToString()][item.type.name] = new JObject
+          customRandomInventories[__instance.name]["presets"][i.ToString()][item.type.name] = new JObject
                     {
                         { "type", item.type.name },
                         { "amountMin", item.amountMin },
@@ -50,23 +50,23 @@ internal class InventoryRandomizePatch
 
       if (!Plugin.RandomInventoriesModification.Value) return;
 
-      instance.presets[i].permittedItems = [];
-      foreach (var item in (JObject)customRandomInventories[instance.name]["presets"][i.ToString()])
+      __instance.presets[i].permittedItems = [];
+      foreach (var item in (JObject)customRandomInventories[__instance.name]["presets"][i.ToString()])
       {
 
         var typeName = item.Value["type"]?.Value<string>();
         if (typeName == null)
         {
-          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {instance.name} has an item with a null type, skipping");
+          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with a null type, skipping");
           continue;
         }
         var type = ItemsDatabase.Instance.getItem(typeName, false);
         if (type == null)
         {
-          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {instance.name} has an item with an invalid type, skipping");
+          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with an invalid type, skipping");
           continue;
         }
-        instance.presets[i].permittedItems.Add(new PermittedItem
+        __instance.presets[i].permittedItems.Add(new PermittedItem
         {
           type = type,
           amountMin = item.Value["amountMin"]?.Value<int>() ?? 0,
@@ -75,10 +75,10 @@ internal class InventoryRandomizePatch
         });
       }
 
-      instance.excludeFromDifficultyRandomizer = true;
+      __instance.excludeFromDifficultyRandomizer = true;
 
-      instance.presets[i].allowedItems = [];
-      instance.presets[i].allowedItems.AddRange(instance.presets[i].permittedItems.Select(item => item.type));
+      __instance.presets[i].allowedItems = [];
+      __instance.presets[i].allowedItems.AddRange(__instance.presets[i].permittedItems.Select(item => item.type));
     }
   }
 }

@@ -6,7 +6,7 @@ internal class CamMainPatch
 {
   [HarmonyPatch(typeof(CamMain), "Update")]
   [HarmonyPostfix]
-  public static void CamUpdate(CamMain instance)
+  public static void CamUpdate(CamMain __instance)
   {
     if (Plugin.CameraModification.Value && Singleton<CamMain>.Instance.GetComponent<tk2dCamera>().ZoomFactor != Plugin.CameraFoV.Value)
     {
