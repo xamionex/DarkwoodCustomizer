@@ -15,31 +15,28 @@ namespace DarkwoodCustomizer;
 [BepInProcess("Darkwood.exe")]
 internal class Plugin : BaseUnityPlugin
 {
-  public static float LastItemsSaveTime = 0f;
-  public static bool SaveItems = false;
-  public static float SavedItemsCooldown = 0f;
-  public static float LastCharactersSaveTime = 0f;
-  public static bool SaveCharacters = false;
-  public static float SavedCharactersCooldown = 0f;
-  public static float LastRandomInventoriesSaveTime = 0f;
-  public static bool SaveRandomInventories = false;
-  public static float SavedRandomInventoriesCooldown = 0f;
-  public static float LastLootSaveTime = 0f;
-  public static bool SaveLoot = false;
-  public static float SavedLootCooldown = 0f;
+  public static float LastItemsSaveTime;
+  public static bool SaveItems;
+  public static float SavedItemsCooldown;
+  public static float LastCharactersSaveTime;
+  public static bool SaveCharacters;
+  public static float SavedCharactersCooldown;
+  public static float LastRandomInventoriesSaveTime;
+  public static bool SaveRandomInventories;
+  public static float SavedRandomInventoriesCooldown;
+  public static float LastLootSaveTime;
+  public static bool SaveLoot;
+  public static float SavedLootCooldown;
   public static ManualLogSource Log;
-  public static FileSystemWatcher FileWatcher;
-  public static FileSystemWatcher FileWatcherJson;
-  public static FileSystemWatcher FileWatcherDefaults;
+  private static FileSystemWatcher _fileWatcher;
+  private static FileSystemWatcher _fileWatcherJson;
+  private static FileSystemWatcher _fileWatcherDefaults;
 
   // Base Plugin Values
-  public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Customs");
-  public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "ModDefaults");
-  public static ConfigEntry<string> ModVersion;
+  private static readonly string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Customs");
+  private static readonly string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "ModDefaults");
+  private static ConfigEntry<string> _modVersion;
   public static ConfigEntry<bool> LogDebug;
-  public static ConfigEntry<bool> LogJsonReload;
-  public static ConfigEntry<bool> LogItems;
-  public static ConfigEntry<bool> LogCharacters;
   public static ConfigEntry<bool> LogWorkbench;
 
   // Items Values
@@ -53,9 +50,9 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> CustomItemsUseDefaults;
 
   public static string CustomItemsPath => Path.Combine(JsonConfigPath, "CustomItems.json");
-  public static string DefaultsCustomItemsPath = Path.Combine(DefaultsConfigPath, "CustomItems.json");
+  private static readonly string DefaultsCustomItemsPath = Path.Combine(DefaultsConfigPath, "CustomItems.json");
   public static JObject CustomItems;
-  public static JObject DefaultCustomItems = JObject.FromObject(new
+  public static readonly JObject DefaultCustomItems = JObject.FromObject(new
   {
     exampleItem = new
     {
@@ -398,13 +395,13 @@ internal class Plugin : BaseUnityPlugin
     var i = 255;
     // Base Plugin
     Config.Bind($"!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ModVersion = Config.Bind($"!Mod", "Version", PluginInfo.PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    _modVersion = Config.Bind($"!Mod", "Version", PluginInfo.PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    LogJsonReload = Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    LogItems = Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    LogCharacters = Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogWorkbench = Config.Bind($"!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ModVersion.Value = PluginInfo.PluginVersion;
+    _modVersion.Value = PluginInfo.PluginVersion;
     Config.Save();
 
     // Items
@@ -415,7 +412,7 @@ internal class Plugin : BaseUnityPlugin
     ChainTrapRecoverySwitch = Config.Bind($"Items", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UseGlobalStackSize = Config.Bind($"Items", "Enable Global Stack Size", false, new ConfigDescription("Whether to use a global stack size for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     StackResize = Config.Bind($"Items", "Global Stack Resize", 50, new ConfigDescription("Number for all item stack sizes to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
+    CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject());
     CustomItemsUseDefaults = Config.Bind($"Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Inventories
@@ -607,23 +604,23 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo($"[{PluginInfo.PluginGuid} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();
 
-    FileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
-    FileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    FileWatcher.Changed += OnFileChanged;
-    FileWatcher.Deleted += OnFileDeleted;
-    FileWatcher.EnableRaisingEvents = true;
+    _fileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
+    _fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    _fileWatcher.Changed += OnFileChanged;
+    _fileWatcher.Deleted += OnFileDeleted;
+    _fileWatcher.EnableRaisingEvents = true;
 
-    FileWatcherDefaults = new FileSystemWatcher(DefaultsConfigPath, "*.json");
-    FileWatcherDefaults.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    FileWatcherDefaults.Changed += OnFileChangedDefaults;
-    FileWatcherDefaults.Deleted += OnFileDeleted;
-    FileWatcherDefaults.EnableRaisingEvents = true;
+    _fileWatcherDefaults = new FileSystemWatcher(DefaultsConfigPath, "*.json");
+    _fileWatcherDefaults.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    _fileWatcherDefaults.Changed += OnFileChangedDefaults;
+    _fileWatcherDefaults.Deleted += OnFileDeleted;
+    _fileWatcherDefaults.EnableRaisingEvents = true;
 
-    FileWatcherJson = new FileSystemWatcher(JsonConfigPath, "*.json");
-    FileWatcherJson.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    FileWatcherJson.Changed += OnFileChanged;
-    FileWatcherJson.Deleted += OnFileDeleted;
-    FileWatcherJson.EnableRaisingEvents = true;
+    _fileWatcherJson = new FileSystemWatcher(JsonConfigPath, "*.json");
+    _fileWatcherJson.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    _fileWatcherJson.Changed += OnFileChanged;
+    _fileWatcherJson.Deleted += OnFileDeleted;
+    _fileWatcherJson.EnableRaisingEvents = true;
 
     // 1.3.3 migration check
     Migrate133Configs();
@@ -693,42 +690,37 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo($"Trying to reload {e.Name}.");
     switch (e.Name)
     {
-      case "amione.DarkwoodCustomizer.cfg":
+      case $"{PluginInfo.PluginGuid}.cfg":
         Config.Reload();
         GeneratorPatch.RefreshGenerator = true;
+        PlayerPatch.RefreshPlayer = true;
         break;
       case "CustomCharacters.json":
         if (SavedCharactersCooldown <= 0f)
         {
-          CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject { });
+          CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject());
         }
-        else return;
         break;
       case "CustomCraftingRecipes.json":
-        CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject { });
+        CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject());
         break;
       case "CustomItems.json":
         if (SavedItemsCooldown <= 0f)
         {
-          CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject { });
+          CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject());
         }
-        else return;
         break;
       case "CustomRandomInventories.json":
         if (SavedRandomInventoriesCooldown <= 0f)
         {
-          CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject { });
+          CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject());
         }
-        else return;
         break;
       case "CustomLoot.json":
         if (SavedLootCooldown <= 0f)
         {
-          CustomLoot = (JObject)GetJsonConfig(CustomLootPath, new JObject { });
+          CustomLoot = (JObject)GetJsonConfig(CustomLootPath, new JObject());
         }
-        else return;
-        break;
-      default:
         break;
     }
   }

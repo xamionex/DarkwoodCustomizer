@@ -12,32 +12,41 @@ internal class InventoryPatch
   [HarmonyPostfix]
   public static void InventoryBackgrounds(Inventory __instance, string labelName = "")
   {
-    var gameObject = __instance.thisUI;
-    if (!gameObject.TryGetComponent<PositionMe>(out var positionMe)) return;
-    if (Plugin.WorkbenchInventoryModification.Value && labelName == "Storage")
+    try
     {
-      positionMe.offset = new Vector2(__instance.position.x + Plugin.StorageXOffset.Value, __instance.position.z + Plugin.StorageZOffset.Value);
+      var gameObject = __instance.thisUI;
+      var positionMe = gameObject.GetComponent<PositionMe>();
+      if (Plugin.WorkbenchInventoryModification.Value && labelName == "Storage")
+      {
+        positionMe.offset = new Vector2(__instance.position.x + Plugin.StorageXOffset.Value, __instance.position.z + Plugin.StorageZOffset.Value);
+      }
+
+      if (!Plugin.CraftingModification.Value || __instance.invType != Inventory.InvType.crafting) return;
+      positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
+      UpgradeItemMenuPatch.CraftingPos.x = positionMe.offset.x;
+      UpgradeItemMenuPatch.CraftingPos.y = positionMe.offset.y;
+      if (!__instance.isWorkbench) return;
+      foreach (var child in gameObject.GetComponentsInChildren<Transform>())
+      {
+        if (child.name != "WorkbenchBackground") continue;
+        UnityEngine.Object.Destroy(child.gameObject);
+        var extraSlots = Plugin.CraftingRightSlots.Value - 5f;
+        var xPosition = 119f + 31f * extraSlots;
+        var xScale = 1f + 0.21f * extraSlots;
+        var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject, false);
+        workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
+        Singleton<InventoryController>.Instance.repairBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
+        Singleton<InventoryController>.Instance.upgradeBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
+        Singleton<InventoryController>.Instance.upgradeWorkbenchBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -503f);
+        break;
+      }
+    }
+    catch (Exception e)
+    {
+      Plugin.Log.LogError("Failed to get PositionMe component on Inventory, exiting early");
+      Plugin.Log.LogError(e);
     }
 
-    if (!Plugin.CraftingModification.Value || __instance.invType != Inventory.InvType.crafting) return;
-    positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
-    UpgradeItemMenuPatch.CraftingPos.x = positionMe.offset.x;
-    UpgradeItemMenuPatch.CraftingPos.y = positionMe.offset.y;
-    if (!__instance.isWorkbench) return;
-    foreach (var child in gameObject.GetComponentsInChildren<Transform>())
-    {
-      if (child.name != "WorkbenchBackground") continue;
-      UnityEngine.Object.Destroy(child.gameObject);
-      var extraSlots = Plugin.CraftingRightSlots.Value - 5f;
-      var xPosition = 119f + 31f * extraSlots;
-      var xScale = 1f + 0.21f * extraSlots;
-      var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject, false);
-      workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
-      Singleton<InventoryController>.Instance.repairBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
-      Singleton<InventoryController>.Instance.upgradeBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
-      Singleton<InventoryController>.Instance.upgradeWorkbenchBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -503f);
-      break;
-    }
   }
 
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]

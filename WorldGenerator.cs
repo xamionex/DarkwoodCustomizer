@@ -11,5 +11,6 @@ internal class WorldGeneratorPatch
     {
         Plugin.Log.LogInfo("World was loaded");
         WorkbenchPatch.Chapter2LoadOnNextOpen = __instance.chapterID != 2;
+        PlayerPatch.RefreshPlayer = true;
     }
 }
