@@ -48,7 +48,7 @@
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <ItemGroup>
       <PluginInfoLines Include="internal static class PluginInfo {" />
-      <PluginInfoLines Include="    public const string PluginGUID = &quot;$(AssemblyName)&quot;%3B" />
+      <PluginInfoLines Include="    public const string PluginGuid = &quot;$(AssemblyName)&quot;%3B" />
       <PluginInfoLines Include="    public const string PluginName = &quot;$(Product)&quot;%3B" />
       <PluginInfoLines Include="    public const string PluginVersion = &quot;$(Version)&quot;%3B" />
       <PluginInfoLines Include="}" />
