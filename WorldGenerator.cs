@@ -7,9 +7,9 @@ internal class WorldGeneratorPatch
     [HarmonyPatch(typeof(WorldGenerator), "onFinished")]
     [HarmonyPatch(MethodType.Normal)]
     [HarmonyPostfix]
-    private static void WorldGeneratorLoad(WorldGenerator __instance)
+    private static void WorldGeneratorLoad(WorldGenerator instance)
     {
         Plugin.Log.LogInfo("World was loaded");
-        WorkbenchPatch.Chapter2LoadOnNextOpen = __instance.chapterID != 2;
+        WorkbenchPatch.Chapter2LoadOnNextOpen = instance.chapterID != 2;
     }
 }

@@ -7,17 +7,17 @@ internal class DialogueWindowPatch
 {
   [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.openTrade))]
   [HarmonyPostfix]
-  public static void InventoryBackgrounds(DialogueWindow __instance)
+  public static void InventoryBackgrounds(DialogueWindow instance)
   {
-    PositionMe traderInventory = __instance.npc.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
-    PositionMe exchangeTrader = __instance.exchangeTrader.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
-    PositionMe exchangePlayer = __instance.exchangePlayer.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
+    var traderInventory = instance.npc.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
+    var exchangeTrader = instance.exchangeTrader.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
+    var exchangePlayer = instance.exchangePlayer.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
 
-    Transform closeButton = __instance.inventoryBackground.Find("Close");
-    Transform closeButtonBackground = __instance.inventoryBackground.Find("Background");
-    Transform acceptButton = __instance.exchangeTrader.transform.Find("AcceptTradeBtn");
+    var closeButton = instance.inventoryBackground.Find("Close");
+    var closeButtonBackground = instance.inventoryBackground.Find("Background");
+    var acceptButton = instance.exchangeTrader.transform.Find("AcceptTradeBtn");
 
-    Vector2 closeOffset = new Vector2(0, 0);
+    var closeOffset = new Vector2(0, 0);
     if (Plugin.TraderSlots.Value)
     {
       traderInventory.offset = new Vector2(traderInventory.offset.x + Plugin.TraderInventoryXOffset.Value, traderInventory.offset.y + Plugin.TraderInventoryZOffset.Value);
@@ -26,11 +26,11 @@ internal class DialogueWindowPatch
       closeOffset = new Vector2(Plugin.TraderCloseXOffset.Value, Plugin.TraderCloseZOffset.Value);
     }
     
-    float extraSlots = Plugin.InventoryRightSlots.Value - 2f;
+    var extraSlots = Plugin.InventoryRightSlots.Value - 2f;
     if (extraSlots > 0)
     {
-      PositionMe inventoryBackground = __instance.inventoryBackground.GetComponent<PositionMe>();
-      tk2dSprite inventoryBackgroundSprite = __instance.inventoryBackground.GetComponent<tk2dSprite>();
+      var inventoryBackground = instance.inventoryBackground.GetComponent<PositionMe>();
+      var inventoryBackgroundSprite = instance.inventoryBackground.GetComponent<tk2dSprite>();
       inventoryBackgroundSprite.scale = new Vector3(2f + 0.65f * extraSlots, inventoryBackgroundSprite.scale.y, inventoryBackgroundSprite.scale.z);
       inventoryBackground.offset.x += 31f * extraSlots;
       traderInventory.offset.x += 31f * extraSlots;

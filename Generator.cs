@@ -8,7 +8,7 @@ public static class GeneratorPatch
 
   [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
   [HarmonyPrefix]
-  public static void DrainPatch(Generator __instance)
+  public static void DrainPatch(Generator instance)
   {
     if (Plugin.GeneratorModification.Value)
     {
@@ -18,7 +18,7 @@ public static class GeneratorPatch
       }
       if (Plugin.GeneratorInfiniteFuel.Value)
       {
-        __instance.fuel = __instance.maxFuel;
+        instance.fuel = instance.maxFuel;
       }
     }
   }

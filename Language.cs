@@ -7,7 +7,7 @@ internal class LanguagePatch
 {
   [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string), typeof(string)])]
   [HarmonyPostfix]
-  public static void LanguageGet(string key, string sheetTitle, ref string __result)
+  public static void LanguageGet(string key, string sheetTitle, ref string result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
     if (Plugin.CustomItemsUseDefaults.Value && Plugin.DefaultCustomItems[cleankey] != null)
@@ -15,8 +15,8 @@ internal class LanguagePatch
       var data = (JObject)Plugin.DefaultCustomItems[cleankey];
       var name = data["name"]?.Value<string>() ?? null;
       var desc = data["description"]?.Value<string>() ?? null;
-      if (key.EndsWith("_name") && name != null && name != key) __result = name;
-      if (key.EndsWith("_desc") && desc != null && desc != key) __result = desc;
+      if (key.EndsWith("_name") && name != null && name != key) result = name;
+      if (key.EndsWith("_desc") && desc != null && desc != key) result = desc;
     }
     if (Plugin.CustomItems[cleankey] != null)
     {
@@ -27,31 +27,31 @@ internal class LanguagePatch
       {
         if (name == null)
         {
-          if (__result == key) data["name"] = "";
-          else data["name"] = __result;
+          if (result == key) data["name"] = "";
+          else data["name"] = result;
           Plugin.SaveItems = true;
         }
         name = data["name"]?.Value<string>() ?? null;
-        if (name != null && name != key) __result = name;
+        if (name != null && name != key) result = name;
       };
       if (key.EndsWith("_desc"))
       {
         if (desc == null)
         {
-          if (__result == key) data["description"] = "";
-          else data["description"] = __result;
+          if (result == key) data["description"] = "";
+          else data["description"] = result;
           Plugin.SaveItems = true;
         }
         desc = data["description"]?.Value<string>() ?? null;
-        if (desc != null && desc != key) __result = desc;
+        if (desc != null && desc != key) result = desc;
       };
     }
-    __result ??= "Unset Name Property";
+    result ??= "Unset Name Property";
   }
 
   [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string)])]
   [HarmonyPostfix]
-  public static void LanguageGet(string key, ref string __result)
+  public static void LanguageGet(string key, ref string result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
     if (Plugin.CustomItems[cleankey] != null)
@@ -62,7 +62,7 @@ internal class LanguagePatch
         var name = data["name"]?.Value<string>();
         if (name == null | name == $"{key}_name")
         {
-          data["name"] = __result;
+          data["name"] = result;
           Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
         }
       };
@@ -71,24 +71,24 @@ internal class LanguagePatch
         var description = data["description"]?.Value<string>();
         if (description == null | description == $"{key}_desc")
         {
-          data["description"] = __result;
+          data["description"] = result;
           Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
         }
       };
     }
-    __result ??= "Unset Name Property";
+    result ??= "Unset Name Property";
   }
 
 
   [HarmonyPatch(typeof(Language), nameof(Language.HasKey), typeof(string), typeof(string))]
   [HarmonyPostfix]
-  public static void LanguageHasKey(string key, string sheetTitle, ref bool __result)
+  public static void LanguageHasKey(string key, string sheetTitle, ref bool result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
     if (Plugin.CustomItems.TryGetValue(cleankey, out var data) && (data["name"] != null || data["description"] != null))
-      __result = true;
+      result = true;
     else if (Plugin.DefaultCustomItems.TryGetValue(cleankey, out data) && (data["name"] != null || data["description"] != null))
-      __result = true;
+      result = true;
   }
 
 }

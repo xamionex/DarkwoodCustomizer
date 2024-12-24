@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
-[BepInPlugin(PluginInfo.PluginGUID, PluginInfo.PluginName, PluginInfo.PluginVersion)]
+[BepInPlugin(PluginInfo.PluginGuid, PluginInfo.PluginName, PluginInfo.PluginVersion)]
 [BepInProcess("Darkwood.exe")]
 internal class Plugin : BaseUnityPlugin
 {
@@ -28,13 +28,13 @@ internal class Plugin : BaseUnityPlugin
   public static bool SaveLoot = false;
   public static float SavedLootCooldown = 0f;
   public static ManualLogSource Log;
-  public static FileSystemWatcher fileWatcher;
-  public static FileSystemWatcher fileWatcherJson;
-  public static FileSystemWatcher fileWatcherDefaults;
+  public static FileSystemWatcher FileWatcher;
+  public static FileSystemWatcher FileWatcherJson;
+  public static FileSystemWatcher FileWatcherDefaults;
 
   // Base Plugin Values
-  public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Customs");
-  public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "ModDefaults");
+  public static string JsonConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Customs");
+  public static string DefaultsConfigPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "ModDefaults");
   public static ConfigEntry<string> ModVersion;
   public static ConfigEntry<bool> LogDebug;
   public static ConfigEntry<bool> LogJsonReload;
@@ -536,12 +536,12 @@ internal class Plugin : BaseUnityPlugin
     if (!Directory.Exists(DefaultsConfigPath))
       Directory.CreateDirectory(DefaultsConfigPath);
 
-    string DefaultsReadMePath = Path.Combine(DefaultsConfigPath, "ReadMe.txt");
-    string ReadMeString = "This folder is a readonly folder for you to use as a template when creating your own custom things.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the DarkwoodCustomizer/Customs folder, not in the ModDefaults folder\nI recommend copying these files and replacing the default values with your own custom ones";
-    if (File.Exists(DefaultsReadMePath) && !File.ReadAllText(DefaultsReadMePath).Equals(ReadMeString))
-      File.Delete(DefaultsReadMePath);
-    if (!File.Exists(DefaultsReadMePath))
-      File.WriteAllText(DefaultsReadMePath, ReadMeString);
+    var defaultsReadMePath = Path.Combine(DefaultsConfigPath, "ReadMe.txt");
+    var readMeString = "This folder is a readonly folder for you to use as a template when creating your own custom things.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the DarkwoodCustomizer/Customs folder, not in the ModDefaults folder\nI recommend copying these files and replacing the default values with your own custom ones";
+    if (File.Exists(defaultsReadMePath) && !File.ReadAllText(defaultsReadMePath).Equals(readMeString))
+      File.Delete(defaultsReadMePath);
+    if (!File.Exists(defaultsReadMePath))
+      File.WriteAllText(defaultsReadMePath, readMeString);
 
     if (File.Exists(DefaultsCustomCraftingRecipesPath) && !File.ReadAllText(DefaultsCustomCraftingRecipesPath).Equals(JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented)))
       File.Delete(DefaultsCustomCraftingRecipesPath);
@@ -558,9 +558,9 @@ internal class Plugin : BaseUnityPlugin
   {
     Log = Logger;
 
-    string LogItemsPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
-    if (File.Exists(LogItemsPath))
-      File.Delete(LogItemsPath);
+    var logItemsPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
+    if (File.Exists(logItemsPath))
+      File.Delete(logItemsPath);
 
     // 1.2.6 migration check
     Migrate126Configs();
@@ -572,58 +572,58 @@ internal class Plugin : BaseUnityPlugin
 
     LogDivider();
 
-    Harmony Harmony = new Harmony($"{PluginInfo.PluginGUID}");
-    Harmony.PatchAll(typeof(CamMainPatch));
+    var harmony = new Harmony($"{PluginInfo.PluginGuid}");
+    harmony.PatchAll(typeof(CamMainPatch));
     Log.LogInfo("Patching in CamMainPatch! (Camera)");
-    Harmony.PatchAll(typeof(CharacterPatch));
+    harmony.PatchAll(typeof(CharacterPatch));
     Log.LogInfo("Patching in CharacterPatch! (Soontm)");
-    Harmony.PatchAll(typeof(ControllerPatch));
+    harmony.PatchAll(typeof(ControllerPatch));
     Log.LogInfo("Patching in ControllerPatch! (Time)");
-    Harmony.PatchAll(typeof(GeneratorPatch));
+    harmony.PatchAll(typeof(GeneratorPatch));
     Log.LogInfo("Patching in GeneratorPatch! (Generator Fuel)");
-    Harmony.PatchAll(typeof(InventoryPatch));
+    harmony.PatchAll(typeof(InventoryPatch));
     Log.LogInfo("Patching in InventoryPatch! (Storage)");
-    Harmony.PatchAll(typeof(InventoryRandomizePatch));
+    harmony.PatchAll(typeof(InventoryRandomizePatch));
     Log.LogInfo("Patching in InventoryRandomizePatch! (Traders and Loot)");
-    Harmony.PatchAll(typeof(InvItemClassPatch));
+    harmony.PatchAll(typeof(InvItemClassPatch));
     Log.LogInfo("Patching in InvItemClassPatch! (Items)");
-    Harmony.PatchAll(typeof(ItemPatch));
+    harmony.PatchAll(typeof(ItemPatch));
     Log.LogInfo("Patching in ItemPatch! (beartrap disarm)");
-    Harmony.PatchAll(typeof(LanguagePatch));
+    harmony.PatchAll(typeof(LanguagePatch));
     Log.LogInfo("Patching in LanguagePatch! (Item Names)");
-    Harmony.PatchAll(typeof(PlayerPatch));
+    harmony.PatchAll(typeof(PlayerPatch));
     Log.LogInfo("Patching in PlayerPatch! (Player Update)");
-    Harmony.PatchAll(typeof(UpgradeItemMenuPatch));
+    harmony.PatchAll(typeof(UpgradeItemMenuPatch));
     Log.LogInfo("Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
-    Harmony.PatchAll(typeof(WorkbenchPatch));
+    harmony.PatchAll(typeof(WorkbenchPatch));
     Log.LogInfo("Patching in WorkbenchPatch! (Recipes)");
-    Harmony.PatchAll(typeof(DialogueWindowPatch));
+    harmony.PatchAll(typeof(DialogueWindowPatch));
     Log.LogInfo("Patching in DialogueWindowPatch! (Trader windows)");
-    Harmony.PatchAll(typeof(LevelingMenuPatch));
+    harmony.PatchAll(typeof(LevelingMenuPatch));
     Log.LogInfo("Patching in LevelingMenuPatch! (Inventory in cooking menu)");
-    Harmony.PatchAll(typeof(WorldGeneratorPatch));
+    harmony.PatchAll(typeof(WorldGeneratorPatch));
     Log.LogInfo("Patching in WorldGeneratorPatch! (Bool when game loads)");
 
-    Log.LogInfo($"[{PluginInfo.PluginGUID} v{PluginInfo.PluginVersion}] has fully loaded!");
+    Log.LogInfo($"[{PluginInfo.PluginGuid} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();
 
-    fileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
-    fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    fileWatcher.Changed += OnFileChanged;
-    fileWatcher.Deleted += OnFileDeleted;
-    fileWatcher.EnableRaisingEvents = true;
+    FileWatcher = new FileSystemWatcher(Paths.ConfigPath, "*.cfg");
+    FileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    FileWatcher.Changed += OnFileChanged;
+    FileWatcher.Deleted += OnFileDeleted;
+    FileWatcher.EnableRaisingEvents = true;
 
-    fileWatcherDefaults = new FileSystemWatcher(DefaultsConfigPath, "*.json");
-    fileWatcherDefaults.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    fileWatcherDefaults.Changed += OnFileChangedDefaults;
-    fileWatcherDefaults.Deleted += OnFileDeleted;
-    fileWatcherDefaults.EnableRaisingEvents = true;
+    FileWatcherDefaults = new FileSystemWatcher(DefaultsConfigPath, "*.json");
+    FileWatcherDefaults.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    FileWatcherDefaults.Changed += OnFileChangedDefaults;
+    FileWatcherDefaults.Deleted += OnFileDeleted;
+    FileWatcherDefaults.EnableRaisingEvents = true;
 
-    fileWatcherJson = new FileSystemWatcher(JsonConfigPath, "*.json");
-    fileWatcherJson.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-    fileWatcherJson.Changed += OnFileChanged;
-    fileWatcherJson.Deleted += OnFileDeleted;
-    fileWatcherJson.EnableRaisingEvents = true;
+    FileWatcherJson = new FileSystemWatcher(JsonConfigPath, "*.json");
+    FileWatcherJson.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
+    FileWatcherJson.Changed += OnFileChanged;
+    FileWatcherJson.Deleted += OnFileDeleted;
+    FileWatcherJson.EnableRaisingEvents = true;
 
     // 1.3.3 migration check
     Migrate133Configs();
@@ -753,82 +753,82 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("");
   }
 
-  public static object GetJsonConfig(string FilePath, JObject DefaultJson)
+  public static object GetJsonConfig(string filePath, JObject defaultJson)
   {
-    return CreateNewJsonFile(FilePath, DefaultJson);
+    return CreateNewJsonFile(filePath, defaultJson);
   }
 
-  public static JObject CreateNewJsonFile(string FilePath, JObject DefaultJson)
+  public static JObject CreateNewJsonFile(string filePath, JObject defaultJson)
   {
-    if (File.Exists(FilePath))
+    if (File.Exists(filePath))
     {
       try
       {
-        var fileContents = File.ReadAllText(FilePath);
-        JObject jsonObject = JObject.Parse(fileContents);
+        var fileContents = File.ReadAllText(filePath);
+        var jsonObject = JObject.Parse(fileContents);
 
         return jsonObject;
       }
       catch (Exception ex)
       {
         var i = 0;
-        var NewFilePath = FilePath;
-        while (File.Exists(NewFilePath))
+        var newFilePath = filePath;
+        while (File.Exists(newFilePath))
         {
-          NewFilePath = Path.Combine(Path.GetDirectoryName(FilePath), $"{Path.GetFileNameWithoutExtension(FilePath)}_error_{i++}{Path.GetExtension(FilePath)}");
+          newFilePath = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_error_{i++}{Path.GetExtension(filePath)}");
         }
-        File.Move(FilePath, NewFilePath);
-        Log.LogInfo($"Error loading JSON file: {ex.Message}, using default config, your config has been renamed to {Path.GetFileName(NewFilePath)}");
-        return DefaultJson;
+        File.Move(filePath, newFilePath);
+        Log.LogInfo($"Error loading JSON file: {ex.Message}, using default config, your config has been renamed to {Path.GetFileName(newFilePath)}");
+        return defaultJson;
       }
     }
     else
     {
-      var directory = Path.GetDirectoryName(FilePath);
+      var directory = Path.GetDirectoryName(filePath);
       if (!Directory.Exists(directory))
       {
         Directory.CreateDirectory(directory);
       }
-      File.WriteAllText(FilePath, JsonConvert.SerializeObject(DefaultJson, Formatting.Indented));
-      Log.LogInfo($"Created {FilePath} with default config because it didnt exist.");
+      File.WriteAllText(filePath, JsonConvert.SerializeObject(defaultJson, Formatting.Indented));
+      Log.LogInfo($"Created {filePath} with default config because it didnt exist.");
     }
-    return DefaultJson;
+    return defaultJson;
   }
 
-  public static void SaveJsonFile(string JsonPath, JObject JsonData)
+  public static void SaveJsonFile(string jsonPath, JObject jsonData)
   {
-    var directory = Path.GetDirectoryName(JsonPath);
+    var directory = Path.GetDirectoryName(jsonPath);
     if (!Directory.Exists(directory))
     {
       Directory.CreateDirectory(directory);
     }
-    File.WriteAllText(JsonPath, JsonConvert.SerializeObject(JsonData, Formatting.Indented));
+    File.WriteAllText(jsonPath, JsonConvert.SerializeObject(jsonData, Formatting.Indented));
   }
 
   private void Migrate126Configs()
   {
     // 1.2.6 migration check
     // Move JSON files
-    string oldJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID);
-    string newJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Customs");
+    var oldJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid);
+    var newJsonPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Customs");
     if (!Directory.Exists(newJsonPath)) Directory.CreateDirectory(newJsonPath);
-    foreach (string jsonFile in Directory.GetFiles(oldJsonPath, "*.json"))
+    foreach (var jsonFile in Directory.GetFiles(oldJsonPath, "*.json"))
     {
-      string fileName = Path.GetFileName(jsonFile);
-      string newJsonFile = Path.Combine(newJsonPath, fileName == "CustomCharacters.json" ? fileName + "_ThisIsYourOldConfigFrom1.2.6.json" : fileName);
+      var fileName = Path.GetFileName(jsonFile);
+      var newJsonFile = Path.Combine(newJsonPath, fileName == "CustomCharacters.json" ? fileName + "_ThisIsYourOldConfigFrom1.2.6.json" : fileName);
       if (File.Exists(newJsonFile)) File.Delete(newJsonFile);
       File.Move(jsonFile, newJsonFile);
       Log.LogInfo($"Moved and renamed old JSON file from {jsonFile} to {newJsonFile}");
     }
 
     // Remove old defaults folders
-    string[] OldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "defaults"), Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "VanillaDefaults")];
-    foreach (string OldDefaultsFolder in OldDefaultsFolders)
+    string[] oldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "defaults"), Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "VanillaDefaults")];
+    foreach (var oldDefaultsFolder in oldDefaultsFolders)
     {
-      if (Directory.Exists(OldDefaultsFolder))
+      if (Directory.Exists(oldDefaultsFolder))
       {
-        Directory.Delete(OldDefaultsFolder, true);
-        Log.LogInfo($"Deleted old defaults folder at \"{OldDefaultsFolder}\"");
+        Directory.Delete(oldDefaultsFolder, true);
+        Log.LogInfo($"Deleted old defaults folder at \"{oldDefaultsFolder}\"");
       }
     }
   }
@@ -837,105 +837,105 @@ internal class Plugin : BaseUnityPlugin
   private void Migrate128Configs()
   {
     // 1.2.8 migration check
-    string OldLanternConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Lantern.cfg");
-    if (File.Exists(OldLanternConfig))
+    var oldLanternConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Lantern.cfg");
+    if (File.Exists(oldLanternConfig))
     {
-      File.Delete(OldLanternConfig);
-      Log.LogInfo($"Deleted old Lantern config file at {OldLanternConfig}");
+      File.Delete(oldLanternConfig);
+      Log.LogInfo($"Deleted old Lantern config file at {oldLanternConfig}");
     }
-    string OldDefaultStacksJson = Path.Combine(DefaultsConfigPath, "CustomStacks.json");
-    if (File.Exists(OldDefaultStacksJson))
+    var oldDefaultStacksJson = Path.Combine(DefaultsConfigPath, "CustomStacks.json");
+    if (File.Exists(oldDefaultStacksJson))
     {
-      File.Delete(OldDefaultStacksJson);
-      Log.LogInfo($"Old Default CustomStacks Json was deleted at {OldDefaultStacksJson}");
+      File.Delete(oldDefaultStacksJson);
+      Log.LogInfo($"Old Default CustomStacks Json was deleted at {oldDefaultStacksJson}");
     }
-    string NewPathConfig;
-    string OldStacksConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "CustomStacks.cfg");
-    if (File.Exists(OldStacksConfig))
+    string newPathConfig;
+    var oldStacksConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "CustomStacks.cfg");
+    if (File.Exists(oldStacksConfig))
     {
-      NewPathConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "CustomStacks_Unused_From_128_DeletePlease.cfg");
-      File.Move(OldStacksConfig, NewPathConfig);
-      Log.LogInfo($"Old CustomStacks config can be found at at {NewPathConfig}");
+      newPathConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "CustomStacks_Unused_From_128_DeletePlease.cfg");
+      File.Move(oldStacksConfig, newPathConfig);
+      Log.LogInfo($"Old CustomStacks config can be found at at {newPathConfig}");
     }
-    string OldStacksJson = Path.Combine(JsonConfigPath, "CustomStacks.json");
-    if (File.Exists(OldStacksJson))
+    var oldStacksJson = Path.Combine(JsonConfigPath, "CustomStacks.json");
+    if (File.Exists(oldStacksJson))
     {
-      NewPathConfig = Path.Combine(JsonConfigPath, "CustomStacks_Unused_From_128_DeletePlease.json");
-      File.Move(OldStacksJson, NewPathConfig);
-      Log.LogInfo($"Old CustomStacks Json file can be found at {NewPathConfig}");
+      newPathConfig = Path.Combine(JsonConfigPath, "CustomStacks_Unused_From_128_DeletePlease.json");
+      File.Move(oldStacksJson, newPathConfig);
+      Log.LogInfo($"Old CustomStacks Json file can be found at {newPathConfig}");
     }
   }
 
   private void Migrate133Configs()
   {
-    List<string> ConfigFiles =
+    List<string> configFiles =
     [
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Logging.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Items.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Inventories.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Characters.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Player.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Time.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Generator.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Camera.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Workbench.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Logging.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Items.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Inventories.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Characters.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Player.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Time.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Generator.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Camera.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Workbench.cfg"),
     ];
-    List<string> ConfigFilesPreviousVersions =
+    List<string> configFilesPreviousVersions =
     [
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Logging.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Items.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Inventories.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Characters.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Player.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Time.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Generator.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Camera.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Workbench.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Repairs.cfg"),
-      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "Stacks.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Logging.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Items.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Inventories.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Characters.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Player.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Time.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Generator.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Camera.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Workbench.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Repairs.cfg"),
+      Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Stacks.cfg"),
     ];
-    string newConfig = "";
-    bool changed = false;
-    if (ConfigFiles.Count == 9)
+    var newConfig = "";
+    var changed = false;
+    if (configFiles.Count == 9)
     {
-      foreach (string ConfigFile in ConfigFiles)
+      foreach (var configFile in configFiles)
       {
-        if (File.Exists(ConfigFile))
+        if (File.Exists(configFile))
         {
-          string category = Path.GetFileNameWithoutExtension(ConfigFile);
-          string[] lines = File.ReadAllLines(ConfigFile);
+          var category = Path.GetFileNameWithoutExtension(configFile);
+          var lines = File.ReadAllLines(configFile);
           if (category == "Logging") category = "!Mod";
           if (category == "Workbench") category = "Crafting";
           newConfig += $"[{category}]\n";
-          foreach (string line in lines)
+          foreach (var line in lines)
           {
             if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
             {
-              string newLine = line.Trim();
+              var newLine = line.Trim();
               if (newLine.Contains("="))
               {
-                string key = newLine.Split('=')[0].Trim();
-                string value = newLine.Split('=')[1].Trim();
+                var key = newLine.Split('=')[0].Trim();
+                var value = newLine.Split('=')[1].Trim();
                 newConfig += $"\n{key} = {value}\n";
                 changed = true;
               }
             }
           }
-          Log.LogInfo($"Merged old config file at {ConfigFile} into {PluginInfo.PluginGUID}.cfg");
+          Log.LogInfo($"Merged old config file at {configFile} into {PluginInfo.PluginGuid}.cfg");
         }
       }
     }
-    foreach (string ConfigPreviousVersion in ConfigFilesPreviousVersions)
+    foreach (var configPreviousVersion in configFilesPreviousVersions)
     {
-      if (File.Exists(ConfigPreviousVersion))
+      if (File.Exists(configPreviousVersion))
       {
-        string oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGUID, "YourOldConfigs");
+        var oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "YourOldConfigs");
         if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
-        string newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(ConfigPreviousVersion)}.cfg");
-        File.Move(ConfigPreviousVersion, newConfigFile);
-        Log.LogInfo($"Old config file at {ConfigPreviousVersion} was moved to {newConfigFile} as its not used anymore");
+        var newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(configPreviousVersion)}.cfg");
+        File.Move(configPreviousVersion, newConfigFile);
+        Log.LogInfo($"Old config file at {configPreviousVersion} was moved to {newConfigFile} as its not used anymore");
       }
     }
-    if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGUID}.cfg"), newConfig);
+    if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGuid}.cfg"), newConfig);
   }
 }

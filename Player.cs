@@ -63,77 +63,77 @@ internal class PlayerPatch
     }
   }
 
-  private static (bool, bool) DrainWeapon(InvItemClass Weapon, JObject data)
+  private static (bool, bool) DrainWeapon(InvItemClass weapon, JObject data)
   {
     if (data == null) return (false, false);
-    bool drainDurability = (bool)(data["drainDurabilityOnShot"] ?? false);
-    bool drainAmmo = (bool)(data["drainAmmoOnShot"] ?? false);
+    var drainDurability = (bool)(data["drainDurabilityOnShot"] ?? false);
+    var drainAmmo = (bool)(data["drainAmmoOnShot"] ?? false);
     return (drainDurability, drainAmmo);
   }
 
   [HarmonyPatch(typeof(Player), nameof(Player.registerMe))]
   [HarmonyPostfix]
-  public static void PlayerRegistered(Player __instance)
+  public static void PlayerRegistered(Player instance)
   {
     RefreshPlayer = true;
-    __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+    instance.maxHealth = Plugin.PlayerMaxHealth.Value;
   }
 
   [HarmonyPatch(typeof(Player), nameof(Player.Update))]
   [HarmonyPostfix]
-  public static void PlayerUpdate(Player __instance)
+  public static void PlayerUpdate(Player instance)
   {
     if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
     {
-      __instance.stamina = __instance.maxStamina;
+      instance.stamina = instance.maxStamina;
       if (Plugin.PlayerInfiniteStaminaEffect.Value)
       {
-        __instance.flashStaminaBar();
+        instance.flashStaminaBar();
       }
     }
     if (Plugin.PlayerHealthModification.Value && Plugin.PlayerGodmode.Value)
     {
-      __instance.health = __instance.maxHealth;
-      __instance.invulnerable = true;
+      instance.health = instance.maxHealth;
+      instance.invulnerable = true;
     }
-    else if (__instance.invulnerable) __instance.invulnerable = false;
+    else if (instance.invulnerable) instance.invulnerable = false;
     if (!RefreshPlayer) return;
     if (Plugin.PlayerStaminaModification.Value)
     {
-      __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
-      __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
-      __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
+      instance.maxStamina = Plugin.PlayerMaxStamina.Value;
+      instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
+      instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
     }
     if (Plugin.PlayerHealthModification.Value)
     {
-      __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
-      if (__instance.health > __instance.maxHealth)
+      instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+      if (instance.health > instance.maxHealth)
       {
-        __instance.health = __instance.maxHealth;
+        instance.health = instance.maxHealth;
       }
-      __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
-      __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
-      __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
+      instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
+      instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
+      instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
     }
     if (Plugin.PlayerFOVModification.Value)
     {
-      __instance.defaultFOV = Plugin.PlayerFOV.Value;
-      __instance.currentDestFOV = Plugin.PlayerFOV.Value;
+      instance.defaultFOV = Plugin.PlayerFOV.Value;
+      instance.currentDestFOV = Plugin.PlayerFOV.Value;
     }
     if (Plugin.PlayerSpeedModification.Value)
     {
-      __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
-      __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
-      __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
+      instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
+      instance.runSpeed = Plugin.PlayerRunSpeed.Value;
+      instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
     }
     if (Plugin.LogDebug.Value)
     {
       Plugin.LogDivider();
-      Plugin.Log.LogInfo($"[Player] Has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
-      Plugin.Log.LogInfo($"[Player] MaxHP: {__instance.maxHealth} | HPR Interval: {__instance.healthRegenInterval} | HPR Modifier: {__instance.healthRegenModifier} | HPR Value: {__instance.healthRegenValue}");
-      Plugin.Log.LogInfo($"[Player] Max Stamina: {__instance.maxStamina} | SR Interval: {__instance.staminaRegenInterval} | SR Value: {__instance.staminaRegenValue}");
-      Plugin.Log.LogInfo($"[Player] WS: {__instance.walkSpeed} | RS: {__instance.runSpeed} | RS Modifier: {__instance.runSpeedModifier}");
-      Plugin.Log.LogInfo($"[Player] FoV: {__instance.currentDestFOV}");
+      Plugin.Log.LogInfo($"[Player] Has {instance.healthUpgrades} health upgrades. Expected base game health is {100 + instance.healthUpgrades * 25}");
+      Plugin.Log.LogInfo($"[Player] MaxHP: {instance.maxHealth} | HPR Interval: {instance.healthRegenInterval} | HPR Modifier: {instance.healthRegenModifier} | HPR Value: {instance.healthRegenValue}");
+      Plugin.Log.LogInfo($"[Player] Max Stamina: {instance.maxStamina} | SR Interval: {instance.staminaRegenInterval} | SR Value: {instance.staminaRegenValue}");
+      Plugin.Log.LogInfo($"[Player] WS: {instance.walkSpeed} | RS: {instance.runSpeed} | RS Modifier: {instance.runSpeedModifier}");
+      Plugin.Log.LogInfo($"[Player] FoV: {instance.currentDestFOV}");
       Plugin.LogDivider();
     }
     RefreshPlayer = false;
@@ -141,7 +141,7 @@ internal class PlayerPatch
 
   [HarmonyPatch(typeof(Player), nameof(Player.getHit), [typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool)])]
   [HarmonyPrefix]
-  public static void gotHit(Player __instance, float damage, Transform attackerTransform, bool CanCutInHalf, bool byPlayer, ref bool canInterrupt, bool normalHit, bool showRedScreen, bool force, bool dontShowHealthBar)
+  public static void GotHit(Player instance, float damage, Transform attackerTransform, bool canCutInHalf, bool byPlayer, ref bool canInterrupt, bool normalHit, bool showRedScreen, bool force, bool dontShowHealthBar)
   {
     if (Plugin.PlayerCantGetInterrupted.Value)
     {
