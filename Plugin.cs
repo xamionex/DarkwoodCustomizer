@@ -42,6 +42,8 @@ internal class Plugin : BaseUnityPlugin
   // Items Values
   public static ConfigEntry<bool> UseGlobalStackSize;
   public static ConfigEntry<int> StackResize;
+  public static ConfigEntry<bool> UseGlobalMaxDurability;
+  public static ConfigEntry<int> MaxDurability;
   public static ConfigEntry<bool> ItemsModification;
   public static ConfigEntry<bool> BearTrapRecovery;
   public static ConfigEntry<bool> BearTrapRecoverySwitch;
@@ -394,123 +396,125 @@ internal class Plugin : BaseUnityPlugin
   {
     var i = 255;
     // Base Plugin
-    Config.Bind($"!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    _modVersion = Config.Bind($"!Mod", "Version", PluginInfo.PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    LogDebug = Config.Bind($"!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    LogWorkbench = Config.Bind($"!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    _modVersion = Config.Bind("!Mod", "Version", PluginInfo.PluginVersion, new ConfigDescription("The mods' version, read only value for you", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LogDebug = Config.Bind("!Mod", "Enable Debug Logs", true, new ConfigDescription("Whether to log debug messages, includes player information on load/change for now.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("!Mod", "Enable Json Reload Messages", false, new ConfigDescription("Whether to log debug messages for when a json file is reloaded", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LogWorkbench = Config.Bind("!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     _modVersion.Value = PluginInfo.PluginVersion;
     Config.Save();
 
     // Items
-    ItemsModification = Config.Bind($"Items", "Enable Section", true, new ConfigDescription("Enable this section of the mod, This section does require save reloads for everything except trap recoveries", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    BearTrapRecovery = Config.Bind($"Items", "BearTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    BearTrapRecoverySwitch = Config.Bind($"Items", "BearTrap Recover Items", true, new ConfigDescription("false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ChainTrapRecovery = Config.Bind($"Items", "ChainTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ChainTrapRecoverySwitch = Config.Bind($"Items", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    UseGlobalStackSize = Config.Bind($"Items", "Enable Global Stack Size", false, new ConfigDescription("Whether to use a global stack size for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    StackResize = Config.Bind($"Items", "Global Stack Resize", 50, new ConfigDescription("Number for all item stack sizes to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ItemsModification = Config.Bind("Items", "Enable Section", true, new ConfigDescription("Enable this section of the mod, This section does require save reloads for everything except trap recoveries", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapRecovery = Config.Bind("Items", "BearTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapRecoverySwitch = Config.Bind("Items", "BearTrap Recover Items", true, new ConfigDescription("false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapRecovery = Config.Bind("Items", "ChainTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapRecoverySwitch = Config.Bind("Items", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UseGlobalStackSize = Config.Bind("Items", "Enable Global Stack Size", false, new ConfigDescription("Whether to use a global stack size for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    StackResize = Config.Bind("Items", "Global Stack Resize", 50, new ConfigDescription("Number for all item stack sizes to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UseGlobalMaxDurability = Config.Bind("Items", "Enable Global Max Durability", false, new ConfigDescription("Whether to use a global max durability for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    MaxDurability = Config.Bind("Items", "Global Max Durability", 100, new ConfigDescription("Number for all item max durability to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject());
-    CustomItemsUseDefaults = Config.Bind($"Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CustomItemsUseDefaults = Config.Bind("Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Inventories
-    WorkbenchInventoryModification = Config.Bind($"Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    RemoveExcess = Config.Bind($"Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    WorkbenchInventoryModification = Config.Bind("Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    RemoveExcess = Config.Bind("Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Workbench
-    StorageXOffset = Config.Bind($"Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    StorageZOffset = Config.Bind($"Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    RightSlots = Config.Bind($"Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    DownSlots = Config.Bind($"Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    StorageXOffset = Config.Bind("Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    StorageZOffset = Config.Bind("Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    RightSlots = Config.Bind("Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    DownSlots = Config.Bind("Inventories", "Workbench Down Slots", 9, new ConfigDescription("Number that determines slots in workbench downward", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Inventory
-    InventorySlots = Config.Bind($"Inventories", "Enable Inventory Modification", false, new ConfigDescription("Enable Inventory Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    InventoryRightSlots = Config.Bind($"Inventories", "Inventory Right Slots", 2, new ConfigDescription("Number that determines slots in inventory to the right", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    InventoryDownSlots = Config.Bind($"Inventories", "Inventory Down Slots", 9, new ConfigDescription("Number that determines slots in inventory downward", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    InventorySlots = Config.Bind("Inventories", "Enable Inventory Modification", false, new ConfigDescription("Enable Inventory Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    InventoryRightSlots = Config.Bind("Inventories", "Inventory Right Slots", 2, new ConfigDescription("Number that determines slots in inventory to the right", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    InventoryDownSlots = Config.Bind("Inventories", "Inventory Down Slots", 9, new ConfigDescription("Number that determines slots in inventory downward", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Hotbar
-    HotbarSlots = Config.Bind($"Inventories", "Enable Hotbar Modification", false, new ConfigDescription("Enable Hotbar Modification\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    HotbarRightSlots = Config.Bind($"Inventories", "Hotbar Right Slots", 1, new ConfigDescription("Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    HotbarDownSlots = Config.Bind($"Inventories", "Hotbar Down Slots", 6, new ConfigDescription("Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    HotbarSlots = Config.Bind("Inventories", "Enable Hotbar Modification", false, new ConfigDescription("Enable Hotbar Modification\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    HotbarRightSlots = Config.Bind("Inventories", "Hotbar Right Slots", 1, new ConfigDescription("Number that determines slots in Hotbar to the right.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    HotbarDownSlots = Config.Bind("Inventories", "Hotbar Down Slots", 6, new ConfigDescription("Number that determines slots in Hotbar downward.\nRequires reload of save to take effect (Return to Menu > Load Save)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Trader
-    TraderSlots = Config.Bind($"Inventories", "Enable Trader Modification", false, new ConfigDescription("Enable Traders Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderRightSlots = Config.Bind($"Inventories", "Trader Right Slots", 6, new ConfigDescription("Number that determines slots in Traders to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderDownSlots = Config.Bind($"Inventories", "Trader Down Slots", 7, new ConfigDescription("Number that determines slots in Traders downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderInventoryXOffset = Config.Bind($"Inventories", "TraderInventory Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderInventoryZOffset = Config.Bind($"Inventories", "TraderInventory Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderSellXOffset = Config.Bind($"Inventories", "TraderSell Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderSellZOffset = Config.Bind($"Inventories", "TraderSell Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderBuyXOffset = Config.Bind($"Inventories", "TraderBuy Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderBuyZOffset = Config.Bind($"Inventories", "TraderBuy Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderCloseXOffset = Config.Bind($"Inventories", "TraderClose Button X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TraderCloseZOffset = Config.Bind($"Inventories", "TraderClose Button Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderSlots = Config.Bind("Inventories", "Enable Trader Modification", false, new ConfigDescription("Enable Traders Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderRightSlots = Config.Bind("Inventories", "Trader Right Slots", 6, new ConfigDescription("Number that determines slots in Traders to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderDownSlots = Config.Bind("Inventories", "Trader Down Slots", 7, new ConfigDescription("Number that determines slots in Traders downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderInventoryXOffset = Config.Bind("Inventories", "TraderInventory Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderInventoryZOffset = Config.Bind("Inventories", "TraderInventory Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the trader inventory window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderSellXOffset = Config.Bind("Inventories", "TraderSell Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderSellZOffset = Config.Bind("Inventories", "TraderSell Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the sell window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderBuyXOffset = Config.Bind("Inventories", "TraderBuy Window X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderBuyZOffset = Config.Bind("Inventories", "TraderBuy Window Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the buy window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderCloseXOffset = Config.Bind("Inventories", "TraderClose Button X Offset", 0f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TraderCloseZOffset = Config.Bind("Inventories", "TraderClose Button Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     
     // Crafting
-    CraftingModification = Config.Bind($"Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CraftingXOffset = Config.Bind($"Inventories", "Crafting Window X Offset", 1000f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CraftingZOffset = Config.Bind($"Inventories", "Crafting Window Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CraftingRightSlots = Config.Bind($"Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CraftingDownSlots = Config.Bind($"Inventories", "Crafting Window Down Slots", 7, new ConfigDescription("Number that determines slots in Crafting window downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingModification = Config.Bind("Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingXOffset = Config.Bind("Inventories", "Crafting Window X Offset", 1000f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingZOffset = Config.Bind("Inventories", "Crafting Window Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingRightSlots = Config.Bind("Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingDownSlots = Config.Bind("Inventories", "Crafting Window Down Slots", 7, new ConfigDescription("Number that determines slots in Crafting window downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject());
-    CraftingRecipesModification = Config.Bind($"Crafting", "Enable Crafting Recipes Modification", true, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CustomCraftingRecipesUseDefaults = Config.Bind($"Crafting", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CraftingUnusedContinue = Config.Bind($"Crafting", "Try to load unused items", false, new ConfigDescription("Try to load unused items anyway\nWARNING: This will most likely result in your workbench breaking, use at your own risk", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"Crafting", "Note1", "okay", new ConfigDescription("This section is responsible for custom recipes. If you're in chapter 2 keep in mind that some recipes might load on 2nd opening, it's because of how the game loads items", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"Crafting", "Note2", "okay", new ConfigDescription("givesamount only works for some items, not sure what dictates this.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingRecipesModification = Config.Bind("Crafting", "Enable Crafting Recipes Modification", true, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CustomCraftingRecipesUseDefaults = Config.Bind("Crafting", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingUnusedContinue = Config.Bind("Crafting", "Try to load unused items", false, new ConfigDescription("Try to load unused items anyway\nWARNING: This will most likely result in your workbench breaking, use at your own risk", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("Crafting", "Note1", "okay", new ConfigDescription("This section is responsible for custom recipes. If you're in chapter 2 keep in mind that some recipes might load on 2nd opening, it's because of how the game loads items", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("Crafting", "Note2", "okay", new ConfigDescription("givesamount only works for some items, not sure what dictates this.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Character
-    CharacterModification = Config.Bind($"Characters", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"Characters", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CharacterModification = Config.Bind("Characters", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("Characters", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject());
 
     // Player
-    PlayerModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerFOVModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerSpeedModification = Config.Bind($"Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerFOV = Config.Bind($"Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerCantGetInterrupted = Config.Bind($"Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerFOVModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerStaminaModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerSpeedModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerFOV = Config.Bind("Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Stamina
-    PlayerMaxStamina = Config.Bind($"Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaRegenInterval = Config.Bind($"Player", "Stamina Regen Interval", 0.05f, new ConfigDescription("Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaRegenValue = Config.Bind($"Player", "Stamina Regen Value", 30f, new ConfigDescription("Amount of stamina regenerated per tick. I believe this is the amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerInfiniteStamina = Config.Bind($"Player", "Infinite Stamina", false, new ConfigDescription("On every update makes your stamina maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerInfiniteStaminaEffect = Config.Bind($"Player", "Infinite Stamina Effect", false, new ConfigDescription("Whether to draw the infinite stamina effect", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerMaxStamina = Config.Bind("Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerStaminaRegenInterval = Config.Bind("Player", "Stamina Regen Interval", 0.05f, new ConfigDescription("Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerStaminaRegenValue = Config.Bind("Player", "Stamina Regen Value", 30f, new ConfigDescription("Amount of stamina regenerated per tick. I believe this is the amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerInfiniteStamina = Config.Bind("Player", "Infinite Stamina", false, new ConfigDescription("On every update makes your stamina maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerInfiniteStaminaEffect = Config.Bind("Player", "Infinite Stamina Effect", false, new ConfigDescription("Whether to draw the infinite stamina effect", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Health
-    PlayerMaxHealth = Config.Bind($"Player", "Max Health", 100f, new ConfigDescription("Set your max health", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenInterval = Config.Bind($"Player", "Health Regen Interval", 5f, new ConfigDescription("Theoretically: Interval in seconds between health regeneration ticks, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenModifier = Config.Bind($"Player", "Health Regen Modifier", 1f, new ConfigDescription("Theoretically: Multiplier for health regen value, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenValue = Config.Bind($"Player", "Health Regen Value", 0f, new ConfigDescription("Theoretically: Amount of health regenerated per tick, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerGodmode = Config.Bind($"Player", "Enable Godmode", false, new ConfigDescription("Makes you invulnerable and on every update makes your health maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerMaxHealth = Config.Bind("Player", "Max Health", 100f, new ConfigDescription("Set your max health", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenInterval = Config.Bind("Player", "Health Regen Interval", 5f, new ConfigDescription("Theoretically: Interval in seconds between health regeneration ticks, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenModifier = Config.Bind("Player", "Health Regen Modifier", 1f, new ConfigDescription("Theoretically: Multiplier for health regen value, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenValue = Config.Bind("Player", "Health Regen Value", 0f, new ConfigDescription("Theoretically: Amount of health regenerated per tick, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerGodmode = Config.Bind("Player", "Enable Godmode", false, new ConfigDescription("Makes you invulnerable and on every update makes your health maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Speed
-    PlayerWalkSpeed = Config.Bind($"Player", "Walk Speed", 7.5f, new ConfigDescription("Set your walk speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerRunSpeed = Config.Bind($"Player", "Run Speed", 15f, new ConfigDescription("Set your run speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerRunSpeedModifier = Config.Bind($"Player", "Run Speed Modifier", 1f, new ConfigDescription("Multiplies your run speed by this value", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerWalkSpeed = Config.Bind("Player", "Walk Speed", 7.5f, new ConfigDescription("Set your walk speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerRunSpeed = Config.Bind("Player", "Run Speed", 15f, new ConfigDescription("Set your run speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerRunSpeedModifier = Config.Bind("Player", "Run Speed Modifier", 1f, new ConfigDescription("Multiplies your run speed by this value", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Time
-    TimeModification = Config.Bind($"Time", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    DaytimeFlow = Config.Bind($"Time", "Daytime Flow", 1f, new ConfigDescription("Set the day time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    NighttimeFlow = Config.Bind($"Time", "Nighttime Flow", 0.75f, new ConfigDescription("Set the night time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower, which includes calculating when the night starts.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    UseCurrentTime = Config.Bind($"Time", "Set Time", false, new ConfigDescription("Enable this to use the config for time of day below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CurrentTime = Config.Bind($"Time", "Set Current Time", 1, new ConfigDescription("(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    TimeStop = Config.Bind($"Time", "Stop Time", false, new ConfigDescription("Doesn't let time get any higher", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ResetWell = Config.Bind($"Time", "Reset Well", false, new ConfigDescription("Whether or not to reset well constantly", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TimeModification = Config.Bind("Time", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    DaytimeFlow = Config.Bind("Time", "Daytime Flow", 1f, new ConfigDescription("Set the day time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    NighttimeFlow = Config.Bind("Time", "Nighttime Flow", 0.75f, new ConfigDescription("Set the night time interval in seconds, aka how many seconds to wait before updating the time.\nLower values make time pass faster, higher values make time pass slower.\nBe cautious: very high values make this option update very slowly, higher values make time update slower, which includes calculating when the night starts.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UseCurrentTime = Config.Bind("Time", "Set Time", false, new ConfigDescription("Enable this to use the config for time of day below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CurrentTime = Config.Bind("Time", "Set Current Time", 1, new ConfigDescription("(1) is day (8:01), (900) is (18:00), (1440) is end of night (set it to 1439 and then disable set time)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    TimeStop = Config.Bind("Time", "Stop Time", false, new ConfigDescription("Doesn't let time get any higher", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ResetWell = Config.Bind("Time", "Reset Well", false, new ConfigDescription("Whether or not to reset well constantly", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Generator
-    GeneratorModification = Config.Bind($"Generator", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    GeneratorModifier = Config.Bind($"Generator", "Generator Modifier", 1f, new ConfigDescription("2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    GeneratorInfiniteFuel = Config.Bind($"Generator", "Generator Infinite Fuel", false, new ConfigDescription("Enable this to make the generator have infinite fuel", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    GeneratorModification = Config.Bind("Generator", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    GeneratorModifier = Config.Bind("Generator", "Generator Modifier", 1f, new ConfigDescription("2x is twice as fast drainage, 1x is as fast as normal, 0.5x is half as fast", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    GeneratorInfiniteFuel = Config.Bind("Generator", "Generator Infinite Fuel", false, new ConfigDescription("Enable this to make the generator have infinite fuel", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Camera
-    CameraModification = Config.Bind($"Camera", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    CameraFoV = Config.Bind($"Camera", "Camera Zoom Factor", 1f, new ConfigDescription("Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CameraModification = Config.Bind("Camera", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CameraFoV = Config.Bind("Camera", "Camera Zoom Factor", 1f, new ConfigDescription("Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Keybinds
     KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
@@ -518,13 +522,13 @@ internal class Plugin : BaseUnityPlugin
     KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
 
     // CustomRandomInventories
-    RandomInventoriesModification = Config.Bind($"RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"RandomInventories", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section also dictates the items traders have\nNew objects will be added when they load, ex. wolfman wont be added until the game loads their randominventory\nAdditional Note: You won't see changes until the next appearance of that type of inventory, I recommend starting a new save with 0.01 time scaling to generate NightTrader and WolfMan trades", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    RandomInventoriesModification = Config.Bind("RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("RandomInventories", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section also dictates the items traders have\nNew objects will be added when they load, ex. wolfman wont be added until the game loads their randominventory\nAdditional Note: You won't see changes until the next appearance of that type of inventory, I recommend starting a new save with 0.01 time scaling to generate NightTrader and WolfMan trades", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomRandomInventories = (JObject)GetJsonConfig(CustomRandomInventoriesPath, new JObject());
 
     // CustomLoot
-    LootModification = Config.Bind($"Loot", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the Loot in Customs/CustomLoot.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind($"Loot", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section dictates which items will be added to the loot tables of inventories, set replace to true to remove the base game items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LootModification = Config.Bind("Loot", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the Loot in Customs/CustomLoot.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("Loot", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section dictates which items will be added to the loot tables of inventories, set replace to true to remove the base game items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomLoot = (JObject)GetJsonConfig(CustomLootPath, new JObject());
   }
 
@@ -631,17 +635,17 @@ internal class Plugin : BaseUnityPlugin
     if (KeybindGodmode.Value.IsDown())
     {
       PlayerGodmode.Value = !PlayerGodmode.Value;
-      Log.LogInfo($"Player Godmode toggled!");
+      Log.LogInfo("Player Godmode toggled!");
     }
     if (KeybindStamina.Value.IsDown())
     {
       PlayerInfiniteStamina.Value = !PlayerInfiniteStamina.Value;
-      Log.LogInfo($"Player Infinite Stamina toggled!");
+      Log.LogInfo("Player Infinite Stamina toggled!");
     }
     if (KeybindTime.Value.IsDown())
     {
       TimeStop.Value = !TimeStop.Value;
-      Log.LogInfo($"Time Stop toggled!");
+      Log.LogInfo("Time Stop toggled!");
     }
   }
 
@@ -687,7 +691,7 @@ internal class Plugin : BaseUnityPlugin
 
   private void OnFileChanged(object sender, FileSystemEventArgs e)
   {
-    Log.LogInfo($"Trying to reload {e.Name}.");
+    //Log.LogInfo($"Trying to reload {e.Name}.");
     switch (e.Name)
     {
       case $"{PluginInfo.PluginGuid}.cfg":

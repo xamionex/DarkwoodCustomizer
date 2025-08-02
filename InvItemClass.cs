@@ -94,6 +94,10 @@ internal class InvItemClassPatch
     {
       __instance.baseClass.maxAmount = Plugin.StackResize.Value;
     }
+    if (Plugin.UseGlobalMaxDurability.Value && __instance.baseClass.hasDurability)
+    {
+      __instance.baseClass.maxDurability = Plugin.MaxDurability.Value;
+    }
   }
   private static void SetItemValues(InvItemClass currentItem, JObject data)
   {

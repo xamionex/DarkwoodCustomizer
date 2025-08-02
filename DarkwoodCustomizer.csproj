@@ -5,7 +5,7 @@
     <AssemblyName>amione.DarkwoodCustomizer</AssemblyName>
     <Product>DarkwoodCustomizer</Product>
     <ProductDescription>A mod for darkwood that lets you customize: Any Player or Enemy (HP,Stamina,Speed,etc.), Item stats (dmg,stacks,etc.), Inventory Sizes, Generator Drain Speed, Time Speed, and more!</ProductDescription>
-    <Version>1.5.2</Version>
+    <Version>1.5.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -105,8 +105,46 @@
             Product="$(Product)" />
   </Target>
 
-<!--  <Target Name="ZipProjectDirectory" AfterTargets="Build">-->
-<!--    <Exec Command="zip -r '$(ProjectDir)$(RootNamespace).zip' '$(ProjectDir)$(RootNamespace)\plugins\*.dll'" Condition="'$(OS)' == 'Unix'" />-->
-<!--    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)\plugins\*.dll' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />-->
-<!--  </Target>-->
+  <Target Name="ZipProjectDirectory" AfterTargets="Build">
+    <Exec Command="cd $(RootNamespace)/plugins &amp;&amp; zip ../../$(RootNamespace).zip amione.DarkwoodCustomizer.dll" Condition="'$(OS)' == 'Unix'" />
+    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)\plugins\amione.DarkwoodCustomizer.dll' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />
+  </Target>
+
+
+  <Target Name="PostBuildCopyToGameFolder" AfterTargets="Build">
+    <!-- Set variables for game game file and plugin source -->
+    <PropertyGroup>
+      <GameLocationFile>$(MSBuildProjectDirectory)/.gamelocation</GameLocationFile>
+      <PluginSource>$(MSBuildProjectDirectory)/DarkwoodCustomizer/plugins/amione.DarkwoodCustomizer.dll</PluginSource>
+    </PropertyGroup>
+
+    <!-- Read .gamelocation file if exists -->
+    <ReadLinesFromFile File="$(GameLocationFile)" Condition="Exists('$(GameLocationFile)')">
+      <Output TaskParameter="Lines" ItemName="_GameLocationLines"/>
+    </ReadLinesFromFile>
+
+    <!-- Extract first non-empty line as path -->
+    <PropertyGroup>
+      <GamePath Condition="'@(_GameLocationLines)' != ''">$([System.Text.RegularExpressions.Regex]::Match(%(_GameLocationLines.Identity), `^\s*(.+?)\s*$`).Groups[1].Value)</GamePath>
+    </PropertyGroup>
+
+    <!-- Warning if no valid path found -->
+    <Warning Condition="'$(GamePath)' == ''" Text="Skipping game folder copy: .gamelocation file not found or empty" />
+
+    <!-- 🪟 Windows -->
+    <Exec Condition="'$(OS)' == 'Windows_NT' And '$(GamePath)' != ''" Command='
+    setlocal EnableDelayedExpansion &amp;&amp;
+    set "TargetPath=$(GamePath)\BepInEx\plugins\DarkwoodCustomizer" &amp;&amp;
+    if exist "!TargetPath!" rmdir /s /q "!TargetPath!" &amp;&amp;
+    xcopy /s /e /y "$(PluginSource)" "!TargetPath!"
+  '/>
+
+    <!-- 🐧 Linux/macOS -->
+    <Exec Condition="'$(OS)' != 'Windows_NT' And '$(GamePath)' != ''" Command='
+    TargetPath="$(GamePath)/BepInEx/plugins/DarkwoodCustomizer" &amp;&amp;
+    rm -rf "$TargetPath" &amp;&amp;
+    mkdir -p "$TargetPath" &amp;&amp;
+    cp -r "$(PluginSource)" "$TargetPath"
+  '/>
+  </Target>
 </Project>
