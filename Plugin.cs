@@ -376,11 +376,22 @@ internal class Plugin : BaseUnityPlugin
   // Camera values
   public static ConfigEntry<bool> CameraModification;
   public static ConfigEntry<float> CameraFoV;
+  public static ConfigEntry<bool> CameraDisablePostFX;
+  public static ConfigEntry<bool> CameraDisableVignette;
+
+  // UI values
+  public static ConfigEntry<bool> UIModification;
+  public static ConfigEntry<bool> UIDisabled;
+  public static ConfigEntry<bool> UIDisabledHealthBar;
+  public static ConfigEntry<bool> UIDisabledLives;
+  public static ConfigEntry<bool> UIDisabledStaminaBar;
+  public static ConfigEntry<bool> UIDisabledSkillbar;
 
   // Keybinds values
   public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
   public static ConfigEntry<KeyboardShortcut> KeybindStamina;
   public static ConfigEntry<KeyboardShortcut> KeybindTime;
+  public static ConfigEntry<KeyboardShortcut> KeybindHud;
 
   // Random Inventories Values
   public static ConfigEntry<bool> RandomInventoriesModification;
@@ -515,11 +526,22 @@ internal class Plugin : BaseUnityPlugin
     // Camera
     CameraModification = Config.Bind("Camera", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CameraFoV = Config.Bind("Camera", "Camera Zoom Factor", 1f, new ConfigDescription("Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CameraDisablePostFX = Config.Bind("Camera", "Disable Post FX", false, new ConfigDescription("Disables Postprocess FX for the camera", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CameraDisableVignette = Config.Bind("Camera", "Disable Vignette", false, new ConfigDescription("Disables the vignette around your vision", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+
+    // UI
+    UIModification = Config.Bind("UI", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UIDisabled = Config.Bind("UI", "Disable UI/HUD", false, new ConfigDescription("Disables all HUD/UI", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UIDisabledHealthBar = Config.Bind("UI", "Disable Healthbar", false, new ConfigDescription("Disables the healthbar for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UIDisabledLives = Config.Bind("UI", "Disable Lives", false, new ConfigDescription("Disables the lives for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UIDisabledStaminaBar = Config.Bind("UI", "Disable Staminabar", false, new ConfigDescription("Disables the stamina bar for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    UIDisabledSkillbar = Config.Bind("UI", "Disable Skillbar (current effects)", false, new ConfigDescription("Disables the skill bar (current effects) for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Keybinds
     KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
     KeybindStamina = Config.Bind("Hotkeys", "Toggle Infinite Stamina", new KeyboardShortcut(KeyCode.H, KeyCode.LeftShift));
     KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
+    KeybindHud = Config.Bind("Hotkeys", "Toggle HUD/UI", new KeyboardShortcut(KeyCode.P));
 
     // CustomRandomInventories
     RandomInventoriesModification = Config.Bind("RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -576,8 +598,10 @@ internal class Plugin : BaseUnityPlugin
     var harmony = new Harmony($"{PluginInfo.PluginGuid}");
     harmony.PatchAll(typeof(CamMainPatch));
     Log.LogInfo("Patching in CamMainPatch! (Camera)");
+    harmony.PatchAll(typeof(UIPatch));
+    Log.LogInfo("Patching in UIPatch! (UI)");
     harmony.PatchAll(typeof(CharacterPatch));
-    Log.LogInfo("Patching in CharacterPatch! (Soontm)");
+    Log.LogInfo("Patching in CharacterPatch! (Soon™️)");
     harmony.PatchAll(typeof(ControllerPatch));
     Log.LogInfo("Patching in ControllerPatch! (Time)");
     harmony.PatchAll(typeof(GeneratorPatch));
@@ -646,6 +670,11 @@ internal class Plugin : BaseUnityPlugin
     {
       TimeStop.Value = !TimeStop.Value;
       Log.LogInfo("Time Stop toggled!");
+    }
+    if (KeybindHud.Value.IsDown())
+    {
+      UIDisabled.Value = !UIDisabled.Value;
+      Log.LogInfo("Hud toggled!");
     }
   }
 
