@@ -83,6 +83,12 @@ internal class PlayerPatch
   [HarmonyPostfix]
   public static void PlayerUpdate(Player __instance)
   {
+    if (Plugin.Cheats.Value && Plugin.CheatsGiveItem)
+    {
+      Plugin.Log.LogInfo($"Giving item {Plugin.CheatsGiveItemName.Value} x{Plugin.CheatsGiveItemAmount.Value}");
+      Plugin.CheatsGiveItem = false;
+      __instance.Inventory.addItemTypeToPlayer(Plugin.CheatsGiveItemName.Value, Plugin.CheatsGiveItemAmount.Value, true);
+    }
     if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
     {
       __instance.stamina = __instance.maxStamina;

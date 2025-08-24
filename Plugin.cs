@@ -378,6 +378,13 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<float> CameraFoV;
   public static ConfigEntry<bool> CameraDisablePostFX;
   public static ConfigEntry<bool> CameraDisableVignette;
+  
+  // Cheats
+  public static ConfigEntry<bool> Cheats;
+  public static ConfigEntry<string> CheatsGiveItemName;
+  public static ConfigEntry<int> CheatsGiveItemAmount;
+  public static bool CheatsGiveItem;
+  public static ConfigEntry<KeyboardShortcut> CheatsGiveItemKeybind;
 
   // UI values
   public static ConfigEntry<bool> UIModification;
@@ -528,6 +535,12 @@ internal class Plugin : BaseUnityPlugin
     CameraFoV = Config.Bind("Camera", "Camera Zoom Factor", 1f, new ConfigDescription("Changes the zoom factor of the camera, lower values is zoomed out, higher values is zoomed in", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CameraDisablePostFX = Config.Bind("Camera", "Disable Post FX", false, new ConfigDescription("Disables Postprocess FX for the camera", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CameraDisableVignette = Config.Bind("Camera", "Disable Vignette", false, new ConfigDescription("Disables the vignette around your vision", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    
+    // Cheats
+    Cheats = Config.Bind("Cheats", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CheatsGiveItemName = Config.Bind("Cheats", "Give Item with Name", "", new ConfigDescription("Gives this item ID when enabling the below toggle", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CheatsGiveItemAmount = Config.Bind("Cheats", "Give Item Amount", 1, new ConfigDescription("Gives the above item with this specified amount", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CheatsGiveItemKeybind = Config.Bind("Cheats", "Give Item Button", new KeyboardShortcut(KeyCode.G, KeyCode.LeftControl));
 
     // UI
     UIModification = Config.Bind("UI", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -675,6 +688,10 @@ internal class Plugin : BaseUnityPlugin
     {
       UIDisabled.Value = !UIDisabled.Value;
       Log.LogInfo("Hud toggled!");
+    }
+    if (CheatsGiveItemKeybind.Value.IsDown())
+    {
+      CheatsGiveItem = true;
     }
   }
 
