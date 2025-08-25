@@ -394,6 +394,9 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> UIDisabledStaminaBar;
   public static ConfigEntry<bool> UIDisabledSkillbar;
 
+  // MISC
+  public static ConfigEntry<bool> DisableWormSpawn;
+
   // Keybinds values
   public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
   public static ConfigEntry<KeyboardShortcut> KeybindStamina;
@@ -549,6 +552,9 @@ internal class Plugin : BaseUnityPlugin
     UIDisabledLives = Config.Bind("UI", "Disable Lives", false, new ConfigDescription("Disables the lives for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UIDisabledStaminaBar = Config.Bind("UI", "Disable Staminabar", false, new ConfigDescription("Disables the stamina bar for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UIDisabledSkillbar = Config.Bind("UI", "Disable Skillbar (current effects)", false, new ConfigDescription("Disables the skill bar (current effects) for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    
+    // Misc
+    DisableWormSpawn = Config.Bind("MISC", "Disable Night Floor Gore (Requires Save Reload)", false, new ConfigDescription("Disables the floor gore that spawns and kills you at night if not in a shelter. Requires Save Reload", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Keybinds
     KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
@@ -613,6 +619,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in CamMainPatch! (Camera)");
     harmony.PatchAll(typeof(UIPatch));
     Log.LogInfo("Patching in UIPatch! (UI)");
+    harmony.PatchAll(typeof(CharacterSpawnerPatch));
+    Log.LogInfo("Patching in CharacterSpawnerPatch! (Floor Gore)");
     harmony.PatchAll(typeof(CharacterPatch));
     Log.LogInfo("Patching in CharacterPatch! (Soon™️)");
     harmony.PatchAll(typeof(ControllerPatch));
