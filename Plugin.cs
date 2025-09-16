@@ -341,12 +341,14 @@ internal class Plugin : BaseUnityPlugin
 
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
-  public static ConfigEntry<bool> PlayerFOVModification;
   public static ConfigEntry<float> PlayerFOV;
   public static ConfigEntry<bool> PlayerCantGetInterrupted;
 
+  // Player Skills
+  public static ConfigEntry<bool> PlayerSkillsModification;
+  public static ConfigEntry<float> PlayerFarsightDistance;
+  
   // Player Stamina Values
-  public static ConfigEntry<bool> PlayerStaminaModification;
   public static ConfigEntry<float> PlayerMaxStamina;
   public static ConfigEntry<float> PlayerStaminaRegenInterval;
   public static ConfigEntry<float> PlayerStaminaRegenValue;
@@ -354,7 +356,6 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> PlayerInfiniteStaminaEffect;
 
   // Player Health Values
-  public static ConfigEntry<bool> PlayerHealthModification;
   public static ConfigEntry<float> PlayerMaxHealth;
   public static ConfigEntry<float> PlayerHealthRegenInterval;
   public static ConfigEntry<float> PlayerHealthRegenModifier;
@@ -362,7 +363,6 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> PlayerGodmode;
 
   // Player Speed Values
-  public static ConfigEntry<bool> PlayerSpeedModification;
   public static ConfigEntry<float> PlayerWalkSpeed;
   public static ConfigEntry<float> PlayerRunSpeed;
   public static ConfigEntry<float> PlayerRunSpeedModifier;
@@ -506,12 +506,12 @@ internal class Plugin : BaseUnityPlugin
 
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerFOVModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerSpeedModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerFOV = Config.Bind("Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+
+    // Player Skills
+    PlayerSkillsModification = Config.Bind("Skills", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerFarsightDistance = Config.Bind("Skills", "Farsight Distance", 3.4f, new ConfigDescription("Changes how far you can see with farsight", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Stamina
     PlayerMaxStamina = Config.Bind("Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -654,6 +654,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in LanguagePatch! (Item Names)");
     harmony.PatchAll(typeof(PlayerPatch));
     Log.LogInfo("Patching in PlayerPatch! (Player Update)");
+    harmony.PatchAll(typeof(PlayerSkillsPatch));
+    Log.LogInfo("Patching in PlayerSkillsPatch! (Farsight)");
     harmony.PatchAll(typeof(UpgradeItemMenuPatch));
     Log.LogInfo("Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
     harmony.PatchAll(typeof(WorkbenchPatch));

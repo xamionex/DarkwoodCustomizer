@@ -1,3 +1,4 @@
+using System;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -91,7 +92,7 @@ internal class PlayerPatch
 
     if (Plugin.PlayerModification.Value)
     {
-      if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
+      if (Plugin.PlayerInfiniteStamina.Value)
       {
         __instance.stamina = __instance.maxStamina;
         if (Plugin.PlayerInfiniteStaminaEffect.Value)
@@ -100,7 +101,7 @@ internal class PlayerPatch
         }
       }
 
-      if (Plugin.PlayerHealthModification.Value && Plugin.PlayerGodmode.Value)
+      if (Plugin.PlayerGodmode.Value)
       {
         __instance.health = __instance.maxHealth;
         __instance.invulnerable = true;
@@ -108,39 +109,26 @@ internal class PlayerPatch
       else if (__instance.invulnerable) __instance.invulnerable = false;
 
       if (!RefreshPlayer) return;
-      if (Plugin.PlayerStaminaModification.Value)
+      __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
+      __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
+      __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
+      
+      __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+      if (__instance.health > __instance.maxHealth)
       {
-        __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
-        __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
-        __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
+        __instance.health = __instance.maxHealth;
       }
 
-      if (Plugin.PlayerHealthModification.Value)
-      {
-        __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
-        if (__instance.health > __instance.maxHealth)
-        {
-          __instance.health = __instance.maxHealth;
-        }
+      __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
+      __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
+      __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
+      __instance.defaultFOV = Plugin.PlayerFOV.Value;
+      __instance.currentDestFOV = Plugin.PlayerFOV.Value;
 
-        __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
-        __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
-        __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
-      }
-
-      if (Plugin.PlayerFOVModification.Value)
-      {
-        __instance.defaultFOV = Plugin.PlayerFOV.Value;
-        __instance.currentDestFOV = Plugin.PlayerFOV.Value;
-      }
-
-      if (Plugin.PlayerSpeedModification.Value)
-      {
-        __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
-        __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
-        __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
-      }
-
+      __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
+      __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
+      __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
+        
       if (Plugin.LogDebug.Value)
       {
         Plugin.LogDivider();
