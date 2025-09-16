@@ -3,7 +3,6 @@ using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
@@ -19,7 +18,8 @@ internal class CharacterEffectsPatch
         if (!Plugin.CharacterEffectsModification.Value) return;
         if (Singleton<Dreams>.Instance.dreaming) return;
 
-        var type = effect.type.ToString();
+        var typeclean = effect.type.ToString();
+        var type = $"{typeclean}_d{effect.duration.ToString()}_m{effect.modifier.ToString()}_i{effect.interval.ToString()}";
         var customEffects = Plugin.CharacterEffects;
 
         // Initialize effect in config if it doesn't exist
@@ -52,6 +52,7 @@ internal class CharacterEffectsPatch
             LogStats += $"{type}.hasPoisonOverlay = {effect.hasPoisonOverlay}\n";
             LogStats += $"{type}.activateSound = {effect.activateSound}\n";
             LogStats += $"{type}.startDelay = {effect.startDelay}\n";
+            LogStats += $"Saved as {type} but the game ID for it is just {typeclean}\n";
             LogStats += "----------------------------------------\n";
 
             var logPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "EffectLog.log");
