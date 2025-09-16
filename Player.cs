@@ -7,8 +7,7 @@ namespace DarkwoodCustomizer;
 internal class PlayerPatch
 {
   public static bool RefreshPlayer = true;
-
-
+  
   [HarmonyPatch(typeof(Player), "fireWeapon")]
   [HarmonyPostfix]
   private static void PlayerFiresWeapon()
@@ -89,58 +88,73 @@ internal class PlayerPatch
       Plugin.CheatsGiveItem = false;
       __instance.Inventory.addItemTypeToPlayer(Plugin.CheatsGiveItemName.Value, Plugin.CheatsGiveItemAmount.Value, true);
     }
-    if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
+
+    if (Plugin.PlayerModification.Value)
     {
-      __instance.stamina = __instance.maxStamina;
-      if (Plugin.PlayerInfiniteStaminaEffect.Value)
+      if (Plugin.PlayerStaminaModification.Value && Plugin.PlayerInfiniteStamina.Value)
       {
-        __instance.flashStaminaBar();
+        __instance.stamina = __instance.maxStamina;
+        if (Plugin.PlayerInfiniteStaminaEffect.Value)
+        {
+          __instance.flashStaminaBar();
+        }
       }
-    }
-    if (Plugin.PlayerHealthModification.Value && Plugin.PlayerGodmode.Value)
-    {
-      __instance.health = __instance.maxHealth;
-      __instance.invulnerable = true;
-    }
-    else if (__instance.invulnerable) __instance.invulnerable = false;
-    if (!RefreshPlayer) return;
-    if (Plugin.PlayerStaminaModification.Value)
-    {
-      __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
-      __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
-      __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
-    }
-    if (Plugin.PlayerHealthModification.Value)
-    {
-      __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
-      if (__instance.health > __instance.maxHealth)
+
+      if (Plugin.PlayerHealthModification.Value && Plugin.PlayerGodmode.Value)
       {
         __instance.health = __instance.maxHealth;
+        __instance.invulnerable = true;
       }
-      __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
-      __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
-      __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
-    }
-    if (Plugin.PlayerFOVModification.Value)
-    {
-      __instance.defaultFOV = Plugin.PlayerFOV.Value;
-      __instance.currentDestFOV = Plugin.PlayerFOV.Value;
-    }
-    if (Plugin.PlayerSpeedModification.Value)
-    {
-      __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
-      __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
-      __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
-    }
-    if (Plugin.LogDebug.Value)
-    {
-      Plugin.LogDivider();
-      Plugin.Log.LogInfo($"[Player] Has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
-      Plugin.Log.LogInfo($"[Player] MaxHP: {__instance.maxHealth} | HPR Interval: {__instance.healthRegenInterval} | HPR Modifier: {__instance.healthRegenModifier} | HPR Value: {__instance.healthRegenValue}");
-      Plugin.Log.LogInfo($"[Player] Max Stamina: {__instance.maxStamina} | SR Interval: {__instance.staminaRegenInterval} | SR Value: {__instance.staminaRegenValue}");
-      Plugin.Log.LogInfo($"[Player] WS: {__instance.walkSpeed} | RS: {__instance.runSpeed} | RS Modifier: {__instance.runSpeedModifier}");
-      Plugin.Log.LogInfo($"[Player] FoV: {__instance.currentDestFOV}");
-      Plugin.LogDivider();
+      else if (__instance.invulnerable) __instance.invulnerable = false;
+
+      if (!RefreshPlayer) return;
+      if (Plugin.PlayerStaminaModification.Value)
+      {
+        __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
+        __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
+        __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
+      }
+
+      if (Plugin.PlayerHealthModification.Value)
+      {
+        __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+        if (__instance.health > __instance.maxHealth)
+        {
+          __instance.health = __instance.maxHealth;
+        }
+
+        __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
+        __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
+        __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
+      }
+
+      if (Plugin.PlayerFOVModification.Value)
+      {
+        __instance.defaultFOV = Plugin.PlayerFOV.Value;
+        __instance.currentDestFOV = Plugin.PlayerFOV.Value;
+      }
+
+      if (Plugin.PlayerSpeedModification.Value)
+      {
+        __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
+        __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
+        __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
+      }
+
+      if (Plugin.LogDebug.Value)
+      {
+        Plugin.LogDivider();
+        Plugin.Log.LogInfo(
+          $"[Player] Has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
+        Plugin.Log.LogInfo(
+          $"[Player] MaxHP: {__instance.maxHealth} | HPR Interval: {__instance.healthRegenInterval} | HPR Modifier: {__instance.healthRegenModifier} | HPR Value: {__instance.healthRegenValue}");
+        Plugin.Log.LogInfo(
+          $"[Player] Max Stamina: {__instance.maxStamina} | SR Interval: {__instance.staminaRegenInterval} | SR Value: {__instance.staminaRegenValue}");
+        Plugin.Log.LogInfo(
+          $"[Player] WS: {__instance.walkSpeed} | RS: {__instance.runSpeed} | RS Modifier: {__instance.runSpeedModifier}");
+        Plugin.Log.LogInfo($"[Player] FoV: {__instance.currentDestFOV}");
+        Plugin.LogDivider();
+      }
     }
     RefreshPlayer = false;
   }

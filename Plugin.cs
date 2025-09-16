@@ -24,6 +24,9 @@ internal class Plugin : BaseUnityPlugin
   public static float LastRandomInventoriesSaveTime;
   public static bool SaveRandomInventories;
   public static float SavedRandomInventoriesCooldown;
+  public static float LastCharacterEffectsSaveTime;
+  public static bool SaveCharacterEffects;
+  public static float SavedCharacterEffectsCooldown;
   public static float LastLootSaveTime;
   public static bool SaveLoot;
   public static float SavedLootCooldown;
@@ -331,6 +334,24 @@ internal class Plugin : BaseUnityPlugin
   public static string CustomCharactersPath => Path.Combine(JsonConfigPath, "CustomCharacters.json");
   public static JObject CustomCharacters;
 
+  // Character Effects
+  public static ConfigEntry<bool> CharacterEffectsModification;
+  public static ConfigEntry<bool> CharacterEffectsUseDefaults;
+  public static string CharacterEffectsPath => Path.Combine(JsonConfigPath, "CustomCharacterEffects.json");
+  public static string DefaultsCharacterEffectsPath = Path.Combine(DefaultsConfigPath, "CustomCharacterEffects.json");
+  public static JObject CharacterEffects;
+  public static JObject DefaultCharacterEffects = JObject.FromObject(new
+  {
+    thirdEye = new {
+      duration = 60.0,
+      modifier = 0.0,
+      interval = 0.0,
+      stopsBleeding = false,
+      stopsPoison = false,
+      hasPoisonOverlay = false,
+    },
+  });
+
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
   public static ConfigEntry<bool> PlayerFOVModification;
@@ -490,6 +511,11 @@ internal class Plugin : BaseUnityPlugin
     CharacterModification = Config.Bind("Characters", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the characters in Customs/CustomCharacters.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("Characters", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nDo not add more attacks than what was added by default, it'll cancel the damage modification since it'll cause an indexing error\nBarricadeDamage is restricted from being loaded when the value is 0\nin the case of a character having barricadedamage but my plugin cant read it, it will assign 0\nso if anything goes wrong with barricadedamage this makes sure something like a dog will still be able to deal damage to barricades", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject());
+    
+    // Character Effects
+    CharacterEffectsModification = Config.Bind("Effects", "Enable Effects Modification", true, new ConfigDescription("Enable Effects Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CharacterEffects = (JObject)GetJsonConfig(CharacterEffectsPath, new JObject());
+    CharacterEffectsUseDefaults = Config.Bind("Effects", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -589,11 +615,16 @@ internal class Plugin : BaseUnityPlugin
       File.Delete(DefaultsCustomCraftingRecipesPath);
     if (!File.Exists(DefaultsCustomCraftingRecipesPath))
       File.WriteAllText(DefaultsCustomCraftingRecipesPath, JsonConvert.SerializeObject(DefaultCustomCraftingRecipes, Formatting.Indented));
-
+    
     if (File.Exists(DefaultsCustomItemsPath) && !File.ReadAllText(DefaultsCustomItemsPath).Equals(JsonConvert.SerializeObject(DefaultCustomItems, Formatting.Indented)))
       File.Delete(DefaultsCustomItemsPath);
     if (!File.Exists(DefaultsCustomItemsPath))
       File.WriteAllText(DefaultsCustomItemsPath, JsonConvert.SerializeObject(DefaultCustomItems, Formatting.Indented));
+    
+    if (File.Exists(DefaultsCharacterEffectsPath) && !File.ReadAllText(DefaultsCharacterEffectsPath).Equals(JsonConvert.SerializeObject(DefaultCharacterEffects, Formatting.Indented)))
+      File.Delete(DefaultsCharacterEffectsPath);
+    if (!File.Exists(DefaultsCharacterEffectsPath))
+      File.WriteAllText(DefaultsCharacterEffectsPath, JsonConvert.SerializeObject(DefaultCharacterEffects, Formatting.Indented));
   }
 
   private void Awake()
@@ -623,6 +654,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in CharacterSpawnerPatch! (Floor Gore)");
     harmony.PatchAll(typeof(CharacterPatch));
     Log.LogInfo("Patching in CharacterPatch! (Soon™️)");
+    harmony.PatchAll(typeof(CharacterEffectsPatch));
+    Log.LogInfo("Patching in CharacterEffectsPatch! (Eagle Eye, etc.)");
     harmony.PatchAll(typeof(ControllerPatch));
     Log.LogInfo("Patching in ControllerPatch! (Time)");
     harmony.PatchAll(typeof(GeneratorPatch));
@@ -711,6 +744,8 @@ internal class Plugin : BaseUnityPlugin
     else SavedCharactersCooldown -= 0.1f;
     if (SavedRandomInventoriesCooldown < 0f) SavedRandomInventoriesCooldown = 0f;
     else SavedRandomInventoriesCooldown -= 0.1f;
+    if (SavedCharacterEffectsCooldown < 0f) SavedCharacterEffectsCooldown = 0f;
+    else SavedCharacterEffectsCooldown -= 0.1f;
     if (SavedLootCooldown < 0f) SavedLootCooldown = 0f;
     else SavedLootCooldown -= 0.1f;
     if (Time.time - LastItemsSaveTime > 0.8f && SaveItems)
@@ -720,6 +755,13 @@ internal class Plugin : BaseUnityPlugin
       SavedItemsCooldown += 1f;
       SaveItems = false;
     }
+    if (Time.time - LastRandomInventoriesSaveTime > 0.8f && SaveRandomInventories)
+    {
+      SaveJsonFile(CustomRandomInventoriesPath, CustomRandomInventories);
+      LastRandomInventoriesSaveTime = Time.time;
+      SavedRandomInventoriesCooldown += 1f;
+      SaveRandomInventories = false;
+    }
     if (Time.time - LastCharactersSaveTime > 0.8f && SaveCharacters)
     {
       SaveJsonFile(CustomCharactersPath, CustomCharacters);
@@ -727,12 +769,12 @@ internal class Plugin : BaseUnityPlugin
       SavedCharactersCooldown += 1f;
       SaveCharacters = false;
     }
-    if (Time.time - LastRandomInventoriesSaveTime > 0.8f && SaveRandomInventories)
+    if (Time.time - LastCharacterEffectsSaveTime > 0.8f && SaveCharacterEffects)
     {
-      SaveJsonFile(CustomRandomInventoriesPath, CustomRandomInventories);
-      LastRandomInventoriesSaveTime = Time.time;
-      SavedRandomInventoriesCooldown += 1f;
-      SaveRandomInventories = false;
+      SaveJsonFile(CharacterEffectsPath, CharacterEffects);
+      LastCharacterEffectsSaveTime = Time.time;
+      SavedCharacterEffectsCooldown += 1f;
+      SaveCharacterEffects = false;
     }
     if (Time.time - LastLootSaveTime > 0.8f && SaveLoot)
     {
@@ -757,6 +799,12 @@ internal class Plugin : BaseUnityPlugin
         if (SavedCharactersCooldown <= 0f)
         {
           CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject());
+        }
+        break;
+      case "CustomCharacterEffects.json":
+        if (SavedCharactersCooldown <= 0f)
+        {
+          CharacterEffects = (JObject)GetJsonConfig(CharacterEffectsPath, new JObject());
         }
         break;
       case "CustomCraftingRecipes.json":
