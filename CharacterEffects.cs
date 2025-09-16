@@ -62,8 +62,6 @@ internal class CharacterEffectsPatch
         }
 
         // Apply modifications
-        if (Plugin.CharacterEffectsUseDefaults.Value) 
-            SetEffectValues(__instance, (JObject)Plugin.DefaultCharacterEffects[type]);
         SetEffectValues(__instance, (JObject)Plugin.CharacterEffects[type]);
     }
 

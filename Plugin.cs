@@ -336,21 +336,8 @@ internal class Plugin : BaseUnityPlugin
 
   // Character Effects
   public static ConfigEntry<bool> CharacterEffectsModification;
-  public static ConfigEntry<bool> CharacterEffectsUseDefaults;
   public static string CharacterEffectsPath => Path.Combine(JsonConfigPath, "CustomCharacterEffects.json");
-  public static string DefaultsCharacterEffectsPath = Path.Combine(DefaultsConfigPath, "CustomCharacterEffects.json");
   public static JObject CharacterEffects;
-  public static JObject DefaultCharacterEffects = JObject.FromObject(new
-  {
-    thirdEye = new {
-      duration = 60.0,
-      modifier = 0.0,
-      interval = 0.0,
-      stopsBleeding = false,
-      stopsPoison = false,
-      hasPoisonOverlay = false,
-    },
-  });
 
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
@@ -514,8 +501,8 @@ internal class Plugin : BaseUnityPlugin
     
     // Character Effects
     CharacterEffectsModification = Config.Bind("Effects", "Enable Effects Modification", true, new ConfigDescription("Enable Effects Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("Effects", "Note", "ReadMePlease", new ConfigDescription("Effects will be saved to your custom config as you get them", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CharacterEffects = (JObject)GetJsonConfig(CharacterEffectsPath, new JObject());
-    CharacterEffectsUseDefaults = Config.Bind("Effects", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -620,11 +607,6 @@ internal class Plugin : BaseUnityPlugin
       File.Delete(DefaultsCustomItemsPath);
     if (!File.Exists(DefaultsCustomItemsPath))
       File.WriteAllText(DefaultsCustomItemsPath, JsonConvert.SerializeObject(DefaultCustomItems, Formatting.Indented));
-    
-    if (File.Exists(DefaultsCharacterEffectsPath) && !File.ReadAllText(DefaultsCharacterEffectsPath).Equals(JsonConvert.SerializeObject(DefaultCharacterEffects, Formatting.Indented)))
-      File.Delete(DefaultsCharacterEffectsPath);
-    if (!File.Exists(DefaultsCharacterEffectsPath))
-      File.WriteAllText(DefaultsCharacterEffectsPath, JsonConvert.SerializeObject(DefaultCharacterEffects, Formatting.Indented));
   }
 
   private void Awake()
