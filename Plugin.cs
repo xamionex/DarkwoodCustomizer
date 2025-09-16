@@ -500,7 +500,7 @@ internal class Plugin : BaseUnityPlugin
     CustomCharacters = (JObject)GetJsonConfig(CustomCharactersPath, new JObject());
     
     // Character Effects
-    CharacterEffectsModification = Config.Bind("Effects", "Enable Effects Modification", true, new ConfigDescription("Enable Effects Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CharacterEffectsModification = Config.Bind("Effects", "Enable Section", true, new ConfigDescription("Enable Section", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("Effects", "Note", "ReadMePlease", new ConfigDescription("Effects will be saved to your custom config as you get them", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CharacterEffects = (JObject)GetJsonConfig(CharacterEffectsPath, new JObject());
 
