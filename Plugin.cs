@@ -342,11 +342,9 @@ internal class Plugin : BaseUnityPlugin
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
   public static ConfigEntry<float> PlayerFOV;
+  public static ConfigEntry<float> PlayerSight;
+  public static ConfigEntry<float> PlayerFarSight;
   public static ConfigEntry<bool> PlayerCantGetInterrupted;
-
-  // Player Skills
-  public static ConfigEntry<bool> PlayerSkillsModification;
-  public static ConfigEntry<float> PlayerFarsightDistance;
   
   // Player Stamina Values
   public static ConfigEntry<float> PlayerMaxStamina;
@@ -507,12 +505,10 @@ internal class Plugin : BaseUnityPlugin
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerFOV = Config.Bind("Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerSight = Config.Bind("Player", "Player Sight Distance", 3.4f, new ConfigDescription("Set players' sight, affects normal sight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerFarSight = Config.Bind("Player", "Player Eagle Eye Distance", 5.2f, new ConfigDescription("Set players' sight, affects farsight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-
-    // Player Skills
-    PlayerSkillsModification = Config.Bind("Skills", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerFarsightDistance = Config.Bind("Skills", "Farsight Distance", 3.4f, new ConfigDescription("Changes how far you can see with farsight", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-
+    
     // Player Stamina
     PlayerMaxStamina = Config.Bind("Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerStaminaRegenInterval = Config.Bind("Player", "Stamina Regen Interval", 0.05f, new ConfigDescription("Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -654,8 +650,6 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in LanguagePatch! (Item Names)");
     harmony.PatchAll(typeof(PlayerPatch));
     Log.LogInfo("Patching in PlayerPatch! (Player Update)");
-    harmony.PatchAll(typeof(PlayerSkillsPatch));
-    Log.LogInfo("Patching in PlayerSkillsPatch! (Farsight)");
     harmony.PatchAll(typeof(UpgradeItemMenuPatch));
     Log.LogInfo("Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
     harmony.PatchAll(typeof(WorkbenchPatch));

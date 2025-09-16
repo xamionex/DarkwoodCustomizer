@@ -22,6 +22,10 @@ internal class CamMainPatch
     [HarmonyPostfix]
     public static void CamUpdate(CamMain __instance)
     {
+        if (Plugin.PlayerModification.Value)
+        {
+            __instance.seeDistance = Player.Instance.skills.Farsight ? Plugin.PlayerFarSight.Value : Plugin.PlayerSight.Value;
+        }
         if (!Plugin.CameraModification.Value) return;
         
         // Cache the main camera component
