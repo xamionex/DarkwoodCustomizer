@@ -10,6 +10,7 @@ internal class InventoryPatch
 {
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void InventoryBackgrounds(Inventory __instance, string labelName = "")
   {
     try
@@ -33,7 +34,7 @@ internal class InventoryPatch
         var extraSlots = Plugin.CraftingRightSlots.Value - 5f;
         var xPosition = 119f + 31f * extraSlots;
         var xScale = 1f + 0.21f * extraSlots;
-        var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject, false);
+        var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject);
         workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
         Singleton<InventoryController>.Instance.repairBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
         Singleton<InventoryController>.Instance.upgradeBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
@@ -51,6 +52,7 @@ internal class InventoryPatch
 
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
   [HarmonyPrefix]
+  // ReSharper disable once InconsistentNaming
   public static void InventorySlots(Inventory __instance, string labelName = "")
   {
     var maxSlots = 0;
@@ -141,6 +143,8 @@ internal class InventoryPatch
       ChangeSlots(__instance, maxSlots);
     }
   }
+
+  // ReSharper disable once InconsistentNaming
   public static void ChangeSlots(Inventory __instance, int maximumSlots)
   {
     var difference = maximumSlots - __instance.slots.Count;
@@ -149,14 +153,7 @@ internal class InventoryPatch
       Plugin.LogDivider();
       Plugin.Log.LogInfo($"Maximum slots allowed in \"{__instance.name}\" is {maximumSlots} and we have {__instance.slots.Count}");
 
-      if (difference < 0)
-      {
-        Plugin.Log.LogInfo($"Removing {Math.Abs(difference)} slots");
-      }
-      else
-      {
-        Plugin.Log.LogInfo($"Adding {difference} slots");
-      }
+      Plugin.Log.LogInfo(difference < 0 ? $"Removing {Math.Abs(difference)} slots" : $"Adding {difference} slots");
       Plugin.LogDivider();
     }
     while (difference < 0 && Plugin.RemoveExcess.Value)
@@ -175,12 +172,12 @@ internal class InventoryPatch
         difference--;
       }
     }
-    return;
   }
 
   [HarmonyPatch(typeof(Inventory), nameof(Inventory.initSlots))]
   [HarmonyPrefix]
-  static void InventoryItems(ref Inventory __instance)
+  // ReSharper disable once InconsistentNaming
+  private static void InventoryItems(ref Inventory __instance)
   {
     var name = __instance.gameObject.name;
 
@@ -191,16 +188,14 @@ internal class InventoryPatch
       var itemsList = new JArray();
 
       // Loop through slots and add items dynamically
-      for (var i = 0; i < __instance.slots.Count; i++)
-      {
-        var itemObject = new JObject
+      foreach (var itemObject in __instance.slots.Select(t => new JObject
         {
-          { "item", __instance.slots[i].item?.type ?? "Empty" },
-          { "minAmount", 1 },
-          { "maxAmount", 1 },
-          { "chance", 1f },
-        };
-
+         { "item", t.item?.type ?? "Empty" },
+         { "minAmount", 1 },
+         { "maxAmount", 1 },
+         { "chance", 1f },
+        }))
+      {
         // Add the item object to the itemsList
         itemsList.Add(itemObject);
       }
@@ -219,6 +214,7 @@ internal class InventoryPatch
 
     // Iterate over each inventory in CustomLoot
     var lootEntry = Plugin.CustomLoot.Properties().FirstOrDefault(x => x.Name == name);
+    if (lootEntry == null) return;
     var lootItems = lootEntry.Value["items"];
     var replaceSlot = lootEntry.Value["replace"];
 
@@ -230,27 +226,18 @@ internal class InventoryPatch
 
       // Get the item data for the current slot
       // lootItems can have less or more than this inventories slots
-      JObject itemData;
-      try
-      {
-        itemData = (JObject)lootItems[i];
-      }
-      catch
-      {
-        continue;
-      }
-      var itemName = itemData["item"].ToString();
+      var itemData = (JObject)lootItems?[i];
+      if (itemData == null) continue;
+      var itemName = itemData["item"]?.ToString();
       var chance = (float)itemData["chance"];
 
       if (itemName == "Empty") continue;
 
       // Determine if the item should be added based on its chance
-      if (UnityEngine.Random.value <= chance)
-      {
-        // Add the item to the inventories slots
-        var amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
-        __instance.slots[i] = new() { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
-      }
+      if (!(UnityEngine.Random.value <= chance)) continue;
+      // Add the item to the inventories slots
+      var amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
+      __instance.slots[i] = new() { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
     }
   }
 }

@@ -203,6 +203,7 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<float> CraftingZOffset;
   public static ConfigEntry<int> CraftingRightSlots;
   public static ConfigEntry<int> CraftingDownSlots;
+  public static ConfigEntry<bool> FreeCrafting;
   public static ConfigEntry<bool> CraftingRecipesModification;
   public static ConfigEntry<bool> CustomCraftingRecipesUseDefaults;
   public static ConfigEntry<bool> CraftingUnusedContinue;
@@ -413,7 +414,14 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<string> CheatsGiveItemName;
   public static ConfigEntry<int> CheatsGiveItemAmount;
   public static bool CheatsGiveItem;
+  
+  // Keybinds
+  public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
+  public static ConfigEntry<KeyboardShortcut> KeybindStamina;
+  public static ConfigEntry<KeyboardShortcut> KeybindTime;
+  public static ConfigEntry<KeyboardShortcut> KeybindHud;
   public static ConfigEntry<KeyboardShortcut> CheatsGiveItemKeybind;
+  public static ConfigEntry<KeyboardShortcut> KeybindFreeCrafting;
 
   // UI values
   public static ConfigEntry<bool> UIModification;
@@ -425,12 +433,6 @@ internal class Plugin : BaseUnityPlugin
 
   // MISC
   public static ConfigEntry<bool> DisableWormSpawn;
-
-  // Keybinds values
-  public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
-  public static ConfigEntry<KeyboardShortcut> KeybindStamina;
-  public static ConfigEntry<KeyboardShortcut> KeybindTime;
-  public static ConfigEntry<KeyboardShortcut> KeybindHud;
 
   // Random Inventories Values
   public static ConfigEntry<bool> RandomInventoriesModification;
@@ -508,6 +510,7 @@ internal class Plugin : BaseUnityPlugin
     CraftingZOffset = Config.Bind("Inventories", "Crafting Window Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingRightSlots = Config.Bind("Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingDownSlots = Config.Bind("Inventories", "Crafting Window Down Slots", 7, new ConfigDescription("Number that determines slots in Crafting window downward.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    FreeCrafting = Config.Bind("Crafting", "Enable Free Crafting", false, new ConfigDescription("All crafting recipes cost nothing when enabled.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCraftingRecipes = (JObject)GetJsonConfig(CustomCraftingRecipesPath, new JObject());
     CraftingRecipesModification = Config.Bind("Crafting", "Enable Crafting Recipes Modification", true, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomCraftingRecipesUseDefaults = Config.Bind("Crafting", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -620,6 +623,7 @@ internal class Plugin : BaseUnityPlugin
     KeybindStamina = Config.Bind("Hotkeys", "Toggle Infinite Stamina", new KeyboardShortcut(KeyCode.H, KeyCode.LeftShift));
     KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
     KeybindHud = Config.Bind("Hotkeys", "Toggle HUD/UI", new KeyboardShortcut(KeyCode.P));
+    KeybindFreeCrafting = Config.Bind("Hotkeys", "Toggle Free Crafting", new KeyboardShortcut(KeyCode.F, KeyCode.LeftControl));
 
     // CustomRandomInventories
     RandomInventoriesModification = Config.Bind("RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -694,6 +698,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in InventoryRandomizePatch! (Traders and Loot)");
     harmony.PatchAll(typeof(InvItemClassPatch));
     Log.LogInfo("Patching in InvItemClassPatch! (Items)");
+    harmony.PatchAll(typeof(FlamethrowerPatch));
+    Log.LogInfo("Patching in FlamethrowerPatch! (Flamethrower Damage)");
     harmony.PatchAll(typeof(ItemPatch));
     Log.LogInfo("Patching in ItemPatch! (beartrap disarm)");
     harmony.PatchAll(typeof(LanguagePatch));
@@ -706,6 +712,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in UpgradeItemMenuPatch! (Upgrade Menu)");
     harmony.PatchAll(typeof(WorkbenchPatch));
     Log.LogInfo("Patching in WorkbenchPatch! (Recipes)");
+    harmony.PatchAll(typeof(CraftingPatch));
+    Log.LogInfo("Patching in CraftingPatch! (Free Crafting)");
     harmony.PatchAll(typeof(DialogueWindowPatch));
     Log.LogInfo("Patching in DialogueWindowPatch! (Trader windows)");
     harmony.PatchAll(typeof(LevelingMenuPatch));
@@ -763,6 +771,11 @@ internal class Plugin : BaseUnityPlugin
     if (CheatsGiveItemKeybind.Value.IsDown())
     {
       CheatsGiveItem = true;
+    }
+    if (KeybindFreeCrafting.Value.IsDown())
+    {
+      FreeCrafting.Value = !FreeCrafting.Value;
+      Log.LogInfo("Free Crafting toggled to: " + FreeCrafting.Value);
     }
   }
 

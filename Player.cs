@@ -1,4 +1,3 @@
-using System;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -14,26 +13,20 @@ internal class PlayerPatch
   private static void PlayerFiresWeapon()
   {
     if (!Plugin.ItemsModification.Value) return;
-
-    bool isInfiniteAmmo;
-    bool isInfiniteDurability;
     JObject data;
-    (bool, bool) shouldDrain;
-
-    if (Plugin.CustomItems.ContainsKey(Player.Instance.currentItem.type))
+    if (Plugin.CustomItems.TryGetValue(Player.Instance.currentItem.type, out var item))
     {
-      data = (JObject)Plugin.CustomItems[Player.Instance.currentItem.type];
-      isInfiniteAmmo = (bool)(data["InfiniteAmmo"] ?? false);
-      isInfiniteDurability = (bool)(data["InfiniteDurability"] ?? false);
-      shouldDrain = DrainWeapon(Player.Instance.currentItem, data);
+      data = (JObject)item;
     }
     else
     {
       data = (JObject)Plugin.DefaultCustomItems[Player.Instance.currentItem.type];
-      isInfiniteAmmo = (bool)(data["InfiniteAmmo"] ?? false);
-      isInfiniteDurability = (bool)(data["InfiniteDurability"] ?? false);
-      shouldDrain = DrainWeapon(Player.Instance.currentItem, data);
     }
+
+    if (data == null) return;
+    var isInfiniteAmmo = (bool)(data["InfiniteAmmo"] ?? false);
+    var isInfiniteDurability = (bool)(data["InfiniteDurability"] ?? false);
+    var shouldDrain = DrainWeapon(Player.Instance.currentItem, data);
     switch (shouldDrain)
     {
       case (true, true):
@@ -51,16 +44,8 @@ internal class PlayerPatch
     }
     if (Player.Instance.currentItem.ammo > Player.Instance.currentItem.baseClass.clipSize) Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
     if (Player.Instance.currentItem.durability > Player.Instance.currentItem.baseClass.maxDurability) Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
-    if (isInfiniteAmmo)
-    {
-      Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
-      return;
-    }
-    if (isInfiniteDurability)
-    {
-      Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
-      return;
-    }
+    if (isInfiniteAmmo) Player.Instance.currentItem.ammo = Player.Instance.currentItem.baseClass.clipSize;
+    if (isInfiniteDurability) Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
   }
 
   private static (bool, bool) DrainWeapon(InvItemClass weapon, JObject data)
@@ -73,6 +58,7 @@ internal class PlayerPatch
 
   [HarmonyPatch(typeof(Player), nameof(Player.registerMe))]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void PlayerRegistered(Player __instance)
   {
     RefreshPlayer = true;
@@ -81,6 +67,7 @@ internal class PlayerPatch
 
   [HarmonyPatch(typeof(Player), nameof(Player.Update))]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void PlayerUpdate(Player __instance)
   {
     if (Plugin.Cheats.Value && Plugin.CheatsGiveItem)
@@ -149,7 +136,9 @@ internal class PlayerPatch
 
   [HarmonyPatch(typeof(Player), nameof(Player.getHit), [typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool)])]
   [HarmonyPrefix]
+  // ReSharper disable InconsistentNaming
   public static void PlayerGotHit(Player __instance, float damage, Transform attackerTransform, bool CanCutInHalf, bool byPlayer, ref bool canInterrupt, bool normalHit, bool showRedScreen, bool force, bool dontShowHealthBar)
+    // ReSharper restore InconsistentNaming
   {
     if (Plugin.PlayerCantGetInterrupted.Value)
     {

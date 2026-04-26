@@ -1,4 +1,5 @@
 using HarmonyLib;
+using UnityEngine;
 
 namespace DarkwoodCustomizer;
 
@@ -20,6 +21,7 @@ internal class CamMainPatch
     
     [HarmonyPatch(typeof(CamMain), "Update")]
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
     public static void CamUpdate(CamMain __instance)
     {
         if (Plugin.PlayerModification.Value)
@@ -32,7 +34,7 @@ internal class CamMainPatch
         var mainCamera = __instance.GetComponent<tk2dCamera>();
         
         // Handle FoV changes
-        if (mainCamera.ZoomFactor != Plugin.CameraFoV.Value || _previousFoV != Plugin.CameraFoV.Value)
+        if (!Mathf.Approximately(mainCamera.ZoomFactor, Plugin.CameraFoV.Value) || !Mathf.Approximately(_previousFoV, Plugin.CameraFoV.Value))
         {
             mainCamera.ZoomFactor = Plugin.CameraFoV.Value;
             
@@ -54,10 +56,9 @@ internal class CamMainPatch
             postFxTransform.GetComponent<AmplifyColorEffect>().enabled = !Plugin.CameraDisablePostFX.Value;
             _previousPostFxState = Plugin.CameraDisablePostFX.Value;
         }
-        if (_previousVignetteState != Plugin.CameraDisableVignette.Value)
-        {
-            postFxTransform.GetComponent<Vignetting>().enabled = !Plugin.CameraDisableVignette.Value;
-            _previousVignetteState = Plugin.CameraDisableVignette.Value;
-        }
+
+        if (_previousVignetteState == Plugin.CameraDisableVignette.Value) return;
+        postFxTransform.GetComponent<Vignetting>().enabled = !Plugin.CameraDisableVignette.Value;
+        _previousVignetteState = Plugin.CameraDisableVignette.Value;
     }
 }

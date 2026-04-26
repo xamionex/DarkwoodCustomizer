@@ -6,6 +6,7 @@ public static class ItemPatch
 {
   [HarmonyPatch(typeof(Item), nameof(Item.disarm))]
   [HarmonyPrefix]
+  // ReSharper disable once InconsistentNaming
   public static void PickingUpGroundItem(Item __instance)
   {
     // Since this includes mushrooms and more dont exit if it isnt beartrap, for future code if needed
@@ -15,7 +16,7 @@ public static class ItemPatch
       __instance.invItemAmount = 3;
       if (!Plugin.BearTrapRecoverySwitch.Value)
       {
-        __instance.invItem = ItemsDatabase.Instance.getItem("beartrap", true);
+        __instance.invItem = ItemsDatabase.Instance.getItem("beartrap");
         __instance.invItemAmount = 1;
       }
     }
@@ -24,7 +25,7 @@ public static class ItemPatch
       __instance.invItemAmount = 2;
       if (!Plugin.ChainTrapRecoverySwitch.Value)
       {
-        __instance.invItem = ItemsDatabase.Instance.getItem("chaintrap", true);
+        __instance.invItem = ItemsDatabase.Instance.getItem("chaintrap");
         __instance.invItemAmount = 1;
       }
     }

@@ -2,6 +2,7 @@ using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -62,9 +63,10 @@ internal class WorkbenchPatch
 
   [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
   [HarmonyPrefix]
+  // ReSharper disable once InconsistentNaming
   public static void WorkbenchRecipes(Workbench __instance)
   {
-    if (!Plugin.CraftingRecipesModification.Value) return;
+    if (Plugin.CraftingRecipesModification.Value) return;
     _onFirst = true;
     if (Plugin.CustomCraftingRecipesUseDefaults.Value)
     {
@@ -78,11 +80,25 @@ internal class WorkbenchPatch
     Chapter2LoadOnNextOpen = true;
   }
 
-  public static void WorkbenchCraftingAddRecipe(string itemName, JObject recipeObject, Workbench __instance)
+  private static void WorkbenchCraftingAddRecipe(string itemName, JObject recipeObject, Workbench instance)
   {
     if (Chapter2Restricted.Contains(itemName) && !Chapter2LoadOnNextOpen)
     {
       Plugin.Log.LogInfo($"Skipping {itemName} since chapter 2 has to yet load it, open the workbench again for it to load");
+      return;
+    }
+    
+    var alreadyExists = false;
+    for (var i = 0; i < 8; i++)
+    {
+      if (instance.levels[i].recipes.All(r => r.name != itemName)) continue;
+      alreadyExists = true;
+      break;
+    }
+    if (alreadyExists)
+    {
+      if (Plugin.LogWorkbench.Value)
+        Plugin.Log.LogInfo($"{_logTypeFlag} Skipping {itemName}, already present in workbench.");
       return;
     }
     
@@ -125,7 +141,7 @@ internal class WorkbenchPatch
       {
         var requirementItemName = requirement.Name;
 
-        var item = ItemsDatabase.Instance.getItem(requirementItemName, true);
+        var item = ItemsDatabase.Instance.getItem(requirementItemName);
 
         if (item == null)
         {
@@ -154,15 +170,15 @@ internal class WorkbenchPatch
 
     for (var i = 0; i < 8; i++)
     {
-      var index = __instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipesLog[itemName].name);
+      var index = instance.levels[i].recipes.FindIndex(r => r.name == CustomizedRecipesLog[itemName].name);
       if (index != -1)
       {
-        __instance.levels[i].recipes.RemoveAt(index);
+        instance.levels[i].recipes.RemoveAt(index);
       }
     }
 
     if (Plugin.LogWorkbench.Value) Plugin.Log.LogInfo($"{_logTypeFlag} Added recipe of {itemName} with {CustomizedRecipes[itemName].recipes[0].requirements.Count} requirements at level {levelToAddTo} workbench");
-    __instance.levels[levelToAddTo].recipes.Add(CustomizedRecipes[itemName]);
+    instance.levels[levelToAddTo].recipes.Add(CustomizedRecipes[itemName]);
   }
 
   public static GameObject LoadResource(string itemName, bool unusedOnly = false)
@@ -174,7 +190,7 @@ internal class WorkbenchPatch
         };
     if (unusedOnly)
     {
-      resourcePaths = new[] { $"InventoryItems_NotUsed/{itemName}" };
+      resourcePaths = [$"InventoryItems_NotUsed/{itemName}"];
     }
     foreach (var resourcePath in resourcePaths)
     {

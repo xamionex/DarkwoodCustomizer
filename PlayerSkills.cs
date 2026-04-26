@@ -4,13 +4,14 @@ using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DarkwoodCustomizer
 {
     internal class PlayerSkillsPatch
     {
         public static bool RefreshSkills = true;
-        private static bool skillsAlreadyApplied = false;
+        private static bool _skillsAlreadyApplied;
         
         // Complete dictionary of all skills from the wiki with correct game object names
         private static readonly Dictionary<string, SkillInfo> AllSkills = new()
@@ -44,9 +45,9 @@ namespace DarkwoodCustomizer
         };
 
         // Skills that are in the game files but not mapped (for logging)
-        private static readonly List<string> UnmappedGameObjectSkills = new()
-        {
-            "badNavigator", 
+        private static readonly List<string> UnmappedGameObjectSkills =
+        [
+            "badNavigator",
             "clumsy",
             "cook",
             "dodge",
@@ -64,7 +65,7 @@ namespace DarkwoodCustomizer
             "specialAttack",
             "vigilant",
             "widerFOV"
-        };
+        ];
 
         // Reverse mapping for easier lookup
         private static readonly Dictionary<string, string> GameObjectToConfigKey = new();
@@ -72,46 +73,40 @@ namespace DarkwoodCustomizer
         static PlayerSkillsPatch()
         {
             // Build reverse mapping
-            foreach (var kvp in AllSkills)
+            foreach (var kvp in AllSkills.Where(kvp => !string.IsNullOrEmpty(kvp.Value.GameObjectName) && !GameObjectToConfigKey.ContainsKey(kvp.Value.GameObjectName)))
             {
-                if (!string.IsNullOrEmpty(kvp.Value.GameObjectName) && 
-                    !GameObjectToConfigKey.ContainsKey(kvp.Value.GameObjectName))
-                {
-                    GameObjectToConfigKey[kvp.Value.GameObjectName] = kvp.Key;
-                }
+                GameObjectToConfigKey[kvp.Value.GameObjectName] = kvp.Key;
             }
         }
 
-        // ===================================================================
         // Main Patch Methods - Apply All Skill States
-        // ===================================================================
         [HarmonyPatch(typeof(PlayerSkills), "initialize")]
         [HarmonyPostfix]
+        // ReSharper disable once InconsistentNaming
         private static void InitializeSkills(PlayerSkills __instance, bool resetTimesUsed = true)
         {
             if (!Plugin.PlayerSkillsModification.Value) return;
             
             // Prevent running multiple times
-            if (skillsAlreadyApplied) return;
+            if (_skillsAlreadyApplied) return;
             
             ApplyAllSkillStates(__instance);
             RefreshSkills = false;
-            skillsAlreadyApplied = true;
+            _skillsAlreadyApplied = true;
         }
 
         [HarmonyPatch(typeof(PlayerSkills), "Start")]
         [HarmonyPostfix]
+        // ReSharper disable once InconsistentNaming
         private static void StartSkills(PlayerSkills __instance)
         {
             if (!Plugin.PlayerSkillsModification.Value) return;
             
             // Reset the flag when starting a new game
-            skillsAlreadyApplied = false;
+            _skillsAlreadyApplied = false;
         }
 
-        // ===================================================================
         // Apply All Skill States
-        // ===================================================================
         private static void ApplyAllSkillStates(PlayerSkills skills)
         {
             if (!Plugin.PlayerSkillsModification.Value) return;
@@ -140,20 +135,16 @@ namespace DarkwoodCustomizer
             
             foreach (var skillObj in allSkills)
             {
-                if (skillObj is GameObject skillGameObject)
-                {
-                    var skill = skillGameObject.GetComponent<PlayerSkill>();
-                    if (skill != null)
-                    {
-                        var configKey = GetConfigKeyFromGameObjectName(skillGameObject.name);
-                        var status = string.IsNullOrEmpty(configKey) ? "UNMAPPED" : "MAPPED";
+                if (skillObj is not GameObject skillGameObject) continue;
+                var skill = skillGameObject.GetComponent<PlayerSkill>();
+                if (skill == null) continue;
+                var configKey = GetConfigKeyFromGameObjectName(skillGameObject.name);
+                var status = string.IsNullOrEmpty(configKey) ? "UNMAPPED" : "MAPPED";
                         
-                        Plugin.Log.LogInfo($"  - {skillGameObject.name}: " +
-                                          $"Manual={skill.isActivatedManually}, " +
-                                          $"Status={status}, " +
-                                          $"Config={configKey ?? "N/A"}");
-                    }
-                }
+                Plugin.Log.LogInfo($"  - {skillGameObject.name}: " +
+                                   $"Manual={skill.isActivatedManually}, " +
+                                   $"Status={status}, " +
+                                   $"Config={configKey ?? "N/A"}");
             }
         }
 
@@ -177,48 +168,42 @@ namespace DarkwoodCustomizer
             // Add skills from Resources
             foreach (var skillObj in allSkills)
             {
-                if (skillObj is GameObject skillGameObject)
+                if (skillObj is not GameObject skillGameObject) continue;
+                var skill = skillGameObject.GetComponent<PlayerSkill>();
+                if (skill == null) continue;
+
+                var gameObjectName = skillGameObject.name;
+                    
+                // Skip if already processed
+                if (!processedGameObjects.Add(gameObjectName))
+                    continue;
+
+                var configKey = GetConfigKeyFromGameObjectName(gameObjectName);
+
+                if (string.IsNullOrEmpty(configKey))
                 {
-                    var skill = skillGameObject.GetComponent<PlayerSkill>();
-                    if (skill == null) continue;
+                    // Skill not in our config map, skip it
+                    continue;
+                }
 
-                    var gameObjectName = skillGameObject.name;
-                    
-                    // Skip if already processed
-                    if (processedGameObjects.Contains(gameObjectName))
-                        continue;
-                    
-                    processedGameObjects.Add(gameObjectName);
-                    
-                    var configKey = GetConfigKeyFromGameObjectName(gameObjectName);
+                // Check if skill should be enabled
+                var shouldBeEnabled = ShouldSkillBeEnabled(configKey);
 
-                    if (string.IsNullOrEmpty(configKey))
-                    {
-                        // Skill not in our config map, skip it
-                        continue;
-                    }
+                if (shouldBeEnabled)
+                {
+                    // Create a new instance of the skill
+                    var skillInstance = CreateSkillInstance(skillGameObject, gameObjectName);
 
-                    // Check if skill should be enabled
-                    var shouldBeEnabled = ShouldSkillBeEnabled(configKey);
-
-                    if (shouldBeEnabled)
-                    {
-                        // Create a new instance of the skill
-                        var skillInstance = CreateSkillInstance(skillGameObject, gameObjectName);
-                        
-                        if (skillInstance != null)
-                        {
-                            AddSkillToLists(skills, skillInstance);
+                    if (skillInstance == null) continue;
+                    AddSkillToLists(skills, skillInstance);
                             
-                            // Update boolean fields for skill effects
-                            UpdateSkillBooleanField(skills, configKey, true);
-                        }
-                    }
-                    else
-                    {
-                        // Skill is not enabled, set boolean field to false
-                        UpdateSkillBooleanField(skills, configKey, false);
-                    }
+                    // Update boolean fields for skill effects
+                    UpdateSkillBooleanField(skills, configKey, true);
+                }
+                else
+                {
+                    // Skill is not enabled, set boolean field to false
+                    UpdateSkillBooleanField(skills, configKey, false);
                 }
             }
 
@@ -229,7 +214,7 @@ namespace DarkwoodCustomizer
         private static PlayerSkill CreateSkillInstance(GameObject skillPrefab, string skillName)
         {
             // Create a new instance
-            var skillInstance = GameObject.Instantiate(skillPrefab);
+            var skillInstance = Object.Instantiate(skillPrefab);
             skillInstance.name = skillName;
             skillInstance.SetActive(true);
             
@@ -276,11 +261,7 @@ namespace DarkwoodCustomizer
 
         private static string GetConfigKeyFromGameObjectName(string gameObjectName)
         {
-            if (GameObjectToConfigKey.TryGetValue(gameObjectName, out var configKey))
-            {
-                return configKey;
-            }
-            return null;
+            return GameObjectToConfigKey.TryGetValue(gameObjectName, out var configKey) ? configKey : null;
         }
 
         private static bool ShouldSkillBeEnabled(string configKey)
@@ -293,37 +274,32 @@ namespace DarkwoodCustomizer
             if (!AllSkills.ContainsKey(configKey))
                 return false;
 
-            switch (configKey)
+            return configKey switch
             {
                 // Positive Skills
-                case "EagleEye": return Plugin.PlayerSkillEagleEye.Value;
-                case "Moth": return Plugin.PlayerSkillMoth.Value;
-                case "Navigator": return Plugin.PlayerSkillNavigator.Value;
-                case "MushroomHealing": return Plugin.PlayerSkillMushroomHealing.Value;
-                
-                case "AcidBlood": return Plugin.PlayerSkillAcidBlood.Value;
-                case "ThirdEye": return Plugin.PlayerSkillThirdEye.Value;
-                case "Runner": return Plugin.PlayerSkillRunner.Value;
-                
-                case "CarefulStep": return Plugin.PlayerSkillCarefulStep.Value;
-                case "Appetite": return Plugin.PlayerSkillAppetite.Value;
-                case "Scream": return Plugin.PlayerSkillScream.Value;
-                
-                case "Adrenaline": return Plugin.PlayerSkillAdrenaline.Value;
-                case "Vitality": return Plugin.PlayerSkillVitality.Value;
-                case "Chameleon": return Plugin.PlayerSkillChameleon.Value;
-                
+                "EagleEye" => Plugin.PlayerSkillEagleEye.Value,
+                "Moth" => Plugin.PlayerSkillMoth.Value,
+                "Navigator" => Plugin.PlayerSkillNavigator.Value,
+                "MushroomHealing" => Plugin.PlayerSkillMushroomHealing.Value,
+                "AcidBlood" => Plugin.PlayerSkillAcidBlood.Value,
+                "ThirdEye" => Plugin.PlayerSkillThirdEye.Value,
+                "Runner" => Plugin.PlayerSkillRunner.Value,
+                "CarefulStep" => Plugin.PlayerSkillCarefulStep.Value,
+                "Appetite" => Plugin.PlayerSkillAppetite.Value,
+                "Scream" => Plugin.PlayerSkillScream.Value,
+                "Adrenaline" => Plugin.PlayerSkillAdrenaline.Value,
+                "Vitality" => Plugin.PlayerSkillVitality.Value,
+                "Chameleon" => Plugin.PlayerSkillChameleon.Value,
                 // Negative Skills
-                case "Shadows": return Plugin.PlayerSkillShadows.Value;
-                case "PoisonVulnerability": return Plugin.PlayerSkillPoisonVulnerability.Value;
-                case "Fearful": return Plugin.PlayerSkillFearful.Value;
-                case "WeakLungs": return Plugin.PlayerSkillWeakLungs.Value;
-                case "Weakness": return Plugin.PlayerSkillWeakness.Value;
-                case "WeakRegeneration": return Plugin.PlayerSkillWeakRegeneration.Value;
-                case "ShakyHands": return Plugin.PlayerSkillShakyHands.Value;
-                
-                default: return false;
-            }
+                "Shadows" => Plugin.PlayerSkillShadows.Value,
+                "PoisonVulnerability" => Plugin.PlayerSkillPoisonVulnerability.Value,
+                "Fearful" => Plugin.PlayerSkillFearful.Value,
+                "WeakLungs" => Plugin.PlayerSkillWeakLungs.Value,
+                "Weakness" => Plugin.PlayerSkillWeakness.Value,
+                "WeakRegeneration" => Plugin.PlayerSkillWeakRegeneration.Value,
+                "ShakyHands" => Plugin.PlayerSkillShakyHands.Value,
+                _ => false
+            };
         }
 
         private static void UpdateSkillBooleanField(PlayerSkills skills, string configKey, bool value)
@@ -590,11 +566,10 @@ namespace DarkwoodCustomizer
             Plugin.LogDivider();
         }
 
-        // ===================================================================
         // Skill Activation Patches
-        // ===================================================================
         [HarmonyPatch(typeof(PlayerSkills), "activateSkill")]
         [HarmonyPrefix]
+        // ReSharper disable once InconsistentNaming
         private static bool OverrideSkillActivation(PlayerSkills __instance, int skillId)
         {
             if (!Plugin.PlayerSkillsModification.Value) return true;
@@ -625,33 +600,22 @@ namespace DarkwoodCustomizer
             return true;
         }
 
-        // ===================================================================
         // Helper method to refresh skills when config changes
-        // ===================================================================
         public static void RefreshAllSkills()
         {
-            skillsAlreadyApplied = false;
+            _skillsAlreadyApplied = false;
             if (Player.Instance != null && Player.Instance.skills != null)
             {
                 ApplyAllSkillStates(Player.Instance.skills);
             }
         }
 
-        // ===================================================================
         // Helper Class
-        // ===================================================================
-        private class SkillInfo
+        private class SkillInfo(string gameObjectName, string type, string tier)
         {
-            public string GameObjectName { get; }
-            public string Type { get; } // "Active" or "Passive"
-            public string Tier { get; }
-            
-            public SkillInfo(string gameObjectName, string type, string tier)
-            {
-                GameObjectName = gameObjectName;
-                Type = type;
-                Tier = tier;
-            }
+            public string GameObjectName { get; } = gameObjectName;
+            public string Type { get; } = type; // "Active" or "Passive"
+            public string Tier { get; } = tier;
         }
     }
 }

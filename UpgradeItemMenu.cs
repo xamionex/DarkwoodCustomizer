@@ -10,6 +10,7 @@ public static class UpgradeItemMenuPatch
 
   [HarmonyPatch(typeof(UpgradeItemMenu), nameof(UpgradeItemMenu.open))]
   [HarmonyPrefix]
+  // ReSharper disable once InconsistentNaming
   public static void UpgradeMenuOpened(UpgradeItemMenu __instance, InvItemClass invItemClass)
   {
     if (!__instance.gameObject.TryGetComponent<PositionMe>(out var positionMe)) return;

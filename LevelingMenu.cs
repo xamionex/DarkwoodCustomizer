@@ -7,6 +7,7 @@ internal class LevelingMenuPatch
 {
   [HarmonyPatch(typeof(LevelingMenu), "positionInventory")]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void LevelingMenuInventory(LevelingMenu __instance)
   {
     var extraRightInventorySlots = 0;

@@ -2,6 +2,7 @@ using BepInEx;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace DarkwoodCustomizer;
@@ -13,13 +14,14 @@ internal class CharacterEffectsPatch
 
     [HarmonyPatch(typeof(CharacterEffect), nameof(CharacterEffect.initialize))]
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
     public static void EffectPatch(CharacterEffect __instance, InvItemEffect effect)
     {
         if (!Plugin.CharacterEffectsModification.Value) return;
         if (Singleton<Dreams>.Instance.dreaming) return;
 
         var typeclean = effect.type.ToString();
-        var type = $"{typeclean}_d{effect.duration.ToString()}_m{effect.modifier.ToString()}_i{effect.interval.ToString()}";
+        var type = $"{typeclean}_d{effect.duration.ToString(CultureInfo.InvariantCulture)}_m{effect.modifier.ToString(CultureInfo.InvariantCulture)}_i{effect.interval.ToString(CultureInfo.InvariantCulture)}";
         var customEffects = Plugin.CharacterEffects;
 
         // Initialize effect in config if it doesn't exist

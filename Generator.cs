@@ -8,18 +8,17 @@ public static class GeneratorPatch
 
   [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
   [HarmonyPrefix]
+  // ReSharper disable once InconsistentNaming
   public static void DrainPatch(Generator __instance)
   {
-    if (Plugin.GeneratorModification.Value)
+    if (!Plugin.GeneratorModification.Value) return;
+    if (RefreshGenerator)
     {
-      if (RefreshGenerator)
-      {
-        Player.Instance.electricityModifier = Plugin.GeneratorModifier.Value;
-      }
-      if (Plugin.GeneratorInfiniteFuel.Value)
-      {
-        __instance.fuel = __instance.maxFuel;
-      }
+      Player.Instance.electricityModifier = Plugin.GeneratorModifier.Value;
+    }
+    if (Plugin.GeneratorInfiniteFuel.Value)
+    {
+      __instance.fuel = __instance.maxFuel;
     }
   }
 }

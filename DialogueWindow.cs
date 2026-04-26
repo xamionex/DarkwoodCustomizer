@@ -10,6 +10,7 @@ internal class DialogueWindowPatch
   
   [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.openTrade))]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void InventoryBackgrounds(DialogueWindow __instance)
   {
     var traderInventory = __instance.npc.GetComponent<Inventory>().thisUI.GetComponent<PositionMe>();
@@ -54,13 +55,14 @@ internal class DialogueWindowPatch
       _cachedCloseButtonOriginal.Value.y,
       _cachedCloseButtonOriginal.Value.z + Plugin.TraderCloseZOffset.Value
     );
-        
-    closeButtonBackground.position = new Vector3(
-      _cachedCloseButtonBackgroundOriginal.Value.x + extraSlotsOffset + Plugin.TraderCloseXOffset.Value,
-      _cachedCloseButtonBackgroundOriginal.Value.y,
-      _cachedCloseButtonBackgroundOriginal.Value.z + Plugin.TraderCloseZOffset.Value
-    );
-    
+
+    if (_cachedCloseButtonBackgroundOriginal != null)
+      closeButtonBackground.position = new Vector3(
+        _cachedCloseButtonBackgroundOriginal.Value.x + extraSlotsOffset + Plugin.TraderCloseXOffset.Value,
+        _cachedCloseButtonBackgroundOriginal.Value.y,
+        _cachedCloseButtonBackgroundOriginal.Value.z + Plugin.TraderCloseZOffset.Value
+      );
+
     traderInventory.init();
     exchangePlayer.init();
     exchangeTrader.init();

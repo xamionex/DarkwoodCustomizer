@@ -16,6 +16,7 @@ internal class UIPatch
 
     [HarmonyPatch(typeof(UI), "Update")]
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
     public static void UIUpdate(UI __instance)
     {
         if (!Plugin.UIModification.Value) return;
@@ -34,22 +35,20 @@ internal class UIPatch
         // Handle individual elements
         var barsTransform = __instance.bars.transform;
         
-        for (int i = 0; i < Elements.Length; i++)
+        for (var i = 0; i < Elements.Length; i++)
         {
             var element = Elements[i];
-            bool currentState = element.Current();
-            
-            if (currentState != element.Previous)
-            {
-                var obj = barsTransform.Find(element.Name).gameObject;
-                obj.SetActive(currentState);
+            var currentState = element.Current();
+
+            if (currentState == element.Previous) continue;
+            var obj = barsTransform.Find(element.Name).gameObject;
+            obj.SetActive(currentState);
                 
-                // Handle Skillbar's additional Sprite0
-                if (element.Name == "Skillbar")
-                    barsTransform.Find("Sprite0").gameObject.SetActive(currentState);
+            // Handle Skillbar's additional Sprite0
+            if (element.Name == "Skillbar")
+                barsTransform.Find("Sprite0").gameObject.SetActive(currentState);
                 
-                Elements[i].Previous = currentState;
-            }
+            Elements[i].Previous = currentState;
         }
     }
 }

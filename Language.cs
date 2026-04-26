@@ -7,14 +7,15 @@ internal class LanguagePatch
 {
   [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string), typeof(string)])]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void LanguageGet(string key, string sheetTitle, ref string __result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
     if (Plugin.CustomItemsUseDefaults.Value && Plugin.DefaultCustomItems[cleankey] != null)
     {
       var data = (JObject)Plugin.DefaultCustomItems[cleankey];
-      var name = data["name"]?.Value<string>() ?? null;
-      var desc = data["description"]?.Value<string>() ?? null;
+      var name = data["name"]?.Value<string>();
+      var desc = data["description"]?.Value<string>();
       if (key.EndsWith("_name") && name != null && name != key) __result = name;
       if (key.EndsWith("_desc") && desc != null && desc != key) __result = desc;
     }
@@ -51,6 +52,7 @@ internal class LanguagePatch
 
   [HarmonyPatch(typeof(Language), nameof(Language.Get), [typeof(string)])]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void LanguageGet(string key, ref string __result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
@@ -78,17 +80,13 @@ internal class LanguagePatch
     }
     __result ??= "Unset Name Property";
   }
-
-
+  
   [HarmonyPatch(typeof(Language), nameof(Language.HasKey), typeof(string), typeof(string))]
   [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
   public static void LanguageHasKey(string key, string sheetTitle, ref bool __result)
   {
     var cleankey = key.Replace("_name", "").Replace("_desc", "");
-    if (Plugin.CustomItems.TryGetValue(cleankey, out var data) && (data["name"] != null || data["description"] != null))
-      __result = true;
-    else if (Plugin.DefaultCustomItems.TryGetValue(cleankey, out data) && (data["name"] != null || data["description"] != null))
-      __result = true;
+    if (Plugin.CustomItems.TryGetValue(cleankey, out var data) && (data["name"] != null || data["description"] != null) || Plugin.DefaultCustomItems.TryGetValue(cleankey, out data) && (data["name"] != null || data["description"] != null)) __result = true;
   }
-
 }

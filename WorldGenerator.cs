@@ -7,6 +7,7 @@ internal class WorldGeneratorPatch
     [HarmonyPatch(typeof(WorldGenerator), "onFinished")]
     [HarmonyPatch(MethodType.Normal)]
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
     private static void WorldGeneratorLoad(WorldGenerator __instance)
     {
         Plugin.Log.LogInfo("World was loaded");
