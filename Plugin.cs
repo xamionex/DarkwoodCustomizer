@@ -349,8 +349,8 @@ internal class Plugin : BaseUnityPlugin
   
   // Player Stamina Values
   public static ConfigEntry<float> PlayerMaxStamina;
-  public static ConfigEntry<float> PlayerStaminaRegenInterval;
-  public static ConfigEntry<float> PlayerStaminaRegenValue;
+  public static ConfigEntry<float> PlayerStaminaRunDrain;
+  public static ConfigEntry<float> PlayerStaminaRegen;
   public static ConfigEntry<bool> PlayerInfiniteStamina;
   public static ConfigEntry<bool> PlayerInfiniteStaminaEffect;
 
@@ -360,6 +360,7 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<float> PlayerHealthRegenModifier;
   public static ConfigEntry<float> PlayerHealthRegenValue;
   public static ConfigEntry<bool> PlayerGodmode;
+  public static ConfigEntry<bool> PlayerNoclip;
 
   // Player Speed Values
   public static ConfigEntry<float> PlayerWalkSpeed;
@@ -417,6 +418,7 @@ internal class Plugin : BaseUnityPlugin
   
   // Keybinds
   public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
+  public static ConfigEntry<KeyboardShortcut> KeybindNoclip;
   public static ConfigEntry<KeyboardShortcut> KeybindStamina;
   public static ConfigEntry<KeyboardShortcut> KeybindTime;
   public static ConfigEntry<KeyboardShortcut> KeybindHud;
@@ -446,6 +448,7 @@ internal class Plugin : BaseUnityPlugin
 
   private void BepinexBindings()
   {
+    // ReSharper disable RedundantAssignment
     var i = 255;
     // Base Plugin
     Config.Bind("!Mod", "Thank you", "<3", new ConfigDescription("Thank you for downloading my mod, every config is explained in it's description above it.\nIf a config doesn't have comments above it, it's probably an old config that was in a previous version.\nAdditionally the wiki can be found on the github for help using the custom x (json) features.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -537,17 +540,18 @@ internal class Plugin : BaseUnityPlugin
     
     // Player Stamina
     PlayerMaxStamina = Config.Bind("Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaRegenInterval = Config.Bind("Player", "Stamina Regen Interval", 0.05f, new ConfigDescription("Interval in seconds between stamina regeneration ticks. I believe this is the rate at which your stamina will regenerate when you are not using stamina abilities. Lowering this value will make your stamina regenerate faster, raising it will make your stamina regenerate slower.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerStaminaRegenValue = Config.Bind("Player", "Stamina Regen Value", 30f, new ConfigDescription("Amount of stamina regenerated per tick. I believe this is the amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerStaminaRunDrain = Config.Bind("Player", "Stamina Drain Value", 8.5f, new ConfigDescription("Amount of stamina drained per tick when running. Amount of stamina you will lose when running. Raising this value will make your stamina drain more per tick, lowering it will make your stamina drain less per tick.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerStaminaRegen = Config.Bind("Player", "Stamina Regen Value", 30f, new ConfigDescription("Amount of stamina regenerated per tick. Amount of stamina you will gain each time your stamina regenerates. Raising this value will make your stamina regenerate more per tick, lowering it will make your stamina regenerate less per tick.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerInfiniteStamina = Config.Bind("Player", "Infinite Stamina", false, new ConfigDescription("On every update makes your stamina maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerInfiniteStaminaEffect = Config.Bind("Player", "Infinite Stamina Effect", false, new ConfigDescription("Whether to draw the infinite stamina effect", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Health
     PlayerMaxHealth = Config.Bind("Player", "Max Health", 100f, new ConfigDescription("Set your max health", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenInterval = Config.Bind("Player", "Health Regen Interval", 5f, new ConfigDescription("Theoretically: Interval in seconds between health regeneration ticks, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenModifier = Config.Bind("Player", "Health Regen Modifier", 1f, new ConfigDescription("Theoretically: Multiplier for health regen value, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerHealthRegenValue = Config.Bind("Player", "Health Regen Value", 0f, new ConfigDescription("Theoretically: Amount of health regenerated per tick, feel free to experiment I didn't test this out yet", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenInterval = Config.Bind("Player", "Health Regen Interval", 5f, new ConfigDescription("Interval in seconds between health regeneration ticks", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenValue = Config.Bind("Player", "Health Regen Value", 0f, new ConfigDescription("Amount of health regenerated per tick", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerHealthRegenModifier = Config.Bind("Player", "Health Regen Modifier", 1f, new ConfigDescription("Multiplier for health regen value", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerGodmode = Config.Bind("Player", "Enable Godmode", false, new ConfigDescription("Makes you invulnerable and on every update makes your health maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerNoclip = Config.Bind("Player", "Enable Noclip", false, new ConfigDescription("Lets you pass through walls", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Speed
     PlayerWalkSpeed = Config.Bind("Player", "Walk Speed", 7.5f, new ConfigDescription("Set your walk speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -620,6 +624,7 @@ internal class Plugin : BaseUnityPlugin
 
     // Keybinds
     KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
+    KeybindNoclip = Config.Bind("Hotkeys", "Toggle Noclip", new KeyboardShortcut(KeyCode.N, KeyCode.LeftShift));
     KeybindStamina = Config.Bind("Hotkeys", "Toggle Infinite Stamina", new KeyboardShortcut(KeyCode.H, KeyCode.LeftShift));
     KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
     KeybindHud = Config.Bind("Hotkeys", "Toggle HUD/UI", new KeyboardShortcut(KeyCode.P));
@@ -634,6 +639,7 @@ internal class Plugin : BaseUnityPlugin
     LootModification = Config.Bind("Loot", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the Loot in Customs/CustomLoot.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("Loot", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section dictates which items will be added to the loot tables of inventories, set replace to true to remove the base game items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomLoot = (JObject)GetJsonConfig(CustomLootPath, new JObject());
+    // ReSharper restore RedundantAssignment
   }
 
   private void MakeDefaults()
@@ -752,6 +758,11 @@ internal class Plugin : BaseUnityPlugin
     {
       PlayerGodmode.Value = !PlayerGodmode.Value;
       Log.LogInfo("Player Godmode toggled!");
+    }
+    if (KeybindNoclip.Value.IsDown())
+    {
+      PlayerNoclip.Value = !PlayerNoclip.Value;
+      Log.LogInfo("Player Noclip toggled!");
     }
     if (KeybindStamina.Value.IsDown())
     {
@@ -894,12 +905,12 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("");
   }
 
-  public static object GetJsonConfig(string filePath, JObject defaultJson)
+  private static object GetJsonConfig(string filePath, JObject defaultJson)
   {
     return CreateNewJsonFile(filePath, defaultJson);
   }
 
-  public static JObject CreateNewJsonFile(string filePath, JObject defaultJson)
+  private static JObject CreateNewJsonFile(string filePath, JObject defaultJson)
   {
     if (File.Exists(filePath))
     {
@@ -916,23 +927,21 @@ internal class Plugin : BaseUnityPlugin
         var newFilePath = filePath;
         while (File.Exists(newFilePath))
         {
-          newFilePath = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_error_{i++}{Path.GetExtension(filePath)}");
+          newFilePath = Path.Combine(Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException(), $"{Path.GetFileNameWithoutExtension(filePath)}_error_{i++}{Path.GetExtension(filePath)}");
         }
         File.Move(filePath, newFilePath);
         Log.LogInfo($"Error loading JSON file: {ex.Message}, using default config, your config has been renamed to {Path.GetFileName(newFilePath)}");
         return defaultJson;
       }
     }
-    else
+
+    var directory = Path.GetDirectoryName(filePath);
+    if (!Directory.Exists(directory))
     {
-      var directory = Path.GetDirectoryName(filePath);
-      if (!Directory.Exists(directory))
-      {
-        Directory.CreateDirectory(directory);
-      }
-      File.WriteAllText(filePath, JsonConvert.SerializeObject(defaultJson, Formatting.Indented));
-      Log.LogInfo($"Created {filePath} with default config because it didnt exist.");
+      if (directory != null) Directory.CreateDirectory(directory);
     }
+    File.WriteAllText(filePath, JsonConvert.SerializeObject(defaultJson, Formatting.Indented));
+    Log.LogInfo($"Created {filePath} with default config because it didnt exist.");
     return defaultJson;
   }
 
@@ -941,7 +950,7 @@ internal class Plugin : BaseUnityPlugin
     var directory = Path.GetDirectoryName(jsonPath);
     if (!Directory.Exists(directory))
     {
-      Directory.CreateDirectory(directory);
+      if (directory != null) Directory.CreateDirectory(directory);
     }
     File.WriteAllText(jsonPath, JsonConvert.SerializeObject(jsonData, Formatting.Indented));
   }

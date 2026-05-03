@@ -94,11 +94,19 @@ internal class PlayerPatch
         __instance.invulnerable = true;
       }
       else if (__instance.invulnerable) __instance.invulnerable = false;
+      
+      if (Plugin.PlayerNoclip.Value)
+      {
+        __instance.noClipMode = true;
+      }
+      else if (__instance.noClipMode) __instance.noClipMode = false;
 
       if (!RefreshPlayer) return;
+      LogPlayer(__instance, true);
+      
       __instance.maxStamina = Plugin.PlayerMaxStamina.Value;
-      __instance.staminaRegenInterval = Plugin.PlayerStaminaRegenInterval.Value;
-      __instance.staminaRegenValue = Plugin.PlayerStaminaRegenValue.Value;
+      __instance.staminaRunDrainValue = Plugin.PlayerStaminaRunDrain.Value;
+      __instance.staminaRegenValue = Plugin.PlayerStaminaRegen.Value;
       
       __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
       if (__instance.health > __instance.maxHealth)
@@ -115,23 +123,28 @@ internal class PlayerPatch
       __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
       __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
       __instance.runSpeedModifier = Plugin.PlayerRunSpeedModifier.Value;
-        
-      if (Plugin.LogDebug.Value)
-      {
-        Plugin.LogDivider();
-        Plugin.Log.LogInfo(
-          $"[Player] Has {__instance.healthUpgrades} health upgrades. Expected base game health is {100 + __instance.healthUpgrades * 25}");
-        Plugin.Log.LogInfo(
-          $"[Player] MaxHP: {__instance.maxHealth} | HPR Interval: {__instance.healthRegenInterval} | HPR Modifier: {__instance.healthRegenModifier} | HPR Value: {__instance.healthRegenValue}");
-        Plugin.Log.LogInfo(
-          $"[Player] Max Stamina: {__instance.maxStamina} | SR Interval: {__instance.staminaRegenInterval} | SR Value: {__instance.staminaRegenValue}");
-        Plugin.Log.LogInfo(
-          $"[Player] WS: {__instance.walkSpeed} | RS: {__instance.runSpeed} | RS Modifier: {__instance.runSpeedModifier}");
-        Plugin.Log.LogInfo($"[Player] FoV: {__instance.currentDestFOV}");
-        Plugin.LogDivider();
-      }
+
+      LogPlayer(__instance);
     }
     RefreshPlayer = false;
+  }
+
+  private static void LogPlayer(Player player, bool before = false)
+  {
+    if (!Plugin.LogDebug.Value) return;
+      
+    Plugin.LogDivider();
+    Plugin.Log.LogInfo(before ? "[Player] BEFORE MODIFICATION" : "[Player] AFTER MODIFICATION");
+    Plugin.Log.LogInfo(
+      $"[Player] Has {player.healthUpgrades} health upgrades. Expected base game health is {100 + player.healthUpgrades * 25}");
+    Plugin.Log.LogInfo(
+      $"[Player] MaxHP: {player.maxHealth} | HPR Interval: {player.healthRegenInterval} | HPR Modifier: {player.healthRegenModifier} | HPR Value: {player.healthRegenValue}");
+    Plugin.Log.LogInfo(
+      $"[Player] Max Stamina: {player.maxStamina} | SR Drain: {player.staminaRunDrainValue} | SR Regen: {player.staminaRegenValue}");
+    Plugin.Log.LogInfo(
+      $"[Player] WS: {player.walkSpeed} | RS: {player.runSpeed} | RS Modifier: {player.runSpeedModifier}");
+    Plugin.Log.LogInfo($"[Player] FoV: {player.currentDestFOV}");
+    Plugin.LogDivider();
   }
 
   [HarmonyPatch(typeof(Player), nameof(Player.getHit), [typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool)])]
