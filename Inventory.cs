@@ -78,7 +78,12 @@ internal class InventoryPatch
           if (Plugin.CraftingModification.Value)
           {
             __instance.maxColumns = Plugin.CraftingRightSlots.Value;
-            maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
+            // Do not resize slots for workbench inventories.
+            // Workbench.setRecipes() expects a stable slot count and crashes if slots are removed or if the count does not match recipe count.
+            if (!__instance.isWorkbench)
+            {
+              maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
+            }
           }
           else
           {
@@ -158,19 +163,21 @@ internal class InventoryPatch
     }
     while (difference < 0 && Plugin.RemoveExcess.Value)
     {
-      for (var i = maximumSlots - 1; i < __instance.slots.Count; i++)
+      var indexToRemove = __instance.slots.Count - 1;
+      var slot = __instance.slots[indexToRemove];
+      if (!InvItemClass.isNull(slot.invItem))
       {
-        __instance.slots.RemoveAt(i - 1);
-        difference++;
+        // Cannot safely remove a slot that contains an item because relocating would require updating the internal slot reference.
+        Plugin.Log.LogWarning($"Cannot reduce slots for '{__instance.name}' because slot {indexToRemove} still contains an item. Stopping removal at {__instance.slots.Count} slots.");
+        break;
       }
+      __instance.slots.RemoveAt(indexToRemove);
+      difference++;
     }
     while (difference > 0)
     {
-      for (var i = 0; i < difference; i++)
-      {
-        __instance.slots.Add(new InvSlot());
-        difference--;
-      }
+      __instance.slots.Add(new InvSlot());
+      difference--;
     }
   }
 

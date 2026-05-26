@@ -63,6 +63,41 @@ internal class WorkbenchPatch
 
   [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
   [HarmonyPrefix]
+  [HarmonyPriority(Priority.First)]
+  private static bool WorkbenchSetRecipesSafety(Workbench __instance)
+  {
+    var requiredSlots = 0;
+    for (var i = 0; i < Player.Instance.Crafting.slots.Count; i++)
+    {
+      if (!InvItemClass.isNull(Player.Instance.Crafting.slots[i].invItem) &&
+          Player.Instance.Crafting.slots[i].invItem.baseClass.GetComponent<CraftingRecipes>() != null)
+      {
+        requiredSlots++;
+      }
+    }
+    for (var j = 0; j < __instance.levels.Count; j++)
+    {
+      if (__instance.levels[j].level <= __instance.currentLevel + 1)
+      {
+        for (var k = 0; k < __instance.levels[j].recipes.Count; k++)
+        {
+          if (__instance.levels[j].recipes[k] != null)
+          {
+            requiredSlots += __instance.levels[j].recipes[k].recipes.Count;
+          }
+        }
+      }
+    }
+    if (requiredSlots > __instance.workbenchInventory.slots.Count)
+    {
+      Plugin.Log.LogError($"Workbench '{__instance.name}' requires {requiredSlots} slots but workbenchInventory only has {__instance.workbenchInventory.slots.Count}. Skipping setRecipes() to prevent item duplication/corruption. If you changed Crafting slot sizes, try increasing them or resetting to defaults.");
+      return false;
+    }
+    return true;
+  }
+
+  [HarmonyPatch(typeof(Workbench), nameof(Workbench.setRecipes))]
+  [HarmonyPrefix]
   // ReSharper disable once InconsistentNaming
   public static void WorkbenchRecipes(Workbench __instance)
   {
