@@ -532,7 +532,7 @@ internal class Plugin : BaseUnityPlugin
     TraderCloseZOffset = Config.Bind("Inventories", "TraderClose Button Z Offset", 0f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the close button", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     
     // Crafting
-    CraftingModification = Config.Bind("Inventories", "Enable Crafting Modification", false, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CraftingModification = Config.Bind("Inventories", "Enable Crafting Modification", true, new ConfigDescription("Enable Crafting Modification", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingXOffset = Config.Bind("Inventories", "Crafting Window X Offset", 1000f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingZOffset = Config.Bind("Inventories", "Crafting Window Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench crafting window", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CraftingRightSlots = Config.Bind("Inventories", "Crafting Window Right Slots", 7, new ConfigDescription("Number that determines slots in Crafting window to the right.", null, new ConfigurationManagerAttributes { Order = i-=1 }));

@@ -80,10 +80,11 @@ internal class InventoryPatch
             __instance.maxColumns = Plugin.CraftingRightSlots.Value;
             // Do not resize slots for workbench inventories.
             // Workbench.setRecipes() expects a stable slot count and crashes if slots are removed or if the count does not match recipe count.
-            if (!__instance.isWorkbench)
-            {
-              maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
-            }
+            // Don't know when I wrote this, but it isn't true, it only breaks the crafting if there's not enough slots
+            //if (!__instance.isWorkbench)
+            //{
+            maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
+            //}
           }
           else
           {
@@ -219,7 +220,26 @@ internal class InventoryPatch
 
     if (!Plugin.LootModification.Value) return;
 
-    // Iterate over each inventory in CustomLoot
+    ApplyCustomLoot(__instance);
+  }
+
+  [HarmonyPatch(typeof(Inventory.SaveState), nameof(Inventory.SaveState.loadValues))]
+  [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
+  private static void InventoryItemsAfterLoad(Inventory inv)
+  {
+    // Saving an inventory stores its slot count, and loadValues() truncates the slots back to
+    // that count after initSlots ran. Re-apply the custom loot so loaded saves keep the
+    // configured drops instead of reverting to the saved (base game) ones.
+    ApplyCustomLoot(inv);
+  }
+
+  private static void ApplyCustomLoot(Inventory __instance)
+  {
+    var name = __instance.gameObject.name;
+
+    if (!Plugin.LootModification.Value) return;
+
     var lootEntry = Plugin.CustomLoot.Properties().FirstOrDefault(x => x.Name == name);
     if (lootEntry == null) return;
     var lootItems = lootEntry.Value["items"];
@@ -247,7 +267,10 @@ internal class InventoryPatch
 
     for (var i = 0; i < __instance.slots.Count; i++)
     {
-      if (!(bool)replaceSlot && __instance.slots[i] != null) continue;
+      // InvSlot instances are never null, so only slots that actually contain an item count as occupied.
+      // replace=false keeps the default loot in occupied slots and fills only the empty ones.
+      var slot = __instance.slots[i];
+      if (!(bool)replaceSlot && (slot.item != null || !InvItemClass.isNull(slot.invItem))) continue;
 
       // Get the item data for the current slot
       // lootItems can have less or more than this inventories slots
@@ -262,7 +285,7 @@ internal class InventoryPatch
       if (!(UnityEngine.Random.value <= chance)) continue;
       // Add the item to the inventories slots
       var amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
-      __instance.slots[i] = new InvSlot { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
+      slot.createItem(itemName, amount);
     }
   }
 }
