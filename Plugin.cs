@@ -445,6 +445,30 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> LootModification;
   public static string CustomLootPath => Path.Combine(JsonConfigPath, "CustomLoot.json");
   public static JObject CustomLoot;
+  public static ConfigEntry<bool> MushroomRespawn;
+  public static ConfigEntry<float> MushroomRespawnTime;
+  public static ConfigEntry<bool> MushroomRespawnPerDay;
+  public static ConfigEntry<bool> LootRespawn;
+  public static ConfigEntry<float> LootRespawnTime;
+  public static ConfigEntry<bool> LootRespawnPerDay;
+
+  // Defenses Values
+  public static ConfigEntry<bool> DefensesModification;
+  public static ConfigEntry<bool> DefensesLogging;
+  public static ConfigEntry<bool> BarricadeHealthModification;
+  public static ConfigEntry<float> BarricadeHealthMultiplier;
+  public static ConfigEntry<bool> BarricadeHealing;
+  public static ConfigEntry<float> BarricadeHealInterval;
+  public static ConfigEntry<float> BarricadeHealPercent;
+  public static ConfigEntry<bool> OnlyPlayerCanDamageBarricades;
+  public static ConfigEntry<bool> BearTrapDamageModification;
+  public static ConfigEntry<int> BearTrapDamage;
+  public static ConfigEntry<bool> BearTrapAutoRecharge;
+  public static ConfigEntry<float> BearTrapRechargeTime;
+  public static ConfigEntry<bool> ChainTrapDamageModification;
+  public static ConfigEntry<int> ChainTrapDamage;
+  public static ConfigEntry<bool> ChainTrapAutoRecharge;
+  public static ConfigEntry<float> ChainTrapRechargeTime;
 
   private void BepinexBindings()
   {
@@ -536,7 +560,7 @@ internal class Plugin : BaseUnityPlugin
     PlayerFOV = Config.Bind("Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerSight = Config.Bind("Player", "Player Sight Distance", 3.4f, new ConfigDescription("Set players' sight, affects normal sight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerFarSight = Config.Bind("Player", "Player Eagle Eye Distance", 5.2f, new ConfigDescription("Set players' sight, affects farsight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", true, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", false, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     
     // Player Stamina
     PlayerMaxStamina = Config.Bind("Player", "Max Stamina", 100f, new ConfigDescription("Set your max stamina", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -639,6 +663,30 @@ internal class Plugin : BaseUnityPlugin
     LootModification = Config.Bind("Loot", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the Loot in Customs/CustomLoot.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("Loot", "Note", "ReadMePlease", new ConfigDescription("Launch a save once to generate the config\nThis section dictates which items will be added to the loot tables of inventories, set replace to true to remove the base game items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomLoot = (JObject)GetJsonConfig(CustomLootPath, new JObject());
+    MushroomRespawn = Config.Bind("Loot", "Enable Mushroom Respawn", false, new ConfigDescription("When enabled, mushrooms respawn after being consumed or harvested\nThe timer is in in-game minutes and persists across saves", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    MushroomRespawnTime = Config.Bind("Loot", "Mushroom Respawn Time", 1440f, new ConfigDescription("In-game minutes before a consumed mushroom respawns at its original position\n1440 = one full in-game day\nOnly used when Per Day is disabled", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    MushroomRespawnPerDay = Config.Bind("Loot", "Mushroom Respawn Per Day", false, new ConfigDescription("When enabled, mushrooms respawn once per day (at the start of the new day) instead of on a timer\nOverrides the Respawn Time setting", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LootRespawn = Config.Bind("Loot", "Enable Loot Respawn", false, new ConfigDescription("When enabled, emptied containers (drawers, cabinets, etc.) respawn with fresh loot\nThe timer is in in-game minutes and persists across saves", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LootRespawnTime = Config.Bind("Loot", "Loot Respawn Time", 1440f, new ConfigDescription("In-game minutes before an emptied container respawns with fresh loot\n1440 = one full in-game day\nOnly used when Per Day is disabled", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    LootRespawnPerDay = Config.Bind("Loot", "Loot Respawn Per Day", false, new ConfigDescription("When enabled, emptied containers respawn once per day (at the start of the new day) instead of on a timer\nOverrides the Respawn Time setting", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+
+    // Defenses
+    DefensesModification = Config.Bind("Defenses", "Enable Section", false, new ConfigDescription("Enable this section of the mod, affects barricades (windows and doors) and traps\nMost options here do not require a save reload, exceptions are noted in their descriptions", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    DefensesLogging = Config.Bind("Defenses", "Enable Debug Logs", false, new ConfigDescription("Logs original and modified values for barricades and traps, useful to verify the section works", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BarricadeHealthModification = Config.Bind("Defenses", "Barricade Health Modification", false, new ConfigDescription("Enables the barricade health multiplier below\nApplies to new barricades and existing ones on the next save load", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BarricadeHealthMultiplier = Config.Bind("Defenses", "Barricade Health Multiplier", 1f, new ConfigDescription("Multiplies the max health of barricades (windows and doors) when they are barricaded\n1 = default, 2 = double health, 0.5 = half health\nOnly applies to new barricades or existing ones on the next save load", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BarricadeHealing = Config.Bind("Defenses", "Enable Barricade Healing", false, new ConfigDescription("Heals damaged barricades (windows and doors) over time, applies to all barricaded windows and doors", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BarricadeHealInterval = Config.Bind("Defenses", "Barricade Heal Interval", 5f, new ConfigDescription("Seconds between each barricade heal tick", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BarricadeHealPercent = Config.Bind("Defenses", "Barricade Heal Percent", 5f, new ConfigDescription("How many percent of the max barricade health is healed per tick", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    OnlyPlayerCanDamageBarricades = Config.Bind("Defenses", "Only Player Can Damage Barricades", false, new ConfigDescription("When enabled, enemies cannot damage barricades (windows and doors)\nOnly the player can damage them, explosions are also blocked", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapDamageModification = Config.Bind("Defenses", "Enable BearTrap Damage Modification", false, new ConfigDescription("Enables the beartrap damage override below\nWhen enabled, the damage value is applied to beartraps (and mutated traps), 0 = 0 damage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapDamage = Config.Bind("Defenses", "BearTrap Damage", 0, new ConfigDescription("Damage dealt by beartraps (and mutated traps) when they trigger\nOnly applies when the damage modification is enabled above", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapAutoRecharge = Config.Bind("Defenses", "BearTrap Auto Recharge", false, new ConfigDescription("When enabled, a triggered beartrap (or mutated trap) resets itself after the configured time so it can trap again\nThe trap stays in the world in its triggered state until it recharges", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapRechargeTime = Config.Bind("Defenses", "BearTrap Recharge Time", 30f, new ConfigDescription("Seconds before a triggered beartrap resets itself and can trap again", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapDamageModification = Config.Bind("Defenses", "Enable ChainTrap Damage Modification", false, new ConfigDescription("Enables the chaintrap damage override below\nWhen enabled, the damage value is applied to chaintraps, 0 = 0 damage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapDamage = Config.Bind("Defenses", "ChainTrap Damage", 0, new ConfigDescription("Damage dealt by chaintraps when they trigger\nOnly applies when the damage modification is enabled above", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapAutoRecharge = Config.Bind("Defenses", "ChainTrap Auto Recharge", false, new ConfigDescription("When enabled, a triggered chaintrap resets itself after the configured time so it can trap again\nThe trap stays in the world in its triggered state until it recharges", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapRechargeTime = Config.Bind("Defenses", "ChainTrap Recharge Time", 30f, new ConfigDescription("Seconds before a triggered chaintrap resets itself and can trap again", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     // ReSharper restore RedundantAssignment
   }
 
@@ -726,6 +774,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in LevelingMenuPatch! (Inventory in cooking menu)");
     harmony.PatchAll(typeof(WorldGeneratorPatch));
     Log.LogInfo("Patching in WorldGeneratorPatch! (Bool when game loads)");
+    harmony.PatchAll(typeof(DefensesPatch));
+    Log.LogInfo("Patching in DefensesPatch! (Defenses)");
 
     Log.LogInfo($"[{PluginInfo.PluginGuid} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();
@@ -792,6 +842,8 @@ internal class Plugin : BaseUnityPlugin
 
   public void FixedUpdate()
   {
+    DefensesPatch.FixedUpdateTick();
+    DefensesPatch.RespawnTick();
     if (SavedItemsCooldown < 0f) SavedItemsCooldown = 0f;
     else SavedItemsCooldown -= 0.1f;
     if (SavedCharactersCooldown < 0f) SavedCharactersCooldown = 0f;

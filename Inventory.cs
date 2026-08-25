@@ -227,6 +227,24 @@ internal class InventoryPatch
 
     if (!(bool)lootEntry.Value["enabled"]) return;
 
+    // Expand the inventory slots if the CustomLoot has more items than the inventory has slots.
+    // This fixes the issue where editing an enemy's drop list to have more drops than its default slot count would silently drop the excess items.
+    if (lootItems is JArray lootArray && lootArray.Count > __instance.slots.Count)
+    {
+      var isLootable = __instance.invType == Inventory.InvType.itemInv
+                       || __instance.invType == Inventory.InvType.deathDrop
+                       || __instance.gameObject.GetComponent<Character>() != null
+                       || __instance.gameObject.GetComponent<NPC>() != null;
+      if (isLootable)
+      {
+        var oldCount = __instance.slots.Count;
+        while (__instance.slots.Count < lootArray.Count)
+          __instance.slots.Add(new InvSlot());
+        if (Plugin.LogDebug.Value)
+          Plugin.Log.LogInfo($"[CustomLoot] Expanded '{name}' from {oldCount} to {__instance.slots.Count} slots to fit configured drops");
+      }
+    }
+
     for (var i = 0; i < __instance.slots.Count; i++)
     {
       if (!(bool)replaceSlot && __instance.slots[i] != null) continue;
@@ -244,7 +262,7 @@ internal class InventoryPatch
       if (!(UnityEngine.Random.value <= chance)) continue;
       // Add the item to the inventories slots
       var amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
-      __instance.slots[i] = new() { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
+      __instance.slots[i] = new InvSlot { item = ItemsDatabase.Instance.getItem(itemName, false), itemAmount = amount };
     }
   }
 }

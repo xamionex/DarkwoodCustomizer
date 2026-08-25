@@ -101,7 +101,7 @@ internal class WorkbenchPatch
   // ReSharper disable once InconsistentNaming
   public static void WorkbenchRecipes(Workbench __instance)
   {
-    if (Plugin.CraftingRecipesModification.Value) return;
+    if (!Plugin.CraftingRecipesModification.Value) return;
     _onFirst = true;
     if (Plugin.CustomCraftingRecipesUseDefaults.Value)
     {
