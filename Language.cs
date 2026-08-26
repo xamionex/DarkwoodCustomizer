@@ -22,8 +22,8 @@ internal class LanguagePatch
     if (Plugin.CustomItems[cleankey] != null)
     {
       var data = (JObject)Plugin.CustomItems[cleankey];
-      var name = data["name"]?.Value<string>() ?? null;
-      var desc = data["description"]?.Value<string>() ?? null;
+      var name = data["name"]?.Value<string>();
+      var desc = data["description"]?.Value<string>();
       if (key.EndsWith("_name"))
       {
         if (name == null)
@@ -32,9 +32,10 @@ internal class LanguagePatch
           else data["name"] = __result;
           Plugin.SaveItems = true;
         }
-        name = data["name"]?.Value<string>() ?? null;
+        name = data["name"]?.Value<string>();
         if (name != null && name != key) __result = name;
-      };
+      }
+
       if (key.EndsWith("_desc"))
       {
         if (desc == null)
@@ -43,9 +44,9 @@ internal class LanguagePatch
           else data["description"] = __result;
           Plugin.SaveItems = true;
         }
-        desc = data["description"]?.Value<string>() ?? null;
+        desc = data["description"]?.Value<string>();
         if (desc != null && desc != key) __result = desc;
-      };
+      }
     }
     __result ??= "Unset Name Property";
   }
@@ -55,10 +56,10 @@ internal class LanguagePatch
   // ReSharper disable once InconsistentNaming
   public static void LanguageGet(string key, ref string __result)
   {
-    var cleankey = key.Replace("_name", "").Replace("_desc", "");
-    if (Plugin.CustomItems[cleankey] != null)
+    var cleanKey = key.Replace("_name", "").Replace("_desc", "");
+    if (Plugin.CustomItems[cleanKey] != null)
     {
-      var data = (JObject)Plugin.CustomItems[cleankey];
+      var data = (JObject)Plugin.CustomItems[cleanKey];
       if (key.EndsWith("_name"))
       {
         var name = data["name"]?.Value<string>();
@@ -67,7 +68,8 @@ internal class LanguagePatch
           data["name"] = __result;
           Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
         }
-      };
+      }
+
       if (key.EndsWith("_desc"))
       {
         var description = data["description"]?.Value<string>();
@@ -76,7 +78,7 @@ internal class LanguagePatch
           data["description"] = __result;
           Plugin.SaveJsonFile(Plugin.CustomItemsPath, Plugin.CustomItems);
         }
-      };
+      }
     }
     __result ??= "Unset Name Property";
   }
@@ -86,7 +88,7 @@ internal class LanguagePatch
   // ReSharper disable once InconsistentNaming
   public static void LanguageHasKey(string key, string sheetTitle, ref bool __result)
   {
-    var cleankey = key.Replace("_name", "").Replace("_desc", "");
-    if (Plugin.CustomItems.TryGetValue(cleankey, out var data) && (data["name"] != null || data["description"] != null) || Plugin.DefaultCustomItems.TryGetValue(cleankey, out data) && (data["name"] != null || data["description"] != null)) __result = true;
+    var cleanKey = key.Replace("_name", "").Replace("_desc", "");
+    if (Plugin.CustomItems.TryGetValue(cleanKey, out var data) && (data["name"] != null || data["description"] != null) || Plugin.DefaultCustomItems.TryGetValue(cleanKey, out data) && (data["name"] != null || data["description"] != null)) __result = true;
   }
 }

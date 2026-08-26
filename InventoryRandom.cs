@@ -9,7 +9,7 @@ internal class InventoryRandomizePatch
   [HarmonyPatch(typeof(InventoryRandom), nameof(InventoryRandom.randomize))]
   [HarmonyPostfix]
   // ReSharper disable once InconsistentNaming
-  static void PatchRandomizedInventory(InventoryRandom __instance)
+  private static void PatchRandomizedInventory(InventoryRandom __instance)
   {
     var customRandomInventories = Plugin.CustomRandomInventories;
     if (!customRandomInventories.ContainsKey(__instance.name))
@@ -27,7 +27,7 @@ internal class InventoryRandomizePatch
         continue;
       }
 
-      var token = customRandomInventories[__instance.name]["presets"][i.ToString()];
+      var token = customRandomInventories[__instance.name]?["presets"][i.ToString()];
       if (token is not { Type: JTokenType.Object })
       {
         customRandomInventories[__instance.name]["presets"][i.ToString()] = new JObject();
@@ -78,8 +78,7 @@ internal class InventoryRandomizePatch
 
       __instance.excludeFromDifficultyRandomizer = true;
 
-      __instance.presets[i].allowedItems = [];
-      __instance.presets[i].allowedItems.AddRange(__instance.presets[i].permittedItems.Select(item => item.type));
+      __instance.presets[i].allowedItems = [.. __instance.presets[i].permittedItems.Select(item => item.type)];
     }
   }
 }

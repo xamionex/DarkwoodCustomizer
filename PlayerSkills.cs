@@ -45,6 +45,7 @@ namespace DarkwoodCustomizer
         };
 
         // Skills that are in the game files but not mapped (for logging)
+        // ReSharper disable once UnusedMember.Local
         private static readonly List<string> UnmappedGameObjectSkills =
         [
             "badNavigator",
@@ -128,16 +129,54 @@ namespace DarkwoodCustomizer
             LogFinalSkillStates(skills);
         }
 
+        // Returns every skill the game knows about. The game data has no
+        // "Skills" resource folder (the game's own Resources.LoadAll("Skills")
+        // in PlayerSkills.Start returns an empty array), the skill prefabs are
+        // referenced from the player's progressionSkills list and the
+        // SkillTiers prefab that the skills menu loads.
+        private static List<PlayerSkill> GetAllSkills()
+        {
+            var skills = new List<PlayerSkill>();
+
+            if (Player.Instance != null && Player.Instance.skills != null)
+            {
+                foreach (var skill in Player.Instance.skills.progressionSkills.Where(skill => skill != null && !skills.Contains(skill)))
+                {
+                    skills.Add(skill);
+                }
+            }
+
+            var skillTiers = Resources.Load("SkillTiers") as GameObject;
+            if (skillTiers == null) return skills;
+            {
+                var tiers = skillTiers.GetComponent<SkillTiers>();
+                if (tiers == null) return skills;
+                foreach (var tier in tiers.tiers.Where(tier => tier != null))
+                {
+                    foreach (var skill in tier.skills.Where(skill => skill != null && !skills.Contains(skill)))
+                    {
+                        skills.Add(skill);
+                    }
+
+                    foreach (var skill in tier.negativeSkills.Where(skill => skill != null && !skills.Contains(skill)))
+                    {
+                        skills.Add(skill);
+                    }
+                }
+            }
+
+            return skills;
+        }
+
         private static void LogAllAvailableSkills()
         {
-            var allSkills = Resources.LoadAll("Skills", typeof(GameObject));
-            Plugin.Log.LogInfo("[Skills] All skills found in Resources:");
+            var allSkills = GetAllSkills();
+            Plugin.Log.LogInfo("[Skills] All skills found in game:");
             
-            foreach (var skillObj in allSkills)
+            foreach (var skill in allSkills)
             {
-                if (skillObj is not GameObject skillGameObject) continue;
-                var skill = skillGameObject.GetComponent<PlayerSkill>();
                 if (skill == null) continue;
+                var skillGameObject = skill.gameObject;
                 var configKey = GetConfigKeyFromGameObjectName(skillGameObject.name);
                 var status = string.IsNullOrEmpty(configKey) ? "UNMAPPED" : "MAPPED";
                         
@@ -151,7 +190,7 @@ namespace DarkwoodCustomizer
         private static void RebuildSkillLists(PlayerSkills skills)
         {
             // Get all available skills from the game
-            var allSkills = Resources.LoadAll("Skills", typeof(GameObject));
+            var allSkills = GetAllSkills();
             
             // Track which skills we've already processed
             var processedGameObjects = new HashSet<string>();
@@ -165,12 +204,12 @@ namespace DarkwoodCustomizer
                 skills.availableSkills.Clear();
             }
 
-            // Add skills from Resources
-            foreach (var skillObj in allSkills)
+            // Add skills from the game's skill lists
+            foreach (var skill in allSkills)
             {
-                if (skillObj is not GameObject skillGameObject) continue;
-                var skill = skillGameObject.GetComponent<PlayerSkill>();
                 if (skill == null) continue;
+                var skillGameObject = skill.gameObject;
+                if (skillGameObject == null) continue;
 
                 var gameObjectName = skillGameObject.name;
                     
@@ -601,6 +640,7 @@ namespace DarkwoodCustomizer
         }
 
         // Helper method to refresh skills when config changes
+        // ReSharper disable once UnusedMember.Global
         public static void RefreshAllSkills()
         {
             _skillsAlreadyApplied = false;
@@ -615,6 +655,7 @@ namespace DarkwoodCustomizer
         {
             public string GameObjectName { get; } = gameObjectName;
             public string Type { get; } = type; // "Active" or "Passive"
+            // ReSharper disable once UnusedMember.Local
             public string Tier { get; } = tier;
         }
     }

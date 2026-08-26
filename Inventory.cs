@@ -234,6 +234,7 @@ internal class InventoryPatch
     ApplyCustomLoot(inv);
   }
 
+  // ReSharper disable once InconsistentNaming
   private static void ApplyCustomLoot(Inventory __instance)
   {
     var name = __instance.gameObject.name;

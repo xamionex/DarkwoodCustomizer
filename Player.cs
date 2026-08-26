@@ -1,3 +1,4 @@
+using System;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -48,6 +49,7 @@ internal class PlayerPatch
     if (isInfiniteDurability) Player.Instance.currentItem.durability = Player.Instance.currentItem.baseClass.maxDurability;
   }
 
+  // ReSharper disable once UnusedParameter.Local
   private static (bool, bool) DrainWeapon(InvItemClass weapon, JObject data)
   {
     if (data == null) return (false, false);
@@ -73,8 +75,81 @@ internal class PlayerPatch
     if (Plugin.Cheats.Value && Plugin.CheatsGiveItem)
     {
       Plugin.Log.LogInfo($"Giving item {Plugin.CheatsGiveItemName.Value} x{Plugin.CheatsGiveItemAmount.Value}");
+      var givenItem = __instance.Inventory.addItemTypeToPlayer(Plugin.CheatsGiveItemName.Value, Plugin.CheatsGiveItemAmount.Value, true);
+      if (givenItem == null)
+        Plugin.Log.LogWarning($"Failed to give item {Plugin.CheatsGiveItemName.Value} x{Plugin.CheatsGiveItemAmount.Value}: invalid item ID or no room (and dropIfNoRoom failed)");
+      else
+        Plugin.Log.LogInfo($"Successfully gave item {Plugin.CheatsGiveItemName.Value} x{Plugin.CheatsGiveItemAmount.Value}");
       Plugin.CheatsGiveItem = false;
-      __instance.Inventory.addItemTypeToPlayer(Plugin.CheatsGiveItemName.Value, Plugin.CheatsGiveItemAmount.Value, true);
+    }
+
+    if (Plugin.Cheats.Value && Plugin.CheatsSpawnCharacter.Value)
+    {
+      Plugin.CheatsSpawnCharacter.Value = false;
+      if (string.IsNullOrEmpty(Plugin.CheatsSpawnCharacterName.Value))
+      {
+        Plugin.Log.LogWarning("Spawn Character was toggled but no character name was set");
+      }
+      else if (Singleton<CharacterSpawner>.Instance == null)
+      {
+        Plugin.Log.LogWarning("Spawn Character was toggled but the character spawner is not available");
+      }
+      else
+      {
+        Plugin.Log.LogInfo($"Spawning character {Plugin.CheatsSpawnCharacterName.Value}");
+        var character = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(__instance.gameObject, Vector3.zero, 300f, Plugin.CheatsSpawnCharacterName.Value, false);
+        if (character == null)
+          Plugin.Log.LogWarning($"Failed to spawn character {Plugin.CheatsSpawnCharacterName.Value}: no free spot found or invalid type");
+        else
+          Plugin.Log.LogInfo($"Successfully spawned character {Plugin.CheatsSpawnCharacterName.Value}");
+      }
+    }
+
+    if (Plugin.CharacterEffectsModification.Value)
+    {
+      if (Plugin.EffectManagerApplyEffect.Value || Plugin.EffectManagerRemoveEffect.Value || Plugin.EffectManagerRemoveAllEffects.Value)
+      {
+        if (__instance.effects == null)
+        {
+          Plugin.Log.LogWarning("Effect manager was toggled but the player has no effects component");
+          Plugin.EffectManagerApplyEffect.Value = false;
+          Plugin.EffectManagerRemoveEffect.Value = false;
+          Plugin.EffectManagerRemoveAllEffects.Value = false;
+        }
+      }
+      if (Plugin.EffectManagerApplyEffect.Value)
+      {
+        Plugin.EffectManagerApplyEffect.Value = false;
+        if (!Enum.TryParse(Plugin.EffectManagerEffectType.Value, true, out CharacterEffectType effectType))
+        {
+          Plugin.Log.LogWarning($"Apply Effect was toggled but '{Plugin.EffectManagerEffectType.Value}' is not a valid effect type");
+        }
+        else
+        {
+          __instance.effects.deleteThisTypeOfEffect(effectType);
+          __instance.effects.activate(effectType, Plugin.EffectManagerEffectDuration.Value, Plugin.EffectManagerEffectModifier.Value, Plugin.EffectManagerEffectInterval.Value, 0f);
+          Plugin.Log.LogInfo($"Applied effect {effectType} to player with duration {Plugin.EffectManagerEffectDuration.Value}, modifier {Plugin.EffectManagerEffectModifier.Value}, interval {Plugin.EffectManagerEffectInterval.Value}");
+        }
+      }
+      if (Plugin.EffectManagerRemoveEffect.Value)
+      {
+        Plugin.EffectManagerRemoveEffect.Value = false;
+        if (!Enum.TryParse(Plugin.EffectManagerEffectType.Value, true, out CharacterEffectType effectType))
+        {
+          Plugin.Log.LogWarning($"Remove Effect was toggled but '{Plugin.EffectManagerEffectType.Value}' is not a valid effect type");
+        }
+        else
+        {
+          __instance.effects.deleteThisTypeOfEffect(effectType);
+          Plugin.Log.LogInfo($"Removed effect {effectType} from player");
+        }
+      }
+      if (Plugin.EffectManagerRemoveAllEffects.Value)
+      {
+        Plugin.EffectManagerRemoveAllEffects.Value = false;
+        __instance.effects.removeAllEffects();
+        Plugin.Log.LogInfo("Removed all effects from player");
+      }
     }
 
     if (Plugin.PlayerModification.Value)

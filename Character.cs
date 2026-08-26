@@ -11,8 +11,10 @@ namespace DarkwoodCustomizer;
 
 internal class CharacterPatch
 {
+  // ReSharper disable once UnusedMember.Global
   public static List<string> CustomCharactersList = [];
 
+  // ReSharper disable once UnusedMember.Local
   private static readonly Dictionary<string, (Character.SensorType[], int[])> LoggedDamage = new();
 
   [HarmonyPatch(typeof(Character), nameof(Character.Update))]
@@ -103,7 +105,8 @@ internal class CharacterPatch
             case (false, true):
               Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted barricade damage, this most likely happened because this charracter isnt supposed to deal barricade damage, skipping!");
               break;
-          };
+          }
+
           if (damage != null && damage != __instance.sensorTypes[i].damage)
           {
             __instance.sensorTypes[i].damage = (int)damage;

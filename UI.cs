@@ -6,13 +6,13 @@ namespace DarkwoodCustomizer;
 internal class UIPatch
 {
     private static bool _previousUiState;
-    private static readonly (string Name, bool Previous, Func<bool> Current)[] Elements = 
-    {
+    private static readonly (string Name, bool Previous, Func<bool> Current)[] Elements =
+    [
         ("HealthBar", false, () => !Plugin.UIDisabledHealthBar.Value),
         ("Lives", false, () => !Plugin.UIDisabledLives.Value),
         ("StaminaBar", false, () => !Plugin.UIDisabledStaminaBar.Value),
         ("Skillbar", false, () => !Plugin.UIDisabledSkillbar.Value)
-    };
+    ];
 
     [HarmonyPatch(typeof(UI), "Update")]
     [HarmonyPostfix]

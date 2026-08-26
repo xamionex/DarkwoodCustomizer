@@ -1,5 +1,6 @@
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DarkwoodCustomizer;
 
@@ -30,6 +31,7 @@ internal static class CraftingPatch
     // Tracks workbench upgrade crafts so the postfix can ensure the item is consumed.
     [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
     [HarmonyPrefix]
+    // ReSharper disable once InconsistentNaming
     private static void Prefix_DoCraft(CraftingRecipes __instance, CraftingRecipes.Recipe __0)
     {
         var invItem = __instance.GetComponent<InvItem>();
@@ -41,6 +43,7 @@ internal static class CraftingPatch
 
     [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
     private static void Postfix_DoCraft(CraftingRecipes __instance)
     {
         if (!PendingUpgradeRecipe.TryGetValue(__instance, out var recipe)) return;
@@ -70,10 +73,8 @@ internal static class CraftingPatch
                 remaining = 0;
             }
         }
-        foreach (var slot in Player.Instance.Hotbar.slots)
+        foreach (var slot in Player.Instance.Hotbar.slots.TakeWhile(slot => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
         {
-            if (remaining <= 0) break;
-            if (InvItemClass.isNull(slot.invItem) || slot.invItem.type != itemType) continue;
             if (slot.invItem.amount <= remaining)
             {
                 remaining -= slot.invItem.amount;
@@ -88,10 +89,8 @@ internal static class CraftingPatch
         }
         if (Player.Instance.openedItemInventory2 != null)
         {
-            foreach (var slot in Player.Instance.openedItemInventory2.slots)
+            foreach (var slot in Player.Instance.openedItemInventory2.slots.TakeWhile(slot => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
             {
-                if (remaining <= 0) break;
-                if (InvItemClass.isNull(slot.invItem) || slot.invItem.type != itemType) continue;
                 if (slot.invItem.amount <= remaining)
                 {
                     remaining -= slot.invItem.amount;

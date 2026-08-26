@@ -10,14 +10,14 @@ internal class CamMainPatch
     private static float _previousFoV;
     
     // Cache child camera names to avoid repeated string operations
-    private static readonly string[] ChildCameraNames = 
-    {
+    private static readonly string[] ChildCameraNames =
+    [
         "CamLights",
         "CamFOV",
         "CamAmbient",
         "CamLightning",
         "CamTopMask"
-    };
+    ];
     
     [HarmonyPatch(typeof(CamMain), "Update")]
     [HarmonyPostfix]

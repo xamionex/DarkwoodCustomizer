@@ -29,6 +29,7 @@ internal static class FlamethrowerPatch
     internal static class BurnTickPatch
     {
         [HarmonyTargetMethod]
+        // ReSharper disable once UnusedMember.Local
         private static MethodBase TargetMethod()
         {
             // This finds the hidden inner class created by the yield return in burnTick
@@ -36,6 +37,7 @@ internal static class FlamethrowerPatch
         }
 
         [HarmonyTranspiler]
+        // ReSharper disable once UnusedMember.Local
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);

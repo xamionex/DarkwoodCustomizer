@@ -31,6 +31,7 @@ internal class Plugin : BaseUnityPlugin
   public static bool SaveLoot;
   public static float SavedLootCooldown;
   public static ManualLogSource Log;
+  public static Plugin Instance;
   private static FileSystemWatcher _fileWatcher;
   private static FileSystemWatcher _fileWatcherJson;
   private static FileSystemWatcher _fileWatcherDefaults;
@@ -339,6 +340,13 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> CharacterEffectsModification;
   public static string CharacterEffectsPath => Path.Combine(JsonConfigPath, "CustomCharacterEffects.json");
   public static JObject CharacterEffects;
+  public static ConfigEntry<string> EffectManagerEffectType;
+  public static ConfigEntry<float> EffectManagerEffectDuration;
+  public static ConfigEntry<float> EffectManagerEffectModifier;
+  public static ConfigEntry<float> EffectManagerEffectInterval;
+  public static ConfigEntry<bool> EffectManagerApplyEffect;
+  public static ConfigEntry<bool> EffectManagerRemoveEffect;
+  public static ConfigEntry<bool> EffectManagerRemoveAllEffects;
 
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
@@ -415,7 +423,18 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<string> CheatsGiveItemName;
   public static ConfigEntry<int> CheatsGiveItemAmount;
   public static bool CheatsGiveItem;
-  
+  public static ConfigEntry<string> CheatsSpawnCharacterName;
+  public static ConfigEntry<bool> CheatsSpawnCharacter;
+
+  // Custom UI
+  public static bool UiOpen;
+  public static bool ItemSpawnerOpen;
+  public static bool EnemySpawnerOpen;
+  public static bool EffectManagerOpen;
+  public static bool CustomDataOpen;
+  public static bool UiManagerOpen;
+  public static bool InventoryEditorOpen;
+
   // Keybinds
   public static ConfigEntry<KeyboardShortcut> KeybindGodmode;
   public static ConfigEntry<KeyboardShortcut> KeybindNoclip;
@@ -424,6 +443,14 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<KeyboardShortcut> KeybindHud;
   public static ConfigEntry<KeyboardShortcut> CheatsGiveItemKeybind;
   public static ConfigEntry<KeyboardShortcut> KeybindFreeCrafting;
+  public static ConfigEntry<KeyboardShortcut> KeybindCustomUi;
+  public static ConfigEntry<KeyboardShortcut> KeybindItemSpawner;
+  public static ConfigEntry<KeyboardShortcut> KeybindEnemySpawner;
+  public static ConfigEntry<KeyboardShortcut> KeybindEffectManager;
+  public static ConfigEntry<KeyboardShortcut> KeybindCustomData;
+  public static ConfigEntry<KeyboardShortcut> KeybindUiManager;
+  public static ConfigEntry<KeyboardShortcut> KeybindSaveCursorPos;
+  public static ConfigEntry<KeyboardShortcut> KeybindInventoryEditor;
 
   // UI values
   public static ConfigEntry<bool> UIModification;
@@ -554,6 +581,13 @@ internal class Plugin : BaseUnityPlugin
     CharacterEffectsModification = Config.Bind("Effects", "Enable Section", true, new ConfigDescription("Enable Section", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("Effects", "Note", "ReadMePlease", new ConfigDescription("Effects will be saved to your custom config as you get them", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CharacterEffects = (JObject)GetJsonConfig(CharacterEffectsPath, new JObject());
+    EffectManagerEffectType = Config.Bind("Effects", "Effect Type", "speed", new ConfigDescription("Effect type to apply or remove with the buttons below. Any CharacterEffectType enum name works, e.g. speed, strength, nightVision, poison, bleeding, invulnerability", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerEffectDuration = Config.Bind("Effects", "Effect Duration", 60f, new ConfigDescription("Duration of the effect in seconds, 0 means permanent", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerEffectModifier = Config.Bind("Effects", "Effect Modifier", 1f, new ConfigDescription("Modifier of the effect, what it does depends on the effect type, e.g. speed 2 means double speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerEffectInterval = Config.Bind("Effects", "Effect Interval", 0f, new ConfigDescription("Interval of the effect in seconds, used by effects like poison and bleed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerApplyEffect = Config.Bind("Effects", "Apply Effect", false, new ConfigDescription("Set to true to apply the effect specified above to the player, resets back to false after applying", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerRemoveEffect = Config.Bind("Effects", "Remove Effect", false, new ConfigDescription("Set to true to remove the effect type specified above from the player, resets back to false after removing", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    EffectManagerRemoveAllEffects = Config.Bind("Effects", "Remove All Effects", false, new ConfigDescription("Set to true to remove all effects from the player, resets back to false after removing", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -634,6 +668,8 @@ internal class Plugin : BaseUnityPlugin
     CheatsGiveItemName = Config.Bind("Cheats", "Give Item with Name", "", new ConfigDescription("Gives this item ID when enabling the below toggle", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CheatsGiveItemAmount = Config.Bind("Cheats", "Give Item Amount", 1, new ConfigDescription("Gives the above item with this specified amount", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CheatsGiveItemKeybind = Config.Bind("Cheats", "Give Item Button", new KeyboardShortcut(KeyCode.G, KeyCode.LeftControl));
+    CheatsSpawnCharacterName = Config.Bind("Cheats", "Spawn Character with Name", "", new ConfigDescription("Spawns this character (enemy) type around the player when enabling the below toggle", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CheatsSpawnCharacter = Config.Bind("Cheats", "Spawn Character", false, new ConfigDescription("Set to true to spawn the character specified above, resets back to false after spawning", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // UI
     UIModification = Config.Bind("UI", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -653,6 +689,14 @@ internal class Plugin : BaseUnityPlugin
     KeybindTime = Config.Bind("Hotkeys", "Toggle Time Stop", new KeyboardShortcut(KeyCode.T, KeyCode.LeftShift));
     KeybindHud = Config.Bind("Hotkeys", "Toggle HUD/UI", new KeyboardShortcut(KeyCode.P));
     KeybindFreeCrafting = Config.Bind("Hotkeys", "Toggle Free Crafting", new KeyboardShortcut(KeyCode.F, KeyCode.LeftControl));
+    KeybindCustomUi = Config.Bind("Hotkeys", "Open Customizer UI", new KeyboardShortcut(KeyCode.F2));
+    KeybindItemSpawner = Config.Bind("Hotkeys", "Open Item Spawner", new KeyboardShortcut(KeyCode.F3));
+    KeybindEnemySpawner = Config.Bind("Hotkeys", "Open Enemy Spawner", new KeyboardShortcut(KeyCode.F4));
+    KeybindEffectManager = Config.Bind("Hotkeys", "Open Effect Manager", new KeyboardShortcut(KeyCode.F5));
+    KeybindCustomData = Config.Bind("Hotkeys", "Open Custom Data", new KeyboardShortcut(KeyCode.F6));
+    KeybindUiManager = Config.Bind("Hotkeys", "Open UI Manager", new KeyboardShortcut(KeyCode.F7));
+    KeybindSaveCursorPos = Config.Bind("Hotkeys", "Save Cursor Position", new KeyboardShortcut(KeyCode.F4, KeyCode.LeftShift));
+    KeybindInventoryEditor = Config.Bind("Hotkeys", "Open Inventory Editor", new KeyboardShortcut(KeyCode.F8));
 
     // CustomRandomInventories
     RandomInventoriesModification = Config.Bind("RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -696,7 +740,7 @@ internal class Plugin : BaseUnityPlugin
       Directory.CreateDirectory(DefaultsConfigPath);
 
     var defaultsReadMePath = Path.Combine(DefaultsConfigPath, "ReadMe.txt");
-    var readMeString = "This folder is a readonly folder for you to use as a template when creating your own custom things.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the DarkwoodCustomizer/Customs folder, not in the ModDefaults folder\nI recommend copying these files and replacing the default values with your own custom ones";
+    const string readMeString = "This folder is a readonly folder for you to use as a template when creating your own custom things.\nYou are not meant to edit this, just to read\nThe custom json files you can edit are in the DarkwoodCustomizer/Customs folder, not in the ModDefaults folder\nI recommend copying these files and replacing the default values with your own custom ones";
     if (File.Exists(defaultsReadMePath) && !File.ReadAllText(defaultsReadMePath).Equals(readMeString))
       File.Delete(defaultsReadMePath);
     if (!File.Exists(defaultsReadMePath))
@@ -716,6 +760,7 @@ internal class Plugin : BaseUnityPlugin
   private void Awake()
   {
     Log = Logger;
+    Instance = this;
 
     var logItemsPath = Path.Combine(Paths.ConfigPath, "ItemLog.log");
     if (File.Exists(logItemsPath))
@@ -776,6 +821,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in WorldGeneratorPatch! (Bool when game loads)");
     harmony.PatchAll(typeof(DefensesPatch));
     Log.LogInfo("Patching in DefensesPatch! (Defenses)");
+    harmony.PatchAll(typeof(CustomUiPatch));
+    Log.LogInfo("Patching in CustomUiPatch! (Custom UI)");
 
     Log.LogInfo($"[{PluginInfo.PluginGuid} v{PluginInfo.PluginVersion}] has fully loaded!");
     LogDivider();
@@ -804,6 +851,13 @@ internal class Plugin : BaseUnityPlugin
 
   public void Update()
   {
+    // Drive the hotkey capture while rebinding, and ignore all other keybinds
+    // until the new combo is committed or cancelled
+    if (CustomUiPatch.IsCapturingHotkey)
+    {
+      CustomUiPatch.PollHotkeyCapture();
+      return;
+    }
     if (KeybindGodmode.Value.IsDown())
     {
       PlayerGodmode.Value = !PlayerGodmode.Value;
@@ -838,6 +892,43 @@ internal class Plugin : BaseUnityPlugin
       FreeCrafting.Value = !FreeCrafting.Value;
       Log.LogInfo("Free Crafting toggled to: " + FreeCrafting.Value);
     }
+    if (KeybindCustomUi.Value.IsDown())
+    {
+      CustomUiPatch.ToggleCustomizerUi();
+    }
+    if (KeybindItemSpawner.Value.IsDown())
+    {
+      CustomUiPatch.ToggleItemSpawner();
+    }
+    if (KeybindEnemySpawner.Value.IsDown())
+    {
+      CustomUiPatch.ToggleEnemySpawner();
+    }
+    if (KeybindEffectManager.Value.IsDown())
+    {
+      CustomUiPatch.ToggleEffectManager();
+    }
+    if (KeybindCustomData.Value.IsDown())
+    {
+      CustomUiPatch.ToggleCustomData();
+    }
+    if (KeybindUiManager.Value.IsDown())
+    {
+      CustomUiPatch.ToggleUiManager();
+    }
+    if (KeybindSaveCursorPos.Value.IsDown())
+    {
+      CustomUiPatch.SaveCursorPosition();
+    }
+    if (KeybindInventoryEditor.Value.IsDown())
+    {
+      CustomUiPatch.ToggleInventoryEditor();
+    }
+  }
+
+  public void OnGUI()
+  {
+    CustomUiPatch.DrawUi();
   }
 
   public void FixedUpdate()
