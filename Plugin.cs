@@ -369,6 +369,8 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<float> PlayerHealthRegenValue;
   public static ConfigEntry<bool> PlayerGodmode;
   public static ConfigEntry<bool> PlayerNoclip;
+  public static ConfigEntry<bool> PlayerInvisible;
+  public static ConfigEntry<bool> PlayerSeeBehindWalls;
 
   // Player Speed Values
   public static ConfigEntry<float> PlayerWalkSpeed;
@@ -451,6 +453,7 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<KeyboardShortcut> KeybindUiManager;
   public static ConfigEntry<KeyboardShortcut> KeybindSaveCursorPos;
   public static ConfigEntry<KeyboardShortcut> KeybindInventoryEditor;
+  public static ConfigEntry<KeyboardShortcut> KeybindInvisible;
 
   // UI values
   public static ConfigEntry<bool> UIModification;
@@ -460,8 +463,13 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> UIDisabledStaminaBar;
   public static ConfigEntry<bool> UIDisabledSkillbar;
 
-  // MISC
+  // Enemies
   public static ConfigEntry<bool> DisableWormSpawn;
+  public static ConfigEntry<float> CreatureSpawnChanceNight;
+  public static ConfigEntry<float> CreatureSpawnChanceDay;
+  public static ConfigEntry<float> CreatureEnemyMultiplierNight;
+  public static ConfigEntry<float> CreatureEnemyMultiplierDay;
+  public static ConfigEntry<bool> CreaturesKnowPlayerPosition;
 
   // Random Inventories Values
   public static ConfigEntry<bool> RandomInventoriesModification;
@@ -610,6 +618,8 @@ internal class Plugin : BaseUnityPlugin
     PlayerHealthRegenModifier = Config.Bind("Player", "Health Regen Modifier", 1f, new ConfigDescription("Multiplier for health regen value", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerGodmode = Config.Bind("Player", "Enable Godmode", false, new ConfigDescription("Makes you invulnerable and on every update makes your health maximized", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerNoclip = Config.Bind("Player", "Enable Noclip", false, new ConfigDescription("Lets you pass through walls", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerInvisible = Config.Bind("Player", "Invisible", false, new ConfigDescription("Makes you invisible to creatures, they will stop attacking you and ignore you. Toggleable with the hotkey in the Hotkeys section", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerSeeBehindWalls = Config.Bind("Player", "Can see behind walls", false, new ConfigDescription("Your vision no longer gets blocked by walls, you can see creatures and objects behind them", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Player Speed
     PlayerWalkSpeed = Config.Bind("Player", "Walk Speed", 7.5f, new ConfigDescription("Set your walk speed", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -679,8 +689,13 @@ internal class Plugin : BaseUnityPlugin
     UIDisabledStaminaBar = Config.Bind("UI", "Disable Staminabar", false, new ConfigDescription("Disables the stamina bar for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UIDisabledSkillbar = Config.Bind("UI", "Disable Skillbar (current effects)", false, new ConfigDescription("Disables the skill bar (current effects) for immersion", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     
-    // Misc
-    DisableWormSpawn = Config.Bind("MISC", "Disable Night Floor Gore (Requires Save Reload)", false, new ConfigDescription("Disables the floor gore that spawns and kills you at night if not in a shelter. Requires Save Reload", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    // Enemies
+    DisableWormSpawn = Config.Bind("Enemies", "Disable Night Floor Gore (Requires Save Reload)", false, new ConfigDescription("Disables the floor gore that spawns and kills you at night if not in a shelter. Requires Save Reload", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CreatureSpawnChanceNight = Config.Bind("Enemies", "Creature Spawn Chance During Nighttime", 1f, new ConfigDescription("Multiplier for how often the night creature spawner ticks. 2 ticks twice as often, 0.5 half as often. 1 is the default", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CreatureSpawnChanceDay = Config.Bind("Enemies", "Creature Spawn Chance During Daytime", 1f, new ConfigDescription("Multiplier for the day creature spawn chance roll. 2 makes each day spawn point twice as likely to spawn, 0.5 half as likely. 1 is the default", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CreatureEnemyMultiplierNight = Config.Bind("Enemies", "Creature Enemy Multiplier During Nighttime", 1f, new ConfigDescription("Multiplies the amount of enemies in each night scenario. 2 doubles the enemies that can spawn during the night, 0.5 halves it. 1 is the default", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CreatureEnemyMultiplierDay = Config.Bind("Enemies", "Creature Enemy Multiplier During Daytime", 1f, new ConfigDescription("Multiplies the amount of creatures each day biome spawns. 2 doubles the day creatures, 0.5 halves it. 1 is the default", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    CreaturesKnowPlayerPosition = Config.Bind("Enemies", "Creatures always know where player is", false, new ConfigDescription("When enabled, every creature always knows exactly where the player is and relentlessly hunts them down, even through walls", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Keybinds
     KeybindGodmode = Config.Bind("Hotkeys", "Toggle Godmode", new KeyboardShortcut(KeyCode.G, KeyCode.LeftShift));
@@ -697,6 +712,7 @@ internal class Plugin : BaseUnityPlugin
     KeybindUiManager = Config.Bind("Hotkeys", "Open UI Manager", new KeyboardShortcut(KeyCode.F7));
     KeybindSaveCursorPos = Config.Bind("Hotkeys", "Save Cursor Position", new KeyboardShortcut(KeyCode.F4, KeyCode.LeftShift));
     KeybindInventoryEditor = Config.Bind("Hotkeys", "Open Inventory Editor", new KeyboardShortcut(KeyCode.F8));
+    KeybindInvisible = Config.Bind("Hotkeys", "Toggle Invisible", new KeyboardShortcut(KeyCode.I, KeyCode.LeftShift));
 
     // CustomRandomInventories
     RandomInventoriesModification = Config.Bind("RandomInventories", "Enable Section", false, new ConfigDescription("Enable this section of the mod, you can edit the RandomInventories in Customs/CustomRandomInventories.json", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -770,6 +786,8 @@ internal class Plugin : BaseUnityPlugin
     Migrate126Configs();
     // 1.2.8 migration check
     Migrate128Configs();
+    // MISC to Enemies migration check
+    MigrateMiscToEnemies();
 
     BepinexBindings();
     MakeDefaults();
@@ -783,6 +801,8 @@ internal class Plugin : BaseUnityPlugin
     Log.LogInfo("Patching in UIPatch! (UI)");
     harmony.PatchAll(typeof(CharacterSpawnerPatch));
     Log.LogInfo("Patching in CharacterSpawnerPatch! (Floor Gore)");
+    harmony.PatchAll(typeof(EnemiesPatch));
+    Log.LogInfo("Patching in EnemiesPatch! (Enemies)");
     harmony.PatchAll(typeof(CharacterPatch));
     Log.LogInfo("Patching in CharacterPatch! (Soon™️)");
     harmony.PatchAll(typeof(CharacterEffectsPatch));
@@ -924,6 +944,11 @@ internal class Plugin : BaseUnityPlugin
     {
       CustomUiPatch.ToggleInventoryEditor();
     }
+    if (KeybindInvisible.Value.IsDown())
+    {
+      PlayerInvisible.Value = !PlayerInvisible.Value;
+      Log.LogInfo("Player Invisible toggled to: " + PlayerInvisible.Value);
+    }
   }
 
   public void OnGUI()
@@ -991,6 +1016,7 @@ internal class Plugin : BaseUnityPlugin
         Config.Reload();
         GeneratorPatch.RefreshGenerator = true;
         PlayerPatch.RefreshPlayer = true;
+        EnemiesPatch.RefreshNightSpawnChance();
         break;
       case "CustomCharacters.json":
         if (SavedCharactersCooldown <= 0f)
@@ -1156,6 +1182,47 @@ internal class Plugin : BaseUnityPlugin
       newPathConfig = Path.Combine(JsonConfigPath, "CustomStacks_Unused_From_128_DeletePlease.json");
       File.Move(oldStacksJson, newPathConfig);
       Log.LogInfo($"Old CustomStacks Json file can be found at {newPathConfig}");
+    }
+  }
+
+  private void MigrateMiscToEnemies()
+  {
+    // 1.6.6 migration check
+    // The MISC section was renamed to Enemies, move the old section header so
+    // existing values are preserved instead of being reset to defaults
+    var configPath = Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGuid}.cfg");
+    if (!File.Exists(configPath)) return;
+    var lines = File.ReadAllLines(configPath);
+    var changed = false;
+    for (var i = 0; i < lines.Length; i++)
+    {
+      if (lines[i].Trim() == "[MISC]")
+      {
+        lines[i] = "[Enemies]";
+        changed = true;
+      }
+      // 1.6.7 renames: the spawn rate options became spawn chance options and
+      // the instant aggro option became always know where player is
+      if (lines[i].Contains("Creature Spawn Rate During Nighttime"))
+      {
+        lines[i] = lines[i].Replace("Creature Spawn Rate During Nighttime", "Creature Spawn Chance During Nighttime");
+        changed = true;
+      }
+      if (lines[i].Contains("Creature Spawn Rate During Daytime"))
+      {
+        lines[i] = lines[i].Replace("Creature Spawn Rate During Daytime", "Creature Spawn Chance During Daytime");
+        changed = true;
+      }
+      if (lines[i].Contains("Creatures will instantly aggro to player"))
+      {
+        lines[i] = lines[i].Replace("Creatures will instantly aggro to player", "Creatures always know where player is");
+        changed = true;
+      }
+    }
+    if (changed)
+    {
+      File.WriteAllLines(configPath, lines);
+      Log.LogInfo("Moved the MISC config section to Enemies and renamed old Enemies options");
     }
   }
 

@@ -8,6 +8,8 @@ namespace DarkwoodCustomizer;
 internal class PlayerPatch
 {
   public static bool RefreshPlayer = true;
+  private static Light2D _fovLight;
+  private static LayerMask _originalFovLightShadowLayer;
   
   [HarmonyPatch(typeof(Player), "fireWeapon")]
   [HarmonyPostfix]
@@ -103,6 +105,42 @@ internal class PlayerPatch
         else
           Plugin.Log.LogInfo($"Successfully spawned character {Plugin.CheatsSpawnCharacterName.Value}");
       }
+    }
+
+    if (Plugin.PlayerModification.Value && Plugin.PlayerInvisible.Value)
+    {
+      if (!__instance.invisible)
+      {
+        __instance.setInvisible(true);
+      }
+    }
+    else if (__instance.invisible && (__instance.effects == null || !__instance.effects.hasEffectType(CharacterEffectType.ninja)))
+    {
+      __instance.setInvisible(false);
+    }
+
+    if (Plugin.PlayerModification.Value && Plugin.PlayerSeeBehindWalls.Value)
+    {
+      // The FOV light shadows walls around the player.
+      // A zero shadow layer makes the vision mesh ignore walls, like fly-by mode does. 
+      // The component is cached so the layer is only set once, setting it every frame would rebuild the vision mesh constantly.
+      if (_fovLight == null)
+      {
+        _fovLight = __instance._transform.Find("PlayerFOVLight").GetComponent<Light2D>();
+        _originalFovLightShadowLayer = _fovLight.ShadowLayer;
+      }
+      if (_fovLight.ShadowLayer.value != 0)
+      {
+        _fovLight.ShadowLayer = 0;
+      }
+    }
+    else if (_fovLight != null)
+    {
+      if (_fovLight.ShadowLayer.value != _originalFovLightShadowLayer.value)
+      {
+        _fovLight.ShadowLayer = _originalFovLightShadowLayer;
+      }
+      _fovLight = null;
     }
 
     if (Plugin.CharacterEffectsModification.Value)

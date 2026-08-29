@@ -73,6 +73,9 @@ internal static class CustomUiPatch
   private static Vector2 _dataPropsScroll;
   private static readonly Dictionary<string, string> PropBuffers = new();
   private static GUIStyle _leftButtonStyle;
+  private static GUIStyle _infoStyle;
+  private static string _infoText = "";
+  private static string _infoKey = "";
 
   // Sub-picker state: which nested array/object is being edited with a picker
   private static string _subPickerKey = ""; // e.g. "LootContainer_WoodenCrate_1A"
@@ -815,6 +818,7 @@ internal static class CustomUiPatch
       foreach (var entry in GetEntries())
       {
         if (entry.Definition.Section == "!Mod" && entry.Definition.Key == "Version") continue;
+        if (entry.Definition.Section == "Cheats") continue;
         if (!Sections.Contains(entry.Definition.Section))
         {
           Sections.Add(entry.Definition.Section);
@@ -842,15 +846,34 @@ internal static class CustomUiPatch
       DrawConfigEntry(entry);
     }
     GUILayout.EndScrollView();
+
+    // Setting descriptions are shown in a fixed bar at the bottom instead of
+    // hover tooltips. IMGUI hover tooltips rely on mouse move events that
+    // Wine/Proton drops, so clicking the ? button is reliable everywhere.
+    DrawInfoBar();
+  }
+
+  private static void DrawInfoBar()
+  {
+    GUILayout.Box("", GUILayout.Height(4f));
+    _infoStyle ??= new GUIStyle(GUI.skin.box)
+    {
+      alignment = TextAnchor.UpperLeft,
+      wordWrap = true,
+      fontSize = 11,
+    };
+    if (string.IsNullOrEmpty(_infoText))
+    {
+      GUILayout.Box("Click the ? button next to any setting to see its description here.", _infoStyle, GUILayout.Height(64f));
+    }
+    else
+    {
+      GUILayout.Box(_infoText, _infoStyle, GUILayout.Height(64f));
+    }
   }
 
   private static bool IsHiddenFromUi(ConfigEntryBase entry)
   {
-    // Item giving moved to the F3 item spawner, hidden from the config tab browser
-    if (entry.Definition.Section == "Cheats" && entry.Definition.Key is "Give Item with Name" or "Give Item Amount" or "Give Item Button")
-    {
-      return true;
-    }
     // Save Cursor Position only appears in the enemy spawner window
     return entry.Definition.Section == "Hotkeys" && entry.Definition.Key == "Save Cursor Position";
   }
@@ -860,8 +883,27 @@ internal static class CustomUiPatch
     if (IsHiddenFromUi(entry)) return;
 
     var key = entry.Definition.Section + "/" + entry.Definition.Key;
+    var description = entry.Description?.Description ?? "";
     GUILayout.BeginHorizontal();
-    GUILayout.Label(entry.Definition.Key, GUILayout.Width(230f));
+    GUILayout.Label(entry.Definition.Key, GUILayout.Width(200f));
+    if (string.IsNullOrEmpty(description))
+    {
+      GUILayout.Space(28f);
+    }
+    else if (GUILayout.Button("?", GUILayout.Width(24f)))
+    {
+      if (_infoKey == key)
+      {
+        _infoKey = "";
+        _infoText = "";
+      }
+      else
+      {
+        _infoKey = key;
+        _infoText = $"{entry.Definition.Key}:\n{description}";
+      }
+    }
+    GUILayout.Space(4f);
 
     var type = entry.SettingType;
     try
