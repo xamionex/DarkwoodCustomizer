@@ -54,6 +54,12 @@ internal class EnemiesPatch
       }
       characterToSpawn.amount = (int)(baseAmount * mult);
     }
+    if (mult == 1f || scenario.characters.Count <= 1) return;
+    // Vanilla spawns one creature per tick and always picks the first entry that is not at its cap, so with multiplied amounts the first entry's budget eats the whole night and the other types never spawn.
+    // Rotating the list one step per tick round-robins the spawns across all types.
+    var first = scenario.characters[0];
+    scenario.characters.RemoveAt(0);
+    scenario.characters.Add(first);
   }
 
   // Day spawn chance: scales the spawn roll of day spawn points.
