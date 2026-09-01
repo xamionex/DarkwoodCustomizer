@@ -34,16 +34,21 @@ internal class EnemiesPatch
     spawner.spawnInterval = _baseSpawnInterval / chance;
   }
 
-  // Night enemy multiplier. The first spawn tick caches the vanilla amounts of the night scenario, every tick then applies amount = base * multiplier.
+  // Night enemy multiplier. The first spawn tick caches the vanilla amounts of the night scenario.
+  // When the multiplier is active the vanilla spawner is replaced: each tick spawns `mult` creatures, each a random type that is not yet at its cap.
+  // This gives every creature type a fair share instead of the first list entry eating the whole night.
   private static readonly Dictionary<NightScenario.CharacterToSpawn, int> _nightBaseAmounts = new();
 
   [HarmonyPatch(typeof(CharacterSpawner), "spawnNightChar")]
   [HarmonyPrefix]
-  public static void NightEnemyMultiplierPrefix()
+  public static bool NightEnemyMultiplierPrefix(CharacterSpawner __instance)
   {
     var mult = Plugin.CreatureEnemyMultiplierNight.Value;
+    if (mult == 1f) return true; // vanilla behavior
     var scenario = Singleton<NightScenarios>.Instance?.currentScenario;
-    if (scenario == null) return;
+    if (scenario == null) return true;
+
+    // Cache the vanilla amounts and scale the caps so the multiplied budget can actually be reached.
     foreach (var characterToSpawn in scenario.characters)
     {
       if (characterToSpawn == null) continue;
@@ -54,12 +59,41 @@ internal class EnemiesPatch
       }
       characterToSpawn.amount = (int)(baseAmount * mult);
     }
-    if (mult == 1f || scenario.characters.Count <= 1) return;
-    // Vanilla spawns one creature per tick and always picks the first entry that is not at its cap, so with multiplied amounts the first entry's budget eats the whole night and the other types never spawn.
-    // Rotating the list one step per tick round-robins the spawns across all types.
-    var first = scenario.characters[0];
-    scenario.characters.RemoveAt(0);
-    scenario.characters.Add(first);
+
+    // Replicate the vanilla spawnNightChar guards.
+    if (Singleton<OutsideLocations>.Instance.playerInOutsideLocation || Singleton<Dreams>.Instance.dreaming || !__instance.spawnNocturnalCharacters)
+    {
+      return false;
+    }
+    if (Player.Instance.whereAmI.bigLocation == null || !Player.Instance.whereAmI.bigLocation.playerBase)
+    {
+      return false;
+    }
+
+    var spawnCount = Mathf.Max(1, (int)mult);
+    for (var s = 0; s < spawnCount; s++)
+    {
+      var candidates = new List<NightScenario.CharacterToSpawn>();
+      foreach (var characterToSpawn in scenario.characters)
+      {
+        if (characterToSpawn != null && !string.IsNullOrEmpty(characterToSpawn.characterName) && characterToSpawn.amount > 0 && characterToSpawn.spawned < characterToSpawn.amount)
+        {
+          candidates.Add(characterToSpawn);
+        }
+      }
+      if (candidates.Count == 0) break;
+      var pick = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+      var character = __instance.spawnCharacterAround(Player.Instance.gameObject, Vector3.zero, 1500f, pick.characterName, true, false, false, false);
+      if (character == null) continue;
+      var chapterTwo = (!Core.randomGeneration && GameObject.Find(Helpers.GetSceneName()).GetComponent<Location>().chapterId > 1)
+                       || (Core.randomGeneration && Singleton<WorldGenerator>.Instance.chapterID > 1);
+      if (chapterTwo && UnityEngine.Random.Range(0f, 1f) > 0.5f)
+      {
+        character.gameObject.AddComponent<ShadowArmor>();
+      }
+      pick.spawned++;
+    }
+    return false; // skip the vanilla single spawn
   }
 
   // Day spawn chance: scales the spawn roll of day spawn points.

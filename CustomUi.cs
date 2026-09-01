@@ -38,6 +38,7 @@ internal static class CustomUiPatch
   private static string[] _allItems = [];
 
   private static string _enemyName = "";
+  private static string _enemySearch = "";
   private static bool _spawnOnSavedPos;
   private static bool _hasSavedCursorPos;
   private static Vector3 _savedCursorPos;
@@ -69,6 +70,7 @@ internal static class CustomUiPatch
   // Custom data editor state
   private static string _dataSelectedKey = "";
   private static string _dataNewKey = "";
+  private static string _dataKeysSearch = "";
   private static Vector2 _dataKeysScroll;
   private static Vector2 _dataPropsScroll;
   private static readonly Dictionary<string, string> PropBuffers = new();
@@ -135,6 +137,7 @@ internal static class CustomUiPatch
 
   private static DataFile _selectedDataFile;
   private static Vector2 _itemKeysScroll;
+  private static string _itemKeysSearch = "";
 
   // All known Custom Items keys with their default values, used by the item key picker in the Custom Items editor
   private static readonly (string Name, JToken Default)[] ItemKeys =
@@ -246,6 +249,186 @@ internal static class CustomUiPatch
     ("takesDamageOnPlayerHit", false),
     ("zoom", 0f),
   ];
+
+  // Descriptions for the known Custom Items keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> ItemKeyDescriptions = new()
+  {
+    ["name"] = "The display name of the item in the game.",
+    ["description"] = "A brief description of what the item is.",
+    ["iconType"] = "The item's icon, requires an item ID.",
+    ["fireMode"] = "The fire mode of a weapon: semi, burst, fullauto/auto, or single.",
+    ["hasAmmo"] = "Whether the item requires ammunition.",
+    ["canBeReloaded"] = "Whether the item can be reloaded.",
+    ["ammoReloadType"] = "The reload type: magazine reloads the whole clip, single uses one item per bullet.",
+    ["ammoType"] = "The type of ammo the item uses, requires an item ID.",
+    ["hasDurability"] = "Whether the item has durability.",
+    ["maxDurability"] = "The maximum durability of the item.",
+    ["ignoreDurabilityInValue"] = "Whether durability is ignored when selling the item.",
+    ["repairable"] = "Whether the item can be repaired.",
+    ["flamethrowerdrag"] = "The drag of the flamethrower's rigidbody, only applies to flamethrowers.",
+    ["flamethrowercontactDamage"] = "The contact damage of the flamethrower's flame, only applies to flamethrowers.",
+    ["flamethrowerBurnDamage"] = "The burn damage per tick of the flamethrower, only applies to flamethrowers.",
+    ["damage"] = "The damage output of the item.",
+    ["clipSize"] = "The maximum ammo capacity of the weapon.",
+    ["value"] = "The item's selling price.",
+    ["maxAmount"] = "The maximum stack amount of the item.",
+    ["stackable"] = "Whether the item can be stacked in inventory.",
+    ["isStackable"] = "Whether the item can be stacked in inventory.",
+    ["ExpValue"] = "The amount of experience gained when the item is used.",
+    ["IsExpItem"] = "Whether the item can be used for cooking.",
+    ["InfiniteAmmo"] = "When true, the item never runs out of ammo.",
+    ["InfiniteDurability"] = "When true, the item never loses durability.",
+    ["drainDurabilityOnShot"] = "Whether firing drains durability.",
+    ["drainAmmoOnShot"] = "Whether firing drains ammo.",
+    ["aimDontSlow"] = "Whether aiming does not slow the player down.",
+    ["aimFOV"] = "The field of view while aiming.",
+    ["fireRate"] = "The firing rate of the weapon.",
+    ["requirements"] = "The items required to repair the item, format: { \"itemId\": amount }. The amount is the durability amount for items with durability, otherwise the item count.",
+    ["rottenItem"] = "The item ID the item rots into, used by mushrooms.",
+    ["rottenItemMaxAmount"] = "The max stack amount of the rotten item.",
+    ["rottenItemStackable"] = "Whether the rotten item can be stacked.",
+    ["rottenItemValue"] = "The selling price of the rotten item.",
+    ["rottenItemExpValue"] = "The experience awarded by the rotten item.",
+    ["rottenItemIsExpItem"] = "Whether the rotten item can be used for cooking.",
+    ["activateSound"] = "The sound played when the item is activated.",
+    ["addsHotbarSlot"] = "Whether the item adds a hotbar slot.",
+    ["addsInventorySlot"] = "Whether the item adds an inventory slot.",
+    ["addSlotAmount"] = "The number of slots added when the item is picked up.",
+    ["addsPoisonImmunity"] = "Whether the item grants poison immunity.",
+    ["aimFinishedFrame"] = "The animation frame at which aiming finishes.",
+    ["aimReturnSound"] = "The sound played when the player stops aiming.",
+    ["aimSound"] = "The sound played when the player starts aiming.",
+    ["aniLibrary"] = "The animation library used by the item.",
+    ["armorValue"] = "The armor value of the item.",
+    ["attack2Sound"] = "The sound played for the second attack.",
+    ["attackDoesNotInterrupt"] = "Whether the attack does not interrupt the player.",
+    ["attackSound"] = "The sound played when attacking.",
+    ["attackSoundRange"] = "The range at which the attack sound is heard.",
+    ["barricadeDamageDurabilityDrain"] = "The durability drained when dealing barricade damage.",
+    ["burstAmount"] = "The number of shots in a burst.",
+    ["canAttackFrame"] = "The animation frame at which the attack can happen.",
+    ["canBeAimed"] = "Whether the item can be aimed.",
+    ["canBePlaced"] = "Whether the item can be placed in the world.",
+    ["canCutInHalf"] = "Whether the item can cut enemies in half.",
+    ["canResumeAim"] = "Whether aiming can be resumed after releasing the aim button.",
+    ["damageDurabilityDrain"] = "The durability drained when dealing damage.",
+    ["deactivateSound"] = "The sound played when the item is deactivated.",
+    ["destroySound"] = "The sound played when the item is destroyed.",
+    ["dontRemoveOnUse"] = "Whether the item is not removed from inventory when used.",
+    ["dropOnReleaseAim"] = "Whether the item is dropped when the player releases the aim button.",
+    ["durabilityDrain"] = "The durability drained per use.",
+    ["durabilityRegeneration"] = "The durability regenerated over time.",
+    ["emptyClipSound"] = "The sound played when the clip is empty.",
+    ["examinable"] = "Whether the item can be examined.",
+    ["getSound"] = "The sound played when the item is picked up.",
+    ["givesLife"] = "Whether using the item restores health.",
+    ["givesSkillSlot"] = "Whether the item gives a skill slot.",
+    ["hideSound"] = "The sound played when the item is hidden.",
+    ["isAmmo"] = "Whether the item is ammunition.",
+    ["isArmor"] = "Whether the item is armor.",
+    ["isFirearm"] = "Whether the item is a firearm.",
+    ["isFlashlight"] = "Whether the item is a flashlight.",
+    ["isImportantItem"] = "Whether the wolf will not steal the item.",
+    ["isMap"] = "Whether the item is a map.",
+    ["isMelee"] = "Whether the item is a melee weapon.",
+    ["isNaturalLight"] = "Whether the item emits natural light.",
+    ["isRepairKit"] = "Whether the item is a repair kit.",
+    ["isThrowable"] = "Whether the item can be thrown.",
+    ["isWorkbenchUpgrade"] = "Whether the item is a workbench upgrade.",
+    ["maxAim"] = "The maximum aim distance.",
+    ["minAim"] = "The minimum aim distance.",
+    ["needsToBeOnHotbar"] = "Whether the item needs to be on the hotbar to be used.",
+    ["nightVision"] = "Whether the item grants night vision.",
+    ["noMuzzleFlash"] = "Whether the weapon has no muzzle flash.",
+    ["notUseableWhenAiming"] = "Whether the item cannot be used while aiming.",
+    ["onBrokenText"] = "The message shown when the item breaks.",
+    ["placeOnUse"] = "Whether the item is placed in the world when used.",
+    ["projectileAmount"] = "The number of projectiles fired per shot.",
+    ["protectsFromShadows"] = "Whether the item protects the player from shadows.",
+    ["recoilAmount"] = "The recoil of the weapon.",
+    ["recoverableAfterThrown"] = "Whether the item can be recovered after being thrown.",
+    ["regeneratesWhenInactive"] = "Whether durability regenerates while the item is not in use.",
+    ["reloadSound"] = "The sound played when reloading.",
+    ["specialBarricadeDamage"] = "The barricade damage of the special attack.",
+    ["specialBarricadeDamageDurabilityDrain"] = "The durability drained when dealing special barricade damage.",
+    ["specialDamage"] = "The damage of the special attack.",
+    ["specialDamageDurabilityDrain"] = "The durability drained when dealing special damage.",
+    ["spillsLiquid"] = "Whether the item spills liquid when aimed.",
+    ["stacksDurability"] = "Whether durability stacks with the stack amount.",
+    ["staminaAttackDrain"] = "The stamina drained per attack.",
+    ["staminaSpecialAttackDrain"] = "The stamina drained per special attack.",
+    ["takesDamageOnPlayerHit"] = "Whether the item takes damage when the player is hit.",
+    ["zoom"] = "The zoom level while aiming.",
+  };
+
+  // Descriptions for the Custom Characters keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> CharacterKeyDescriptions = new()
+  {
+    ["Health"] = "The maximum health of the character.",
+    ["WalkSpeed"] = "The walking speed of the character.",
+    ["RunSpeed"] = "The running speed of the character.",
+    ["Attacks"] = "The list of attacks the character can use.",
+  };
+
+  // Descriptions for the Custom Character Effects keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> EffectKeyDescriptions = new()
+  {
+    ["duration"] = "How long the effect lasts, 0 means permanent.",
+    ["modifier"] = "The strength of the effect, most effects use 1 as the default.",
+    ["interval"] = "How often the effect applies, used by damage over time effects.",
+    ["stopsBleeding"] = "Whether the effect stops bleeding.",
+    ["stopsPoison"] = "Whether the effect stops poison.",
+    ["hasPoisonOverlay"] = "Whether the effect shows the poison overlay.",
+    ["activateSound"] = "The sound played when the effect activates.",
+    ["startDelay"] = "The delay before the effect starts.",
+  };
+
+  // Descriptions for the Custom Crafting Recipes keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> RecipeKeyDescriptions = new()
+  {
+    ["requiredlevel"] = "The crafting level required to craft the item.",
+    ["resource"] = "The item produced by the recipe.",
+    ["givesamount"] = "The quantity of the resource produced.",
+    ["requirements"] = "The items and amounts needed to craft the resource, format: { \"itemId\": amount }.",
+  };
+
+  // Descriptions for the Custom Random Inventories keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> RandomInvKeyDescriptions = new()
+  {
+    ["presets"] = "The list of random inventory presets.",
+    ["type"] = "The item type that can spawn.",
+    ["amountMin"] = "The minimum amount of the item that can spawn.",
+    ["amountMax"] = "The maximum amount of the item that can spawn.",
+    ["chance"] = "The chance the item spawns, from 0 to 1.",
+  };
+
+  // Descriptions for the Custom Loot keys, shown in the ? info bar of the Custom Data editor
+  private static readonly Dictionary<string, string> LootKeyDescriptions = new()
+  {
+    ["enabled"] = "Whether custom loot is active for the entity.",
+    ["replace"] = "Whether the entity's default loot is replaced, otherwise custom loot fills the empty slots.",
+    ["items"] = "The list of items the entity can drop.",
+    ["item"] = "The item ID that can drop.",
+    ["minAmount"] = "The minimum amount of the item that can drop.",
+    ["maxAmount"] = "The maximum amount of the item that can drop.",
+    ["chance"] = "The chance the item drops, from 0 to 1.",
+  };
+
+  // Returns the description for a property in the currently selected data file, or null if there is none
+  private static string GetPropertyDescription(string propName)
+  {
+    if (_selectedDataFile == null) return null;
+    return _selectedDataFile.Name switch
+    {
+      "Custom Items" => ItemKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      "Custom Characters" => CharacterKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      "Custom Character Effects" => EffectKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      "Custom Crafting Recipes" => RecipeKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      "Custom Random Inventories" => RandomInvKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      "Custom Loot" => LootKeyDescriptions.TryGetValue(propName, out var d) ? d : null,
+      _ => null
+    };
+  }
 
   // Sound picker state for the Custom Character Effects editor
   private static string _soundPickerFor = "";
@@ -1209,16 +1392,23 @@ internal static class CustomUiPatch
     GUILayout.EndHorizontal();
 
     GUILayout.Space(6f);
+    GUILayout.BeginHorizontal();
+    GUILayout.Label("Search", GUILayout.Width(70f));
+    _enemySearch = GUILayout.TextField(_enemySearch, GUILayout.Width(200f));
+    GUILayout.EndHorizontal();
     GUILayout.Label("Quick spawn (click a name)");
     // No fixed height: fills the remaining window space like the other windows
     _enemyScroll = GUILayout.BeginScrollView(_enemyScroll);
+    var filteredEnemies = string.IsNullOrEmpty(_enemySearch)
+      ? _enemyNames
+      : [.. _enemyNames.Where(n => n.IndexOf(_enemySearch, StringComparison.OrdinalIgnoreCase) >= 0)];
     const int cols = 3;
-    for (var i = 0; i < _enemyNames.Length; i += cols)
+    for (var i = 0; i < filteredEnemies.Length; i += cols)
     {
       GUILayout.BeginHorizontal();
-      for (var j = 0; j < cols && i + j < _enemyNames.Length; j++)
+      for (var j = 0; j < cols && i + j < filteredEnemies.Length; j++)
       {
-        var name = _enemyNames[i + j];
+        var name = filteredEnemies[i + j];
         // Shorten the displayed name so three columns fit without a horizontal scrollbar, the full ID is still used for spawning
         var display = name.StartsWith("FakeChars/", StringComparison.Ordinal) ? name.Substring("FakeChars/".Length) : name;
         if (!GUILayout.Button(display)) continue;
@@ -1300,6 +1490,8 @@ internal static class CustomUiPatch
     _selectedDataFile = file;
     _dataSelectedKey = "";
     _dataNewKey = "";
+    _infoKey = "";
+    _infoText = "";
     PropBuffers.Clear();
   }
 
@@ -1333,12 +1525,19 @@ internal static class CustomUiPatch
     GUILayout.BeginHorizontal();
     // Left: top level keys of the json file, clicking one edits its object
     GUILayout.BeginVertical(GUILayout.Width(280f));
+    GUILayout.BeginHorizontal();
+    GUILayout.Label("Search", GUILayout.Width(50f));
+    _dataKeysSearch = GUILayout.TextField(_dataKeysSearch, GUILayout.Width(220f));
+    GUILayout.EndHorizontal();
     _dataKeysScroll = GUILayout.BeginScrollView(_dataKeysScroll);
     if (data != null)
     {
       // Left aligned buttons so long names are readable instead of clipped
       _leftButtonStyle ??= new GUIStyle(GUI.skin.button) { alignment = TextAnchor.MiddleLeft };
-      foreach (var prop in data.Properties())
+      var filtered = string.IsNullOrEmpty(_dataKeysSearch)
+        ? data.Properties()
+        : data.Properties().Where(p => p.Name.IndexOf(_dataKeysSearch, StringComparison.OrdinalIgnoreCase) >= 0);
+      foreach (var prop in filtered)
       {
         if (prop.Name == _dataSelectedKey)
         {
@@ -1347,6 +1546,8 @@ internal static class CustomUiPatch
         if (GUILayout.Button(prop.Name, _leftButtonStyle))
         {
           _dataSelectedKey = prop.Name;
+          _infoKey = "";
+          _infoText = "";
           SyncPropBuffers(prop.Value);
         }
         GUI.color = Color.white;
@@ -1368,9 +1569,16 @@ internal static class CustomUiPatch
     {
       GUILayout.Space(4f);
       GUILayout.Label("Available keys:", GUILayout.ExpandWidth(true));
+      GUILayout.BeginHorizontal();
+      GUILayout.Label("Search", GUILayout.Width(50f));
+      _itemKeysSearch = GUILayout.TextField(_itemKeysSearch, GUILayout.Width(220f));
+      GUILayout.EndHorizontal();
       var editorHeight = GetWindowRect(9006).height;
       _itemKeysScroll = GUILayout.BeginScrollView(_itemKeysScroll, GUILayout.Height(Mathf.Max(editorHeight * 0.35f, 120f)));
-      foreach (var key in ItemKeys)
+      var filteredKeys = string.IsNullOrEmpty(_itemKeysSearch)
+        ? ItemKeys
+        : ItemKeys.Where(k => k.Name.IndexOf(_itemKeysSearch, StringComparison.OrdinalIgnoreCase) >= 0);
+      foreach (var key in filteredKeys)
       {
         if (itemObj.ContainsKey(key.Name)) continue;
         if (!GUILayout.Button(key.Name, _leftButtonStyle)) continue;
@@ -1410,6 +1618,8 @@ internal static class CustomUiPatch
     GUILayout.EndVertical();
     GUILayout.EndHorizontal();
 
+    // Clicking the ? button next to a property shows its description here
+    DrawInfoBar();
   }
 
   private static void SyncPropBuffers(JToken value)
@@ -1428,6 +1638,22 @@ internal static class CustomUiPatch
     {
       GUILayout.BeginHorizontal();
       GUILayout.Label(prop.Name, GUILayout.Width(160f));
+      if (GUILayout.Button("?", GUILayout.Width(24f)))
+      {
+        if (_infoKey == prop.Name)
+        {
+          _infoKey = "";
+          _infoText = "";
+        }
+        else
+        {
+          _infoKey = prop.Name;
+          var desc = GetPropertyDescription(prop.Name);
+          _infoText = desc != null
+            ? prop.Name + ":\n" + desc
+            : prop.Name + ":\nNo description available.";
+        }
+      }
       if (!PropBuffers.TryGetValue(prop.Name, out var buffer))
       {
         buffer = prop.Value.Type == JTokenType.String ? prop.Value.Value<string>() : prop.Value.ToString(Formatting.None);
