@@ -51,8 +51,8 @@ internal static class DefensesPatch
     if (item == null || item.invItem == null) return false;
     var type = item.invItem.type;
     if (type.IndexOf("mushroom", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-    if (trigger.isBearTrap) return type.Equals("beartrap", StringComparison.OrdinalIgnoreCase);
-    if (trigger.isChainTrap) return type.Equals("chaintrap", StringComparison.OrdinalIgnoreCase);
+    if (trigger.isBearTrap) return type.Equals("beartrap", StringComparison.OrdinalIgnoreCase) || type.Equals("junk", StringComparison.OrdinalIgnoreCase);
+    if (trigger.isChainTrap) return type.Equals("chaintrap", StringComparison.OrdinalIgnoreCase) || type.Equals("junk", StringComparison.OrdinalIgnoreCase);
     if (trigger.isMutatedTrap) return true;
     return false;
   }
@@ -69,9 +69,9 @@ internal static class DefensesPatch
   public static void RespawnTick()
   {
     if (!Plugin.MushroomRespawn.Value && !Plugin.LootRespawn.Value) return;
-    if (Player.Instance == null || Singleton<Controller>.Instance == null) return;
+    if (!Player.Instance || !Singleton<Controller>.Instance) return;
     var bigLocation = Player.Instance.whereAmI?.bigLocation;
-    if (bigLocation == null) return;
+    if (!bigLocation) return;
     var locationName = bigLocation.name;
     var currentTime = Singleton<Controller>.Instance.totalTime;
 
