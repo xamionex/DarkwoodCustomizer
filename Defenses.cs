@@ -277,6 +277,14 @@ internal static class DefensesPatch
     __instance.active = false;
     __instance.canDisarm = false;
 
+    // Vanilla's Trigger.switchToTriggered() marks the item as a simple dropped-item pickup once it has an Inventory (see Item.getDroppedItem()), which is what lets the player grab the spent trap's loot directly with no popup.
+    // Since this prefix replaces OnAfterTrigger entirely (and never destroys Item/Inventory, so the trap can be picked back up after recharging), we have to set that flag ourselves otherwise Item.activate()/Item.disarm() fall through to the generic "search container" Inventory popup instead.
+    if (item != null)
+    {
+      item.isDroppedItem = true;
+      item.refreshName();
+    }
+
     RechargeQueue.Add(new RechargeRecord { Trap = __instance, ReadyTime = Time.time + rechargeTime, ArmedSprite = armedSprite });
 
     if (Plugin.DefensesLogging.Value)
@@ -308,6 +316,14 @@ internal static class DefensesPatch
       if (!sprite) sprite = trap.GetComponentInChildren<tk2dBaseSprite>();
       if (sprite && !string.IsNullOrEmpty(record.ArmedSprite))
         sprite.SetSprite(record.ArmedSprite);
+
+      // Undo the dropped-item marker from TrapRechargePrefix now that the trap is armed again, so it goes back to being disarm-able instead of a ground pickup.
+      var item = trap.GetComponent<Item>();
+      if (item)
+      {
+        item.isDroppedItem = false;
+        item.refreshName();
+      }
 
       trap.checkCollisions();
 
