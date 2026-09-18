@@ -126,7 +126,12 @@ internal class WorkbenchPatch
     var itemResourceObject = LoadResource(itemResource, true);
     if (itemResourceObject == null)
     {
-      itemResourceObject = ItemsDatabase.Instance.getItem(itemName, false).gameObject;
+      if (!ItemsDatabase.Instance.hasItem(itemName))
+      {
+        Plugin.Log.LogError($"{_logTypeFlag} Item '{itemName}' does not exist, skipping recipe.");
+        return;
+      }
+      itemResourceObject = ItemsDatabase.Instance.getItem(itemName, false)?.gameObject;
     }
     else
     {
@@ -137,7 +142,7 @@ internal class WorkbenchPatch
 
     if (itemResourceObject == null)
     {
-      Plugin.Log.LogError($"{_logTypeFlag} Item {itemName} does not exist, stopping as to not break the plugin!");
+      Plugin.Log.LogError($"{_logTypeFlag} Item {itemName} does not exist, skipping recipe.");
       return;
     }
 
