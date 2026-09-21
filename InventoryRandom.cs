@@ -22,7 +22,7 @@ internal class InventoryRandomizePatch
     }
     for (var i = 0; i < __instance.presets.Count; i++)
     {
-      if (__instance.presets[i] == null)
+      if (!__instance.presets[i])
       {
         continue;
       }
@@ -33,7 +33,7 @@ internal class InventoryRandomizePatch
         customRandomInventories[__instance.name]["presets"][i.ToString()] = new JObject();
         foreach (var item in __instance.presets[i].permittedItems)
         {
-          if (item.type == null)
+          if (!item.type)
           {
             Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item ({item}) with no type, skipping");
             continue;
@@ -62,7 +62,7 @@ internal class InventoryRandomizePatch
           continue;
         }
         var type = ItemsDatabase.Instance.getItem(typeName, false);
-        if (type == null)
+        if (!type)
         {
           Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with an invalid type, skipping");
           continue;

@@ -10,12 +10,16 @@ internal class PlayerPatch
   public static bool RefreshPlayer = true;
   private static Light2D _fovLight;
   private static LayerMask _originalFovLightShadowLayer;
+  // The game's own FoV, captured once per player instance before the mod overwrites it.
+  // Used to restore normal vision during the day while the night only FoV setting is on.
+  private static Player _fovPlayer;
+  private static float _vanillaFov;
   
   [HarmonyPatch(typeof(Player), "fireWeapon")]
   [HarmonyPostfix]
   private static void PlayerFiresWeapon()
   {
-    if (!Plugin.ItemsModification.Value) return;
+    if (!Plugin.CustomItemsModification.Value) return;
     JObject data;
     if (Plugin.CustomItems.TryGetValue(Player.Instance.currentItem.type, out var item))
     {
@@ -66,7 +70,23 @@ internal class PlayerPatch
   public static void PlayerRegistered(Player __instance)
   {
     RefreshPlayer = true;
+    // registerMe runs while the player is still untouched, so defaultFOV is the game's own value here
+    CaptureVanillaFov(__instance);
     __instance.maxHealth = Plugin.PlayerMaxHealth.Value;
+  }
+
+  private static void CaptureVanillaFov(Player player)
+  {
+    if (ReferenceEquals(_fovPlayer, player)) return;
+    _fovPlayer = player;
+    _vanillaFov = player.defaultFOV;
+  }
+
+  // Cutscenes set their own FoV, the night only FoV override must not fight them
+  private static bool IsCutscenePlaying()
+  {
+    var controller = Singleton<Controller>.Instance;
+    return controller && controller.playingCutscene;
   }
 
   [HarmonyPatch(typeof(Player), nameof(Player.Update))]
@@ -92,7 +112,7 @@ internal class PlayerPatch
       {
         Plugin.Log.LogWarning("Spawn Character was toggled but no character name was set");
       }
-      else if (Singleton<CharacterSpawner>.Instance == null)
+      else if (!Singleton<CharacterSpawner>.Instance)
       {
         Plugin.Log.LogWarning("Spawn Character was toggled but the character spawner is not available");
       }
@@ -100,7 +120,7 @@ internal class PlayerPatch
       {
         Plugin.Log.LogInfo($"Spawning character {Plugin.CheatsSpawnCharacterName.Value}");
         var character = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(__instance.gameObject, Vector3.zero, 300f, Plugin.CheatsSpawnCharacterName.Value, false);
-        if (character == null)
+        if (!character)
           Plugin.Log.LogWarning($"Failed to spawn character {Plugin.CheatsSpawnCharacterName.Value}: no free spot found or invalid type");
         else
           Plugin.Log.LogInfo($"Successfully spawned character {Plugin.CheatsSpawnCharacterName.Value}");
@@ -114,7 +134,7 @@ internal class PlayerPatch
         __instance.setInvisible(true);
       }
     }
-    else if (__instance.invisible && (__instance.effects == null || !__instance.effects.hasEffectType(CharacterEffectType.ninja)))
+    else if (__instance.invisible && (!__instance.effects || !__instance.effects.hasEffectType(CharacterEffectType.ninja)))
     {
       __instance.setInvisible(false);
     }
@@ -124,7 +144,7 @@ internal class PlayerPatch
       // The FOV light shadows walls around the player.
       // A zero shadow layer makes the vision mesh ignore walls, like fly-by mode does. 
       // The component is cached so the layer is only set once, setting it every frame would rebuild the vision mesh constantly.
-      if (_fovLight == null)
+      if (!_fovLight)
       {
         _fovLight = __instance._transform.Find("PlayerFOVLight").GetComponent<Light2D>();
         _originalFovLightShadowLayer = _fovLight.ShadowLayer;
@@ -134,7 +154,7 @@ internal class PlayerPatch
         _fovLight.ShadowLayer = 0;
       }
     }
-    else if (_fovLight != null)
+    else if (_fovLight)
     {
       if (_fovLight.ShadowLayer.value != _originalFovLightShadowLayer.value)
       {
@@ -147,7 +167,7 @@ internal class PlayerPatch
     {
       if (Plugin.EffectManagerApplyEffect.Value || Plugin.EffectManagerRemoveEffect.Value || Plugin.EffectManagerRemoveAllEffects.Value)
       {
-        if (__instance.effects == null)
+        if (!__instance.effects)
         {
           Plugin.Log.LogWarning("Effect manager was toggled but the player has no effects component");
           Plugin.EffectManagerApplyEffect.Value = false;
@@ -190,6 +210,9 @@ internal class PlayerPatch
       }
     }
 
+    // Keeps the effect manager toggles honored: disabled effects stay off, effects marked to re-apply on loss come back
+    CharacterEffectsPatch.EnforceConfiguredToggles(__instance);
+
     if (Plugin.PlayerModification.Value)
     {
       if (Plugin.PlayerInfiniteStamina.Value)
@@ -214,6 +237,14 @@ internal class PlayerPatch
       }
       else if (__instance.noClipMode) __instance.noClipMode = false;
 
+      CaptureVanillaFov(__instance);
+      // Night only FoV: the configured FoV replaces the game's own value at night and the original value comes back during the day. Runs every frame so dawn and dusk switch the FoV by themselves.
+      // Cutscenes set their own FoV, leave those alone.
+      if (Plugin.PlayerFOVNightOnly.Value && !IsCutscenePlaying())
+      {
+        __instance.currentDestFOV = Core.isDay() ? _vanillaFov : Plugin.PlayerFOV.Value;
+      }
+
       if (!RefreshPlayer) return;
       LogPlayer(__instance, true);
       
@@ -230,8 +261,17 @@ internal class PlayerPatch
       __instance.healthRegenInterval = Plugin.PlayerHealthRegenInterval.Value;
       __instance.healthRegenModifier = Plugin.PlayerHealthRegenModifier.Value;
       __instance.healthRegenValue = Plugin.PlayerHealthRegenValue.Value;
-      __instance.defaultFOV = Plugin.PlayerFOV.Value;
-      __instance.currentDestFOV = Plugin.PlayerFOV.Value;
+      if (Plugin.PlayerFOVNightOnly.Value)
+      {
+        // defaultFOV drives the game's own FoV logic (for example the Fearful skill tweens back to it), so it keeps the game's value and only the destination FoV is overridden
+        __instance.defaultFOV = _vanillaFov;
+        __instance.currentDestFOV = Core.isDay() ? _vanillaFov : Plugin.PlayerFOV.Value;
+      }
+      else
+      {
+        __instance.defaultFOV = Plugin.PlayerFOV.Value;
+        __instance.currentDestFOV = Plugin.PlayerFOV.Value;
+      }
 
       __instance.walkSpeed = Plugin.PlayerWalkSpeed.Value;
       __instance.runSpeed = Plugin.PlayerRunSpeed.Value;
@@ -248,14 +288,10 @@ internal class PlayerPatch
       
     Plugin.LogDivider();
     Plugin.Log.LogInfo(before ? "[Player] BEFORE MODIFICATION" : "[Player] AFTER MODIFICATION");
-    Plugin.Log.LogInfo(
-      $"[Player] Has {player.healthUpgrades} health upgrades. Expected base game health is {100 + player.healthUpgrades * 25}");
-    Plugin.Log.LogInfo(
-      $"[Player] MaxHP: {player.maxHealth} | HPR Interval: {player.healthRegenInterval} | HPR Modifier: {player.healthRegenModifier} | HPR Value: {player.healthRegenValue}");
-    Plugin.Log.LogInfo(
-      $"[Player] Max Stamina: {player.maxStamina} | SR Drain: {player.staminaRunDrainValue} | SR Regen: {player.staminaRegenValue}");
-    Plugin.Log.LogInfo(
-      $"[Player] WS: {player.walkSpeed} | RS: {player.runSpeed} | RS Modifier: {player.runSpeedModifier}");
+    Plugin.Log.LogInfo($"[Player] Has {player.healthUpgrades} health upgrades. Expected base game health is {100 + player.healthUpgrades * 25}");
+    Plugin.Log.LogInfo($"[Player] MaxHP: {player.maxHealth} | HPR Interval: {player.healthRegenInterval} | HPR Modifier: {player.healthRegenModifier} | HPR Value: {player.healthRegenValue}");
+    Plugin.Log.LogInfo($"[Player] Max Stamina: {player.maxStamina} | SR Drain: {player.staminaRunDrainValue} | SR Regen: {player.staminaRegenValue}");
+    Plugin.Log.LogInfo($"[Player] WS: {player.walkSpeed} | RS: {player.runSpeed} | RS Modifier: {player.runSpeedModifier}");
     Plugin.Log.LogInfo($"[Player] FoV: {player.currentDestFOV}");
     Plugin.LogDivider();
   }
@@ -270,5 +306,46 @@ internal class PlayerPatch
     {
       canInterrupt = false;
     }
+  }
+
+  // The cursor name shown for an armed trap is Language.Get(item.name, "Objects"), which is the raw prefab name ("beartrap") or the loot name a triggered trap was renamed to ("Scrap metal").
+  // Neither reflects the Recover Items settings, so put the reward text back in right after the cursor composed it.
+  // The pickup text of a triggered trap goes through Item.getRealName() instead, which ItemPatch already overrides.
+  [HarmonyPatch(typeof(Player), "selectObjectMouseAndKeyboard")]
+  [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
+  private static void TrapCursorTextMouse(Player __instance, Transform selectedTransform)
+  {
+    FixTrapCursorText(__instance, selectedTransform);
+  }
+
+  [HarmonyPatch(typeof(Player), "selectObjectController")]
+  [HarmonyPostfix]
+  // ReSharper disable once InconsistentNaming
+  private static void TrapCursorTextController(Player __instance, Transform selectedTransform)
+  {
+    FixTrapCursorText(__instance, selectedTransform);
+  }
+
+  private static void FixTrapCursorText(Player player, Transform selectedTransform)
+  {
+    if (!Plugin.DefensesModification.Value || !selectedTransform) return;
+
+    var item = selectedTransform.GetComponent<Item>();
+    if (!item || item.isDroppedItem) return;
+
+    var trigger = item.GetComponent<Trigger>();
+    if (!trigger || !DefensesPatch.IsTrapType(trigger)) return;
+
+    var reward = DefensesPatch.GetTrapRewardName(trigger);
+    if (reward == null) return;
+
+    if (!player.MouseText || !player.MouseText.activeInHierarchy) return;
+    var textMesh = player.MouseText.GetComponent<tk2dTextMesh>();
+    if (!textMesh) return;
+
+    // Only swap out the name the game itself wrote for this trap, never a label some other part of the UI has put there in the same frame.
+    if (textMesh.text != Language.Get(item.name, "Objects")) return;
+    textMesh.text = reward;
   }
 }

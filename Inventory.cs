@@ -235,9 +235,9 @@ internal class InventoryPatch
   }
 
   // ReSharper disable once InconsistentNaming
-  private static void ApplyCustomLoot(Inventory __instance)
+  internal static void ApplyCustomLoot(Inventory inventory)
   {
-    var name = __instance.gameObject.name;
+    var name = inventory.gameObject.name;
 
     if (!Plugin.LootModification.Value) return;
 
@@ -250,30 +250,30 @@ internal class InventoryPatch
 
     // Expand the inventory slots if the CustomLoot has more items than the inventory has slots.
     // This fixes the issue where editing an enemy's drop list to have more drops than its default slot count would silently drop the excess items.
-    if (lootItems is JArray lootArray && lootArray.Count > __instance.slots.Count)
+    if (lootItems is JArray lootArray && lootArray.Count > inventory.slots.Count)
     {
-      var isLootable = __instance.invType == Inventory.InvType.itemInv
-                       || __instance.invType == Inventory.InvType.deathDrop
-                       || __instance.gameObject.GetComponent<Character>() != null
-                       || __instance.gameObject.GetComponent<NPC>() != null;
+      var isLootable = inventory.invType == Inventory.InvType.itemInv
+                       || inventory.invType == Inventory.InvType.deathDrop
+                       || inventory.gameObject.GetComponent<Character>()
+                       || inventory.gameObject.GetComponent<NPC>();
       if (isLootable)
       {
-        var oldCount = __instance.slots.Count;
-        while (__instance.slots.Count < lootArray.Count)
-          __instance.slots.Add(new InvSlot());
+        var oldCount = inventory.slots.Count;
+        while (inventory.slots.Count < lootArray.Count)
+          inventory.slots.Add(new InvSlot());
         if (Plugin.LogDebug.Value)
-          Plugin.Log.LogInfo($"[CustomLoot] Expanded '{name}' from {oldCount} to {__instance.slots.Count} slots to fit configured drops");
+          Plugin.Log.LogInfo($"[CustomLoot] Expanded '{name}' from {oldCount} to {inventory.slots.Count} slots to fit configured drops");
       }
     }
 
-    for (var i = 0; i < __instance.slots.Count; i++)
+    for (var i = 0; i < inventory.slots.Count; i++)
     {
       // InvSlot instances are never null, so only slots that actually contain an item count as occupied.
       // replace=false keeps the default loot in occupied slots and fills only the empty ones.
-      var slot = __instance.slots[i];
-      if (!(bool)replaceSlot && (slot.item != null || !InvItemClass.isNull(slot.invItem))) continue;
+      var slot = inventory.slots[i];
+      if (!(bool)replaceSlot && (slot.item || !InvItemClass.isNull(slot.invItem))) continue;
 
-      // Get the item data for the current slot
+      // Get the item data for the current slot.
       // lootItems can have less or more than this inventories slots
       var itemData = (JObject)lootItems?[i];
       if (itemData == null) continue;

@@ -18,8 +18,40 @@ internal class InvItemClassPatch
   // ReSharper disable once InconsistentNaming
   public static void ItemPatch(InvItemClass __instance)
   {
+    // The items section handles the stack size and durability tweaks, the custom items section handles everything loaded from Customs/CustomItems.json
+    if (!Plugin.ItemsModification.Value && !Plugin.CustomItemsModification.Value) return;
+    if (Singleton<Dreams>.Instance.dreaming || !__instance.baseClass) return;
+
+    if (Plugin.CustomItemsModification.Value)
+    {
+      // This runs for every single InvItemClass the game creates, which includes Player.Start().
+      // A single bad entry must never throw out of here: an exception inside Player.Start() skips the rest of the player setup, which leaves the inventory components disabled (so the inventory, hotbar and crafting windows are never initialized and sit at the origin) and the click handlers unregistered (so nothing in the world can be disarmed, picked up or opened).
+      try
+      {
+        ApplyCustomItemValues(__instance);
+      }
+      catch (System.Exception e)
+      {
+        Plugin.Log.LogError($"[Items] Failed to apply Custom Items values for '{__instance.type}': {e.Message}");
+      }
+    }
+
     if (!Plugin.ItemsModification.Value) return;
-    if (Singleton<Dreams>.Instance.dreaming || __instance.baseClass == null) return;
+    if (Plugin.UseGlobalStackSize.Value)
+    {
+      __instance.baseClass.maxAmount = Plugin.StackResize.Value;
+    }
+
+    if (Plugin.UseGlobalMaxDurability.Value && __instance.baseClass.hasDurability)
+    {
+      __instance.baseClass.maxDurability = Plugin.MaxDurability.Value;
+    }
+  }
+
+  // Creates the missing entries in CustomItems.json, logs the item for the wiki and applies the values from the mod defaults and your own file
+  // ReSharper disable once InconsistentNaming
+  private static void ApplyCustomItemValues(InvItemClass __instance)
+  {
     var type = __instance.baseClass.type ?? __instance.type;
     var typeRotten = __instance.baseClass?.rottenItem;
     var icon = __instance.baseClass?.iconType ?? __instance.baseClass.name;
@@ -97,19 +129,16 @@ internal class InvItemClassPatch
       File.WriteAllText(logPath, _logStats);
     }
 
-    if (!Plugin.ItemsModification.Value) return;
     if (Plugin.CustomItemsUseDefaults.Value)
       SetItemValues(__instance, (JObject)Plugin.DefaultCustomItems[__instance.type]);
     SetItemValues(__instance, (JObject)Plugin.CustomItems[__instance.type]);
-    if (Plugin.UseGlobalStackSize.Value)
-    {
-      __instance.baseClass.maxAmount = Plugin.StackResize.Value;
-    }
+  }
 
-    if (Plugin.UseGlobalMaxDurability.Value && __instance.baseClass.hasDurability)
-    {
-      __instance.baseClass.maxDurability = Plugin.MaxDurability.Value;
-    }
+  // The flamethrower values are read off the item's world prefab, which several item types do not have (fists and other items that are never dropped or placed have a null item prefab), so every access has to be checked.
+  // A NullReferenceException here used to abort the caller, which for Player.Start() meant the rest of the player setup never ran.
+  private static T GetPrefabComponent<T>(InvItemClass item) where T : Component
+  {
+    return item?.baseClass?.item is GameObject prefab ? prefab.GetComponent<T>() : null;
   }
 
   private static void SetItemValues(InvItemClass currentItem, JObject data)
@@ -156,9 +185,29 @@ internal class InvItemClassPatch
     if (data["repairable"] != null && bool.TryParse(data["repairable"]?.Value<string>(), out var repairable))
       currentItem.baseClass.repairable = repairable;
     if (data["flamethrowerdrag"] != null && float.TryParse(data["flamethrowerdrag"]?.Value<string>(), out var drag))
-      ((GameObject)currentItem.baseClass.item).GetComponent<Rigidbody>().drag = drag;
+    {
+      var dragBody = GetPrefabComponent<Rigidbody>(currentItem);
+      if (dragBody)
+      {
+        dragBody.drag = drag;
+      }
+      else
+      {
+        Plugin.Log.LogWarning($"[Items] Cannot apply flamethrowerdrag to '{currentItem.type}', its item prefab has no Rigidbody (items like fists have no world prefab)");
+      }
+    }
     if (data["flamethrowercontactDamage"] != null && int.TryParse(data["flamethrowercontactDamage"]?.Value<string>(), out var contactDamage))
-      ((GameObject)currentItem.baseClass.item).GetComponent<Flame>().contactDamage = contactDamage;
+    {
+      var flame = GetPrefabComponent<Flame>(currentItem);
+      if (flame)
+      {
+        flame.contactDamage = contactDamage;
+      }
+      else
+      {
+        Plugin.Log.LogWarning($"[Items] Cannot apply flamethrowercontactDamage to '{currentItem.type}', its item prefab has no Flame component (items like fists have no world prefab)");
+      }
+    }
     if (data["damage"] != null && int.TryParse(data["damage"]?.Value<string>(), out var damage)) currentItem.baseClass.damage = damage;
     if (data["clipSize"] != null && int.TryParse(data["clipSize"]?.Value<string>(), out var clipSize)) currentItem.baseClass.clipSize = clipSize;
     if (data["value"] != null && int.TryParse(data["value"]?.Value<string>(), out var value)) currentItem.baseClass.value = value;
@@ -326,7 +375,7 @@ internal class InvItemClassPatch
     if (data.ContainsKey("rottenItem"))
     {
       var rottenItem = ItemsDatabase.Instance.getItem(data["rottenItem"].Value<string>());
-      if (rottenItem != null) currentItem.baseClass.rottenItem = rottenItem;
+      if (rottenItem) currentItem.baseClass.rottenItem = rottenItem;
     }
 
     if (data["rottenItemMaxAmount"] != null && int.TryParse(data["rottenItemMaxAmount"]?.Value<string>(), out var rottenItemMaxAmount))
@@ -346,12 +395,11 @@ internal class InvItemClassPatch
   // ReSharper disable once InconsistentNaming
   private static bool PreventDurabilityDrain(InvItemClass __instance)
   {
-    if (!Plugin.ItemsModification.Value) return true;
+    if (!Plugin.CustomItemsModification.Value) return true;
 
     var type = __instance.baseClass?.type ?? __instance.type;
 
-    var infinite = Plugin.CustomItems[type] is JObject j && j["InfiniteDurability"]?.Value<bool>() == true ||
-                   Plugin.DefaultCustomItems[type] is JObject j2 && j2["InfiniteDurability"]?.Value<bool>() == true;
+    var infinite = Plugin.CustomItems[type] is JObject j && j["InfiniteDurability"]?.Value<bool>() == true || Plugin.DefaultCustomItems[type] is JObject j2 && j2["InfiniteDurability"]?.Value<bool>() == true;
 
     return !infinite; // skip original if infinite
   }

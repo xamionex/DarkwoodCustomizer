@@ -35,7 +35,7 @@ internal static class CraftingPatch
     private static void Prefix_DoCraft(CraftingRecipes __instance, CraftingRecipes.Recipe __0)
     {
         var invItem = __instance.GetComponent<InvItem>();
-        if (invItem != null && invItem.isWorkbenchUpgrade)
+        if (invItem && invItem.isWorkbenchUpgrade)
         {
             PendingUpgradeRecipe[__instance] = __0;
         }
@@ -57,23 +57,7 @@ internal static class CraftingPatch
 
         // Remove the upgrade item from player inventory, hotbar, and workbench storage.
         // This handles cases where the vanilla removeItem() failed because the item was stackable and merged into an existing stack.
-        foreach (var slot in Player.Instance.Inventory.slots)
-        {
-            if (remaining <= 0) break;
-            if (InvItemClass.isNull(slot.invItem) || slot.invItem.type != itemType) continue;
-            if (slot.invItem.amount <= remaining)
-            {
-                remaining -= slot.invItem.amount;
-                slot.removeItem();
-            }
-            else
-            {
-                slot.invItem.amount -= remaining;
-                slot.invItem.refresh();
-                remaining = 0;
-            }
-        }
-        foreach (var slot in Player.Instance.Hotbar.slots.TakeWhile(slot => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
+        foreach (var slot in Player.Instance.Inventory.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
         {
             if (slot.invItem.amount <= remaining)
             {
@@ -87,9 +71,23 @@ internal static class CraftingPatch
                 remaining = 0;
             }
         }
-        if (Player.Instance.openedItemInventory2 != null)
+        foreach (var slot in Player.Instance.Hotbar.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
         {
-            foreach (var slot in Player.Instance.openedItemInventory2.slots.TakeWhile(slot => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
+            if (slot.invItem.amount <= remaining)
+            {
+                remaining -= slot.invItem.amount;
+                slot.removeItem();
+            }
+            else
+            {
+                slot.invItem.amount -= remaining;
+                slot.invItem.refresh();
+                remaining = 0;
+            }
+        }
+        if (Player.Instance.openedItemInventory2)
+        {
+            foreach (var slot in Player.Instance.openedItemInventory2.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
             {
                 if (slot.invItem.amount <= remaining)
                 {

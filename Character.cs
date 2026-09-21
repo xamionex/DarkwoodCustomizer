@@ -50,7 +50,7 @@ internal class CharacterPatch
   // ReSharper disable once InconsistentNaming
   public static void UpdateCharacterValues(Character __instance, JToken stats, string name, bool updateHealth = false)
   {
-    if (__instance == null) return;
+    if (!__instance) return;
     var maxHealth = stats["Health"]?.Value<float>() ?? __instance.maxHealth;
     if (!Mathf.Approximately(maxHealth, __instance.maxHealth))
     {
@@ -94,7 +94,7 @@ internal class CharacterPatch
             barricadeDamage = newBarricadeDamage;
             File.WriteAllText(Plugin.CustomCharactersPath, JsonConvert.SerializeObject(Plugin.CustomCharacters, Formatting.Indented));
           }
-          switch ((damage == null, barricadeDamage == null))
+          switch (damage == null, barricadeDamage == null)
           {
             case (true, true):
               Plugin.Log.LogWarning($"[CHARACTER] {name} has a corrupted attack damage AND barricade damage, this most likely happened because this charracter is peaceful, skipping!");

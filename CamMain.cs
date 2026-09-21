@@ -24,7 +24,8 @@ internal class CamMainPatch
     // ReSharper disable once InconsistentNaming
     public static void CamUpdate(CamMain __instance)
     {
-        if (Plugin.PlayerModification.Value)
+        // This also runs on the title screen and during loading, where there is no player yet
+        if (Plugin.PlayerModification.Value && Player.Instance && Player.Instance.skills)
         {
             __instance.seeDistance = Player.Instance.skills.Farsight ? Plugin.PlayerFarSight.Value : Plugin.PlayerSight.Value;
         }

@@ -14,7 +14,7 @@ internal static class FlamethrowerPatch
     // ReSharper disable once InconsistentNaming
     private static void Prefix_FlameContact(Flame __instance)
     {
-        if (!Plugin.ItemsModification.Value) return;
+        if (!Plugin.CustomItemsModification.Value) return;
 
         if (Player.Instance.currentItem == null || Player.Instance.currentItem.type != "flamethrower") return;
         if (!Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) || itemData is not JObject data) return;
@@ -56,8 +56,7 @@ internal static class FlamethrowerPatch
 
     public static float GetCustomBurnDamage(float originalModifier)
     {
-        if (!Plugin.ItemsModification.Value || !Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) ||
-            itemData is not JObject data) return originalModifier;
+        if (!Plugin.CustomItemsModification.Value || !Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) || itemData is not JObject data) return originalModifier;
         var burnDmgToken = data["flamethrowerBurnDamage"];
         return burnDmgToken?.Value<float>() ?? originalModifier;
     }

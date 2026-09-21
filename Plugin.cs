@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -30,6 +31,9 @@ internal class Plugin : BaseUnityPlugin
   public static float LastLootSaveTime;
   public static bool SaveLoot;
   public static float SavedLootCooldown;
+  public static float LastCraftingRecipesSaveTime;
+  public static bool SaveCraftingRecipes;
+  public static float SavedCraftingRecipesCooldown;
   public static ManualLogSource Log;
   public static Plugin Instance;
   private static FileSystemWatcher _fileWatcher;
@@ -42,6 +46,7 @@ internal class Plugin : BaseUnityPlugin
   private static ConfigEntry<string> _modVersion;
   public static ConfigEntry<bool> LogDebug;
   public static ConfigEntry<bool> LogWorkbench;
+  public static ConfigEntry<bool> AlwaysShowKeyPickers;
 
   // Items Values
   public static ConfigEntry<bool> UseGlobalStackSize;
@@ -54,6 +59,7 @@ internal class Plugin : BaseUnityPlugin
   public static ConfigEntry<bool> ChainTrapRecovery;
   public static ConfigEntry<bool> ChainTrapRecoverySwitch;
   public static ConfigEntry<bool> CustomItemsUseDefaults;
+  public static ConfigEntry<bool> CustomItemsModification;
 
   public static string CustomItemsPath => Path.Combine(JsonConfigPath, "CustomItems.json");
   private static readonly string DefaultsCustomItemsPath = Path.Combine(DefaultsConfigPath, "CustomItems.json");
@@ -215,6 +221,8 @@ internal class Plugin : BaseUnityPlugin
   {
     spring = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 2,
       resource = "spring",
       givesamount = 1,
@@ -226,6 +234,8 @@ internal class Plugin : BaseUnityPlugin
     },
     ammo_clip_mediumCal = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 3,
       resource = "ammo_clip_mediumCal",
       givesamount = 1,
@@ -238,6 +248,8 @@ internal class Plugin : BaseUnityPlugin
     },
     ammo_clip_smallCal = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 3,
       resource = "ammo_clip_smallCal",
       givesamount = 1,
@@ -250,6 +262,8 @@ internal class Plugin : BaseUnityPlugin
     },
     ammo_single_mediumCal = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 4,
       resource = "ammo_single_mediumCal",
       givesamount = 2,
@@ -261,6 +275,8 @@ internal class Plugin : BaseUnityPlugin
     },
     knife = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 2,
       resource = "knife",
       givesamount = 1,
@@ -274,6 +290,8 @@ internal class Plugin : BaseUnityPlugin
     },
     weapon_flamethrower_homeMade = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 4,
       resource = "weapon_flamethrower_homeMade",
       givesamount = 1,
@@ -285,6 +303,8 @@ internal class Plugin : BaseUnityPlugin
     },
     weapon_submachine_01_full = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 4,
       resource = "weapon_submachine_01_full",
       givesamount = 1,
@@ -297,6 +317,8 @@ internal class Plugin : BaseUnityPlugin
     },
     weapon_pistol_01_pellet = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 3,
       resource = "weapon_pistol_01_pellet",
       givesamount = 1,
@@ -309,6 +331,8 @@ internal class Plugin : BaseUnityPlugin
     },
     weapon_assault_01_burst = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 4,
       resource = "weapon_assault_01_burst",
       givesamount = 1,
@@ -321,6 +345,8 @@ internal class Plugin : BaseUnityPlugin
     },
     ammo_single_pellet = new
     {
+      enabled = true,
+      replace = true,
       requiredlevel = 4,
       resource = "ammo_single_pellet",
       givesamount = 8,
@@ -351,6 +377,7 @@ internal class Plugin : BaseUnityPlugin
   // Player Values
   public static ConfigEntry<bool> PlayerModification;
   public static ConfigEntry<float> PlayerFOV;
+  public static ConfigEntry<bool> PlayerFOVNightOnly;
   public static ConfigEntry<float> PlayerSight;
   public static ConfigEntry<float> PlayerFarSight;
   public static ConfigEntry<bool> PlayerCantGetInterrupted;
@@ -517,21 +544,21 @@ internal class Plugin : BaseUnityPlugin
     Config.Bind("!Mod", "Enable Debug Logs for Items", false, new ConfigDescription("Whether to log every item, only called when the game is loading the specific item\nItems loaded by the game are saved to ItemLog.log and any items the mod changes are also logged to the bepinex log", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     Config.Bind("!Mod", "Enable Debug Logs for Characters", false, new ConfigDescription("Whether to log every character, called when the game is load the specific character\nRS=Run Speed, WS=Walk Speed\nRead the extended documentation in the Characters config", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     LogWorkbench = Config.Bind("!Mod", "Enable Debug Logs for Workbench", false, new ConfigDescription("Whether to log every time a custom recipe is added to the workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    AlwaysShowKeyPickers = Config.Bind("!Mod", "Always Show Key Pickers", false, new ConfigDescription("Debug, keeps the available keys pickers of the Custom Data editor visible even when there is nothing left to add to the selected entry", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     _modVersion.Value = PluginInfo.PluginVersion;
     Config.Save();
 
     // Items
-    ItemsModification = Config.Bind("Items", "Enable Section", true, new ConfigDescription("Enable this section of the mod, This section does require save reloads for everything except trap recoveries", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    BearTrapRecovery = Config.Bind("Items", "BearTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    BearTrapRecoverySwitch = Config.Bind("Items", "BearTrap Recover Items", true, new ConfigDescription("false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ChainTrapRecovery = Config.Bind("Items", "ChainTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ChainTrapRecoverySwitch = Config.Bind("Items", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ItemsModification = Config.Bind("Items", "Enable Section", true, new ConfigDescription("Enable this section of the mod, This section does require save reloads", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UseGlobalStackSize = Config.Bind("Items", "Enable Global Stack Size", false, new ConfigDescription("Whether to use a global stack size for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     StackResize = Config.Bind("Items", "Global Stack Resize", 50, new ConfigDescription("Number for all item stack sizes to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     UseGlobalMaxDurability = Config.Bind("Items", "Enable Global Max Durability", false, new ConfigDescription("Whether to use a global max durability for all items.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     MaxDurability = Config.Bind("Items", "Global Max Durability", 100, new ConfigDescription("Number for all item max durability to be set to.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     CustomItems = (JObject)GetJsonConfig(CustomItemsPath, new JObject());
     CustomItemsUseDefaults = Config.Bind("Items", "Load Mod Defaults First", true, new ConfigDescription("Whether or not to load mod defaults first and then customs you have\nDon't worry about duplicates, they will be overwritten", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    // Custom items loading has its own section so it can be toggled separately from the items section
+    CustomItemsModification = Config.Bind("CustomItems", "Enable Section", true, new ConfigDescription("Whether the custom items from Customs/CustomItems.json are applied to the game\nDisable this to keep the game's own item values, the rest of the Items section still works", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    Config.Bind("CustomItems", "Note", "ReadMePlease", new ConfigDescription("Items are written into Customs/CustomItems.json as the game loads them, the in-game editor is the Custom Items window\nLoad Mod Defaults First decides whether the mod's own defaults in ModDefaults/CustomItems.json are applied before your file", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Inventories
     WorkbenchInventoryModification = Config.Bind("Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -600,6 +627,7 @@ internal class Plugin : BaseUnityPlugin
     // Player
     PlayerModification = Config.Bind("Player", "Enable Section", false, new ConfigDescription("Enable this section of the mod, This section does not require restarts", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerFOV = Config.Bind("Player", "Player FoV", 90f, new ConfigDescription("Set your players' FoV (370 recommended, set to 720 if you want to always see everything)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    PlayerFOVNightOnly = Config.Bind("Player", "Player FoV at Night Only", false, new ConfigDescription("When enabled, the Player FoV above is only applied during the night\nThe game's default FoV is used during the day, so you get normal vision in daylight and the wide FoV only in the dark", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerSight = Config.Bind("Player", "Player Sight Distance", 3.4f, new ConfigDescription("Set players' sight, affects normal sight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerFarSight = Config.Bind("Player", "Player Eagle Eye Distance", 5.2f, new ConfigDescription("Set players' sight, affects farsight only", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     PlayerCantGetInterrupted = Config.Bind("Player", "Cant Get Interrupted", false, new ConfigDescription("If set to true you can't get stunned, your cursor will reset color but remember that you're still charged, it just doesn't show it", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -629,7 +657,6 @@ internal class Plugin : BaseUnityPlugin
     // Player Skills
     PlayerSkillsModification = Config.Bind("Skills", "Enable modification of skills", false, new ConfigDescription("Enables this section of the mod", null, new ConfigurationManagerAttributes { Order = i-- }));
     Config.Bind("Skills", "README", "VERY IMPORTANT READ HOVER TEXT", new ConfigDescription("This section is responsible for skills, by enabling the above you also disable all skills in the game, you need to enable the ones you want", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    Config.Bind("Skills", "AI WARNING", "VERY IMPORTANT READ HOVER TEXT", new ConfigDescription("This section was PARTIALLY GENERATED BY AN AI where it was given the decompiled code to the game with rules it must follow, I didn't have much more time to test it. All I know is that you must reload your save for it to refresh. Shoot me a message for me to fix something if it doesn't work correctly.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     
     PlayerSkillEagleEye = Config.Bind("Skills - Tier 1 - Positive", "Enable Eagle Eye", false, new ConfigDescription("Enables the skill that lets you see farther", null, new ConfigurationManagerAttributes { Order = i-- }));
     PlayerSkillMoth = Config.Bind("Skills - Tier 1 - Positive", "Enable Moth", false, new ConfigDescription("Enables the skill that lets you heal by standing next to electric light", null, new ConfigurationManagerAttributes { Order = i-- }));
@@ -733,6 +760,10 @@ internal class Plugin : BaseUnityPlugin
     // Defenses
     DefensesModification = Config.Bind("Defenses", "Enable Section", false, new ConfigDescription("Enable this section of the mod, affects barricades (windows and doors) and traps\nMost options here do not require a save reload, exceptions are noted in their descriptions", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     DefensesLogging = Config.Bind("Defenses", "Enable Debug Logs", false, new ConfigDescription("Logs original and modified values for barricades and traps, useful to verify the section works", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapRecovery = Config.Bind("Defenses", "BearTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    BearTrapRecoverySwitch = Config.Bind("Defenses", "BearTrap Recover Items", true, new ConfigDescription("false = beartrap disarm gives a beartrap\ntrue = beartrap disarm gives 3 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapRecovery = Config.Bind("Defenses", "ChainTrap Recovery", true, new ConfigDescription("Enables the option below", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapRecoverySwitch = Config.Bind("Defenses", "ChainTrap Recover Items", true, new ConfigDescription("false = chaintrap disarm gives a chaintrap\ntrue = chaintrap disarm gives 2 scrap metal", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     BarricadeHealthModification = Config.Bind("Defenses", "Barricade Health Modification", false, new ConfigDescription("Enables the barricade health multiplier below\nApplies to new barricades and existing ones on the next save load", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     BarricadeHealthMultiplier = Config.Bind("Defenses", "Barricade Health Multiplier", 1f, new ConfigDescription("Multiplies the max health of barricades (windows and doors) when they are barricaded\n1 = default, 2 = double health, 0.5 = half health\nOnly applies to new barricades or existing ones on the next save load", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     BarricadeHealing = Config.Bind("Defenses", "Enable Barricade Healing", false, new ConfigDescription("Heals damaged barricades (windows and doors) over time, applies to all barricaded windows and doors", null, new ConfigurationManagerAttributes { Order = i-=1 }));
@@ -745,12 +776,12 @@ internal class Plugin : BaseUnityPlugin
     BearTrapRechargeTime = Config.Bind("Defenses", "BearTrap Recharge Time", 30f, new ConfigDescription("Seconds before a triggered beartrap resets itself and can trap again", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     ChainTrapDamageModification = Config.Bind("Defenses", "Enable ChainTrap Damage Modification", false, new ConfigDescription("Enables the chaintrap damage override below\nWhen enabled, the damage value is applied to chaintraps, 0 = 0 damage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     ChainTrapDamage = Config.Bind("Defenses", "ChainTrap Damage", 0, new ConfigDescription("Damage dealt by chaintraps when they trigger\nOnly applies when the damage modification is enabled above", null, new ConfigurationManagerAttributes { Order = i-=1 }));
-    ChainTrapAutoRecharge = Config.Bind("Defenses", "ChainTrap Auto Recharge", false, new ConfigDescription("When enabled, a triggered chaintrap resets itself after the configured time so it can trap again\nThe trap stays in the world in its triggered state until it recharges", null, new ConfigurationManagerAttributes { Order = i-=1 }));
+    ChainTrapAutoRecharge = Config.Bind("Defenses", "ChainTrap Auto Recharge", false, new ConfigDescription("When enabled, a triggered chaintrap is placed back at the same spot after the configured time so it can trap again\nThe trap disappears like vanilla when it triggers, leaving only the chain on its victim, and the respawn works across saving and loading", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     ChainTrapRechargeTime = Config.Bind("Defenses", "ChainTrap Recharge Time", 30f, new ConfigDescription("Seconds before a triggered chaintrap resets itself and can trap again", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     // ReSharper restore RedundantAssignment
   }
 
-  private void MakeDefaults()
+  private static void MakeDefaults()
   {
     if (!Directory.Exists(DefaultsConfigPath))
       Directory.CreateDirectory(DefaultsConfigPath);
@@ -788,6 +819,8 @@ internal class Plugin : BaseUnityPlugin
     Migrate128Configs();
     // MISC to Enemies migration check
     MigrateMiscToEnemies();
+    // Traps moved from Items to Defenses migration check
+    MigrateTrapsToDefenses();
 
     BepinexBindings();
     MakeDefaults();
@@ -871,8 +904,7 @@ internal class Plugin : BaseUnityPlugin
 
   public void Update()
   {
-    // Drive the hotkey capture while rebinding, and ignore all other keybinds
-    // until the new combo is committed or cancelled
+    // Drive the hotkey capture while rebinding, and ignore all other keybinds until the new combo is committed or canceled.
     if (CustomUiPatch.IsCapturingHotkey)
     {
       CustomUiPatch.PollHotkeyCapture();
@@ -960,6 +992,7 @@ internal class Plugin : BaseUnityPlugin
   {
     DefensesPatch.FixedUpdateTick();
     DefensesPatch.RespawnTick();
+    CustomUiPatch.WarmUpStep();
     if (SavedItemsCooldown < 0f) SavedItemsCooldown = 0f;
     else SavedItemsCooldown -= 0.1f;
     if (SavedCharactersCooldown < 0f) SavedCharactersCooldown = 0f;
@@ -970,6 +1003,8 @@ internal class Plugin : BaseUnityPlugin
     else SavedCharacterEffectsCooldown -= 0.1f;
     if (SavedLootCooldown < 0f) SavedLootCooldown = 0f;
     else SavedLootCooldown -= 0.1f;
+    if (SavedCraftingRecipesCooldown < 0f) SavedCraftingRecipesCooldown = 0f;
+    else SavedCraftingRecipesCooldown -= 0.1f;
     if (Time.time - LastItemsSaveTime > 0.8f && SaveItems)
     {
       SaveJsonFile(CustomItemsPath, CustomItems);
@@ -1004,6 +1039,13 @@ internal class Plugin : BaseUnityPlugin
       LastLootSaveTime = Time.time;
       SavedLootCooldown += 1f;
       SaveLoot = false;
+    }
+    if (Time.time - LastCraftingRecipesSaveTime > 0.8f && SaveCraftingRecipes)
+    {
+      SaveJsonFile(CustomCraftingRecipesPath, CustomCraftingRecipes);
+      LastCraftingRecipesSaveTime = Time.time;
+      SavedCraftingRecipesCooldown += 1f;
+      SaveCraftingRecipes = false;
     }
   }
 
@@ -1124,7 +1166,7 @@ internal class Plugin : BaseUnityPlugin
     File.WriteAllText(jsonPath, JsonConvert.SerializeObject(jsonData, Formatting.Indented));
   }
 
-  private void Migrate126Configs()
+  private static void Migrate126Configs()
   {
     // 1.2.6 migration check
     // Move JSON files
@@ -1144,16 +1186,14 @@ internal class Plugin : BaseUnityPlugin
     string[] oldDefaultsFolders = [Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "defaults"), Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "VanillaDefaults")];
     foreach (var oldDefaultsFolder in oldDefaultsFolders)
     {
-      if (Directory.Exists(oldDefaultsFolder))
-      {
-        Directory.Delete(oldDefaultsFolder, true);
-        Log.LogInfo($"Deleted old defaults folder at \"{oldDefaultsFolder}\"");
-      }
+      if (!Directory.Exists(oldDefaultsFolder)) continue;
+      Directory.Delete(oldDefaultsFolder, true);
+      Log.LogInfo($"Deleted old defaults folder at \"{oldDefaultsFolder}\"");
     }
   }
 
 
-  private void Migrate128Configs()
+  private static void Migrate128Configs()
   {
     // 1.2.8 migration check
     var oldLanternConfig = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "Lantern.cfg");
@@ -1185,11 +1225,10 @@ internal class Plugin : BaseUnityPlugin
     }
   }
 
-  private void MigrateMiscToEnemies()
+  private static void MigrateMiscToEnemies()
   {
     // 1.6.6 migration check
-    // The MISC section was renamed to Enemies, move the old section header so
-    // existing values are preserved instead of being reset to defaults
+    // The MISC section was renamed to Enemies, move the old section header so existing values are preserved instead of being reset to defaults
     var configPath = Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGuid}.cfg");
     if (!File.Exists(configPath)) return;
     var lines = File.ReadAllLines(configPath);
@@ -1226,7 +1265,75 @@ internal class Plugin : BaseUnityPlugin
     }
   }
 
-  private void Migrate133Configs()
+  // 1.7.2 migration check: the trap recovery settings moved from the Items section to Defenses.
+  // This runs whenever the old keys are still under Items, so it does not depend on the version number (the dev builds of 1.7.2 share it with the release) and it is a no-op once moved.
+  private static void MigrateTrapsToDefenses()
+  {
+    var configPath = Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGuid}.cfg");
+    if (!File.Exists(configPath)) return;
+    var lines = File.ReadAllLines(configPath);
+
+    HashSet<string> trapKeys = ["BearTrap Recovery", "BearTrap Recover Items", "ChainTrap Recovery", "ChainTrap Recover Items"];
+
+    // Take the old lines out of the Items section first
+    var oldLines = new Dictionary<string, string>();
+    var result = new List<string>(lines.Length);
+    var inItems = false;
+    foreach (var line in lines)
+    {
+      var trimmed = line.TrimStart();
+      if (trimmed.StartsWith("[", StringComparison.Ordinal)) inItems = trimmed.StartsWith("[Items]", StringComparison.Ordinal);
+      var key = inItems ? GetConfigKey(line) : null;
+      if (key != null && trapKeys.Contains(key))
+      {
+        oldLines[key] = line.Trim();
+        continue;
+      }
+      result.Add(line);
+    }
+
+    if (oldLines.Count == 0) return;
+
+    // Then put them into the Defenses section, the old value wins over a key that is already there
+    var inDefenses = false;
+    var replaced = new HashSet<string>();
+    var defensesHeader = -1;
+    for (var i = 0; i < result.Count; i++)
+    {
+      var trimmed = result[i].TrimStart();
+      if (trimmed.StartsWith("[", StringComparison.Ordinal))
+      {
+        inDefenses = trimmed.StartsWith("[Defenses]", StringComparison.Ordinal);
+        if (inDefenses) defensesHeader = i;
+      }
+      var key = inDefenses ? GetConfigKey(result[i]) : null;
+      if (key == null || !oldLines.TryGetValue(key, out var movedLine)) continue;
+      result[i] = movedLine;
+      replaced.Add(key);
+    }
+
+    if (defensesHeader < 0)
+    {
+      result.Add("[Defenses]");
+      defensesHeader = result.Count - 1;
+    }
+
+    var toAppend = (from pair in oldLines where !replaced.Contains(pair.Key) select pair.Value).ToList();
+    if (toAppend.Count > 0) result.InsertRange(defensesHeader + 1, toAppend);
+
+    File.WriteAllLines(configPath, result);
+    Log.LogInfo($"Moved {oldLines.Count} trap settings from the Items section to the Defenses section");
+  }
+
+  private static string GetConfigKey(string line)
+  {
+    var trimmed = line.TrimStart();
+    if (trimmed.StartsWith("#", StringComparison.Ordinal)) return null;
+    var separator = trimmed.IndexOf('=');
+    return separator > 0 ? trimmed.Substring(0, separator).Trim() : null;
+  }
+
+  private static void Migrate133Configs()
   {
     List<string> configFiles =
     [
@@ -1260,41 +1367,33 @@ internal class Plugin : BaseUnityPlugin
     {
       foreach (var configFile in configFiles)
       {
-        if (File.Exists(configFile))
+        if (!File.Exists(configFile)) continue;
+        var category = Path.GetFileNameWithoutExtension(configFile);
+        var lines = File.ReadAllLines(configFile);
+        if (category == "Logging") category = "!Mod";
+        if (category == "Workbench") category = "Crafting";
+        newConfig += $"[{category}]\n";
+        foreach (var line in lines)
         {
-          var category = Path.GetFileNameWithoutExtension(configFile);
-          var lines = File.ReadAllLines(configFile);
-          if (category == "Logging") category = "!Mod";
-          if (category == "Workbench") category = "Crafting";
-          newConfig += $"[{category}]\n";
-          foreach (var line in lines)
-          {
-            if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
-            {
-              var newLine = line.Trim();
-              if (newLine.Contains("="))
-              {
-                var key = newLine.Split('=')[0].Trim();
-                var value = newLine.Split('=')[1].Trim();
-                newConfig += $"\n{key} = {value}\n";
-                changed = true;
-              }
-            }
-          }
-          Log.LogInfo($"Merged old config file at {configFile} into {PluginInfo.PluginGuid}.cfg");
+          if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#")) continue;
+          var newLine = line.Trim();
+          if (!newLine.Contains("=")) continue;
+          var key = newLine.Split('=')[0].Trim();
+          var value = newLine.Split('=')[1].Trim();
+          newConfig += $"\n{key} = {value}\n";
+          changed = true;
         }
+        Log.LogInfo($"Merged old config file at {configFile} into {PluginInfo.PluginGuid}.cfg");
       }
     }
     foreach (var configPreviousVersion in configFilesPreviousVersions)
     {
-      if (File.Exists(configPreviousVersion))
-      {
-        var oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "YourOldConfigs");
-        if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
-        var newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(configPreviousVersion)}.cfg");
-        File.Move(configPreviousVersion, newConfigFile);
-        Log.LogInfo($"Old config file at {configPreviousVersion} was moved to {newConfigFile} as its not used anymore");
-      }
+      if (!File.Exists(configPreviousVersion)) continue;
+      var oldConfigsFolder = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "YourOldConfigs");
+      if (!Directory.Exists(oldConfigsFolder)) Directory.CreateDirectory(oldConfigsFolder);
+      var newConfigFile = Path.Combine(oldConfigsFolder, $"{Path.GetFileNameWithoutExtension(configPreviousVersion)}.cfg");
+      File.Move(configPreviousVersion, newConfigFile);
+      Log.LogInfo($"Old config file at {configPreviousVersion} was moved to {newConfigFile} as its not used anymore");
     }
     if (changed) File.WriteAllText(Path.Combine(Paths.ConfigPath, $"{PluginInfo.PluginGuid}.cfg"), newConfig);
   }
