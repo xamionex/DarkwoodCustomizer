@@ -91,15 +91,6 @@ internal class WorkbenchPatch
     return !invItem ? "<no InvItem>" : invItem.type;
   }
 
-  // The asset name behind a table resource path, e.g. "InventoryItems/meleeWeapons/pitchfork" -> "pitchfork".
-  private static string PrefabAssetName(string tablePath)
-  {
-    if (string.IsNullOrEmpty(tablePath)) return "";
-    var trimmed = tablePath.TrimEnd('/');
-    var index = trimmed.LastIndexOf('/');
-    return index < 0 ? trimmed : trimmed.Substring(index + 1);
-  }
-
   // Debug only: dumps every recipe entry of every level so name/type mix-ups are visible in the log.
   private static void LogWorkbenchState(Workbench instance, string when)
   {
@@ -117,7 +108,7 @@ internal class WorkbenchPatch
         }
         var type = TypeOf(recipes);
         var mismatch = recipes.name == type ? "" : "   <-- object name != item type";
-        Plugin.Log.LogInfo($"[WB-Diag]   idx {i} (Level.level={level.level}): obj='{recipes.name}' type='{type}' recipes={recipes.recipes.Count}{mismatch}");
+        Plugin.Log.LogInfo($"[WB-Diag]   idx {i} (Level.level={level.level}): obj='{recipes.name}' type='{type}' recipes={recipes.recipes?.Count ?? 0}{mismatch}");
       }
     }
   }
@@ -142,7 +133,7 @@ internal class WorkbenchPatch
     }
 
     var recipeBookSlots = Player.Instance.Crafting.slots.Count(t => !InvItemClass.isNull(t.invItem) && t.invItem.baseClass.GetComponent<CraftingRecipes>());
-    var levelSlots = __instance.levels.Where(t => t.level <= __instance.currentLevel + 1).Sum(t => t.recipes.Where(t1 => t1).Sum(t1 => t1.recipes.Count));
+    var levelSlots = __instance.levels.Where(t => t.level <= __instance.currentLevel + 1).Sum(t => t.recipes.Where(t1 => t1).Sum(t1 => t1.recipes?.Count ?? 0));
     var requiredSlots = recipeBookSlots + levelSlots;
 
     if (Plugin.LogWorkbench.Value)
@@ -199,7 +190,8 @@ internal class WorkbenchPatch
         {
           if (!VanillaRecipes.TryGetValue(entry, out var vanillaRecipes))
           {
-            vanillaRecipes = [.. entry.recipes];
+            vanillaRecipes = [];
+            if (entry.recipes != null) vanillaRecipes.AddRange(entry.recipes);
             VanillaRecipes[entry] = vanillaRecipes;
           }
 
@@ -313,42 +305,21 @@ internal class WorkbenchPatch
       return;
     }
 
-    // The prefab has to be the item that was asked for.
-    // When the game's item table points a key at a different asset (some game builds map "pitchfork" onto the homemade flamethrower's prefab, for example), taking the prefab's recipe component below would overwrite that other item's recipe and move it to this level.
-    // Two things are checked and either one passing is enough to continue:
-    // the prefab's item type, and the asset name of the table's resource path.
-    // Keys that resolve to a world object prefab (the mushroom plants behind the default recipes, for example) have an InvItem type of the item they hand out but their asset is named after the key, so the asset name covers those.
-    // The asset name only vouches for a prefab while the prefab inside it is still that asset, which is what the prefab name check below adds:
-    // another mod that replaces an item's prefab in place (pitchfork turned into a homemade flamethrower, for example) leaves the resource path and the asset name untouched, so without it the recipe would silently craft that other item and take over its recipe.
+    // The recipe is applied to whatever prefab the item table points the key at, the same way it was before the enabled and replace rework.
+    // Entries whose prefab turns out to be a different item, like another mod replacing an item's prefab in place, are applied as well and only logged.
+    // Skipping those used to protect the other item's recipe, but it also skipped entries that resolve to different prefabs without being a mod replacement, so only the warning is kept.
     var itemsDict = ItemsDatabase.Instance.itemsDict;
     var tablePath = itemsDict.TryGetValue(itemName, out var path) ? path : "";
-    var assetName = PrefabAssetName(tablePath);
-    var resolvedPrefabName = itemResourceObject.name;
     var prefabType = TypeOfPrefab(itemResourceObject);
-    var prefabIsAskedFor = prefabType == itemName || prefabType == itemResource;
-    var assetIsAskedFor = (assetName == itemName || assetName == itemResource) && resolvedPrefabName == assetName;
-    if (!prefabIsAskedFor && !assetIsAskedFor)
-    {
-      // Other keys pointing at the very same resource path: if any show up, the game's own table aliases these items.
-      var sharedWith = string.Join(", ", itemsDict.Where(kv => kv.Value == tablePath && kv.Key != itemName).Select(kv => kv.Key));
-      Plugin.Log.LogError($"{_logTypeFlag} Skipping '{itemName}': the game's item table maps it to prefab '{resolvedPrefabName}' (item type '{prefabType}', resource path '{tablePath}', asset name '{assetName}', other keys with the same path: [{sharedWith}], scene '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}'), which is a different item. Adding this recipe would overwrite the recipe of '{prefabType}'. If that item is what this recipe should craft, set \"resource\" to '{prefabType}' in the entry, otherwise another mod has replaced this item's prefab and the entry has to be removed.");
-      return;
-    }
+    if (prefabType != itemName && prefabType != itemResource)
+      Plugin.Log.LogWarning($"{_logTypeFlag} '{itemName}' resolves to prefab '{itemResourceObject.name}' (item type '{prefabType}', resource path '{tablePath}', scene '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}'), which is a different item, the recipe is applied to '{prefabType}' anyway. Rename the entry to '{prefabType}' if that is what it should craft, otherwise remove it.");
 
-    // A prefab whose recipe already sits in the workbench belongs to a recipe the game shows, and when its item type is not the key that was asked for this key resolved to a different item's prefab.
-    // Adding a recipe there would move and overwrite that item's recipe, which is what used to turn a pitchfork entry into the homemade flamethrower.
     var prefabRecipe = itemResourceObject.GetComponent<CraftingRecipes>();
-    if (prefabRecipe && !prefabIsAskedFor)
-    {
-      for (var i = 0; i < levelCount; i++)
-      {
-        if (!instance.levels[i].recipes.Any(r => ReferenceEquals(r, prefabRecipe))) continue;
-        Plugin.Log.LogError($"{_logTypeFlag} Skipping '{itemName}': its prefab '{itemResourceObject.name}' has item type '{prefabType}' and already has a recipe in the workbench at level {i + 1}. This key is not a real item in this game version.");
-        return;
-      }
-    }
-
     var itemPath = prefabRecipe ?? itemResourceObject.AddComponent<CraftingRecipes>();
+
+    // A component added by AddComponent starts with a null recipe list, unlike the prefabs the game ships with one assigned.
+    // The list has to exist before anything copies, reads or adds to it, and the game reads recipes.Count when it builds the workbench menu.
+    itemPath.recipes ??= [];
     CustomizedRecipesLog[itemName] = itemPath;
 
     // Everything is resolved before the recipe is assigned: the component is shared with the item itself, so a recipe that fails halfway through must not leave the item with a half built recipe.
@@ -492,17 +463,20 @@ internal class WorkbenchPatch
   {
     if (a == null || b == null) return false;
     if (a.produceAmount != b.produceAmount) return false;
-    if (a.requirements.Count != b.requirements.Count) return false;
+    var requirementsA = a.requirements;
+    var requirementsB = b.requirements;
+    if (requirementsA == null || requirementsB == null) return false;
+    if (requirementsA.Count != requirementsB.Count) return false;
 
-    var used = new bool[b.requirements.Count];
-    foreach (var requirementA in a.requirements)
+    var used = new bool[requirementsB.Count];
+    foreach (var requirementA in requirementsA)
     {
       if (!requirementA?.item) return false;
       var found = false;
-      for (var i = 0; i < b.requirements.Count; i++)
+      for (var i = 0; i < requirementsB.Count; i++)
       {
         if (used[i]) continue;
-        var requirementB = b.requirements[i];
+        var requirementB = requirementsB[i];
         if (!requirementB?.item) continue;
         if (requirementA.item.type != requirementB.item.type) continue;
         if (requirementA.amount != requirementB.amount) continue;
