@@ -318,22 +318,27 @@ internal class WorkbenchPatch
     // Two things are checked and either one passing is enough to continue:
     // the prefab's item type, and the asset name of the table's resource path.
     // Keys that resolve to a world object prefab (the mushroom plants behind the default recipes, for example) have an InvItem type of the item they hand out but their asset is named after the key, so the asset name covers those.
+    // The asset name only vouches for a prefab while the prefab inside it is still that asset, which is what the prefab name check below adds:
+    // another mod that replaces an item's prefab in place (pitchfork turned into a homemade flamethrower, for example) leaves the resource path and the asset name untouched, so without it the recipe would silently craft that other item and take over its recipe.
     var itemsDict = ItemsDatabase.Instance.itemsDict;
     var tablePath = itemsDict.TryGetValue(itemName, out var path) ? path : "";
     var assetName = PrefabAssetName(tablePath);
+    var resolvedPrefabName = itemResourceObject.name;
     var prefabType = TypeOfPrefab(itemResourceObject);
-    if (prefabType != itemName && prefabType != itemResource && assetName != itemName && assetName != itemResource)
+    var prefabIsAskedFor = prefabType == itemName || prefabType == itemResource;
+    var assetIsAskedFor = (assetName == itemName || assetName == itemResource) && resolvedPrefabName == assetName;
+    if (!prefabIsAskedFor && !assetIsAskedFor)
     {
       // Other keys pointing at the very same resource path: if any show up, the game's own table aliases these items.
       var sharedWith = string.Join(", ", itemsDict.Where(kv => kv.Value == tablePath && kv.Key != itemName).Select(kv => kv.Key));
-      Plugin.Log.LogError($"{_logTypeFlag} Skipping '{itemName}': the game's item table maps it to prefab '{itemResourceObject.name}' (item type '{prefabType}', resource path '{tablePath}', other keys with the same path: [{sharedWith}], scene '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}'), which is a different item. Adding this recipe would overwrite the recipe of '{prefabType}'.");
+      Plugin.Log.LogError($"{_logTypeFlag} Skipping '{itemName}': the game's item table maps it to prefab '{resolvedPrefabName}' (item type '{prefabType}', resource path '{tablePath}', asset name '{assetName}', other keys with the same path: [{sharedWith}], scene '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}'), which is a different item. Adding this recipe would overwrite the recipe of '{prefabType}'. If that item is what this recipe should craft, set \"resource\" to '{prefabType}' in the entry, otherwise another mod has replaced this item's prefab and the entry has to be removed.");
       return;
     }
 
     // A prefab whose recipe already sits in the workbench belongs to a recipe the game shows, and when its item type is not the key that was asked for this key resolved to a different item's prefab.
     // Adding a recipe there would move and overwrite that item's recipe, which is what used to turn a pitchfork entry into the homemade flamethrower.
     var prefabRecipe = itemResourceObject.GetComponent<CraftingRecipes>();
-    if (prefabRecipe && prefabType != itemName && prefabType != itemResource)
+    if (prefabRecipe && !prefabIsAskedFor)
     {
       for (var i = 0; i < levelCount; i++)
       {
