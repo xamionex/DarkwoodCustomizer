@@ -561,10 +561,10 @@ internal class Plugin : BaseUnityPlugin
     Config.Bind("CustomItems", "Note", "ReadMePlease", new ConfigDescription("Items are written into Customs/CustomItems.json as the game loads them, the in-game editor is the Custom Items window\nLoad Mod Defaults First decides whether the mod's own defaults in ModDefaults/CustomItems.json are applied before your file", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Inventories
-    WorkbenchInventoryModification = Config.Bind("Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enable Workbench Modification.", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     RemoveExcess = Config.Bind("Inventories", "Remove Excess Slots", true, new ConfigDescription("Whether or not to remove slots that are outside the inventory you set. For example, you set your inventory to 9x9 (81 slots) but you had a previous mod do something bigger and you have something like 128 slots extra enabling this option will remove those excess slots and bring it down to 9x9 (81)", null, new ConfigurationManagerAttributes { Order = i-=1 }));
 
     // Workbench
+    WorkbenchInventoryModification = Config.Bind("Inventories", "Enable Workbench Modification", false, new ConfigDescription("Enables Workbench Modification. Enable with Crafting modification to make space for the new workbench", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     StorageXOffset = Config.Bind("Inventories", "Storage X Offset", 150f, new ConfigDescription("Pixels offset on the X axis (left negative/right positive) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     StorageZOffset = Config.Bind("Inventories", "Storage Z Offset", -100f, new ConfigDescription("Pixels offset on the Z axis (up positive/down negative) for the workbench storage", null, new ConfigurationManagerAttributes { Order = i-=1 }));
     RightSlots = Config.Bind("Inventories", "Workbench Right Slots", 12, new ConfigDescription("Number that determines slots in workbench to the right", null, new ConfigurationManagerAttributes { Order = i-=1 }));
