@@ -1,81 +1,81 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>amione.DarkwoodCustomizer</AssemblyName>
-    <Product>DarkwoodCustomizer</Product>
-    <ProductDescription>A mod for darkwood that lets you customize: Any Player or Enemy (HP,Stamina,Speed,etc.), Item stats (dmg,stacks,etc.), Inventory Sizes, Generator Drain Speed, Time Speed, and more!</ProductDescription>
-    <Version>1.7.3</Version>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>latest</LangVersion>
-    <RestoreAdditionalProjectSources>
-      https://api.nuget.org/v3/index.json;
-      https://nuget.bepinex.dev/v3/index.json;
-      https://nuget.samboy.dev/v3/index.json
-    </RestoreAdditionalProjectSources>
-    <RootNamespace>DarkwoodCustomizer</RootNamespace>
-    <DebugType>embedded</DebugType>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <AssemblyName>amione.DarkwoodCustomizer</AssemblyName>
+        <Product>DarkwoodCustomizer</Product>
+        <ProductDescription>A mod for darkwood that lets you customize: Any Player or Enemy (HP,Stamina,Speed,etc.), Item stats (dmg,stacks,etc.), Inventory Sizes, Generator Drain Speed, Time Speed, and more!</ProductDescription>
+        <Version>1.7.3</Version>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>latest</LangVersion>
+        <RestoreAdditionalProjectSources>
+            https://api.nuget.org/v3/index.json;
+            https://nuget.bepinex.dev/v3/index.json;
+            https://nuget.samboy.dev/v3/index.json
+        </RestoreAdditionalProjectSources>
+        <RootNamespace>DarkwoodCustomizer</RootNamespace>
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
-    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="UnityEngine.Modules" Version="2021.3.40">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="lib\*.dll" Private="False" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="DarkwoodCustomizer\manifest.json" />
-  </ItemGroup>
-
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <ItemGroup>
-      <PluginInfoLines Include="internal static class PluginInfo {" />
-      <PluginInfoLines Include="    public const string PluginGuid = &quot;$(AssemblyName)&quot;%3B" />
-      <PluginInfoLines Include="    public const string PluginName = &quot;$(Product)&quot;%3B" />
-      <PluginInfoLines Include="    public const string PluginVersion = &quot;$(Version)&quot;%3B" />
-      <PluginInfoLines Include="}" />
+        <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all"/>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="BepInEx.Core" Version="5.4.21"/>
+        <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*"/>
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+        <PackageReference Include="UnityEngine.Modules" Version="2021.3.40">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
-    <WriteLinesToFile File="$(ProjectDir)PluginInfo.cs" Lines="@(PluginInfoLines)" Overwrite="true" />
-  </Target>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all"/>
+    </ItemGroup>
+
     <ItemGroup>
-      <BuildFiles Include="$(Outdir)\*" />
+        <Reference Include="lib\*.dll" Private="False"/>
     </ItemGroup>
-    <Copy SourceFiles="@(BuildFiles)" DestinationFolder="$(ProjectDir)$(RootNamespace)\plugins" />
-  </Target>
 
-  <UsingTask TaskName="RegexReplaceTask" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll" TaskFactory="RoslynCodeTaskFactory">
-    <ParameterGroup>
-      <InputFile />
-      <VersionValue Required="true" />
-      <AssemblyName Required="true" />
-      <ProductDescription Required="true" />
-      <Product Required="true" />
-    </ParameterGroup>
-    <Task>
-      <Using Namespace="System.IO" />
-      <Using Namespace="System.Text.RegularExpressions" />
-      <Code Type="Fragment" Language="cs">
-        <![CDATA[
+    <ItemGroup>
+        <None Remove="DarkwoodCustomizer\manifest.json"/>
+    </ItemGroup>
+
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <ItemGroup>
+            <PluginInfoLines Include="internal static class PluginInfo {"/>
+            <PluginInfoLines Include="    public const string PluginGuid = &quot;$(AssemblyName)&quot;%3B"/>
+            <PluginInfoLines Include="    public const string PluginName = &quot;$(Product)&quot;%3B"/>
+            <PluginInfoLines Include="    public const string PluginVersion = &quot;$(Version)&quot;%3B"/>
+            <PluginInfoLines Include="}"/>
+        </ItemGroup>
+        <WriteLinesToFile File="$(ProjectDir)PluginInfo.cs" Lines="@(PluginInfoLines)" Overwrite="true"/>
+    </Target>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <ItemGroup>
+            <BuildFiles Include="$(Outdir)\*"/>
+        </ItemGroup>
+        <Copy SourceFiles="@(BuildFiles)" DestinationFolder="$(ProjectDir)$(RootNamespace)\plugins"/>
+    </Target>
+
+    <UsingTask TaskName="RegexReplaceTask" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll" TaskFactory="RoslynCodeTaskFactory">
+        <ParameterGroup>
+            <InputFile/>
+            <VersionValue Required="true"/>
+            <AssemblyName Required="true"/>
+            <ProductDescription Required="true"/>
+            <Product Required="true"/>
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System.IO"/>
+            <Using Namespace="System.Text.RegularExpressions"/>
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
           string content = File.ReadAllText(InputFile);
 
           // Replace "version"
@@ -92,59 +92,59 @@
 
           File.WriteAllText(InputFile, content);
         ]]>
-      </Code>
-    </Task>
-  </UsingTask>
+            </Code>
+        </Task>
+    </UsingTask>
 
-  <Target Name="UpdateModInfo" AfterTargets="Build">
-    <RegexReplaceTask
-            InputFile="$(ProjectDir)$(RootNamespace)\manifest.json"
-            VersionValue="$(Version)"
-            AssemblyName="$(AssemblyName)"
-            ProductDescription="$(ProductDescription)"
-            Product="$(Product)" />
-  </Target>
+    <Target Name="UpdateModInfo" AfterTargets="Build">
+        <RegexReplaceTask
+                InputFile="$(ProjectDir)$(RootNamespace)\manifest.json"
+                VersionValue="$(Version)"
+                AssemblyName="$(AssemblyName)"
+                ProductDescription="$(ProductDescription)"
+                Product="$(Product)"/>
+    </Target>
 
-  <Target Name="ZipProjectDirectory" AfterTargets="Build">
-    <Exec Command="cd $(RootNamespace)/plugins &amp;&amp; zip ../../$(RootNamespace).zip amione.DarkwoodCustomizer.dll" Condition="'$(OS)' == 'Unix'" />
-    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)\plugins\amione.DarkwoodCustomizer.dll' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'" />
-  </Target>
+    <Target Name="ZipProjectDirectory" AfterTargets="Build">
+        <Exec Command="cd $(RootNamespace)/plugins &amp;&amp; zip ../../$(RootNamespace).zip amione.DarkwoodCustomizer.dll" Condition="'$(OS)' == 'Unix'"/>
+        <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(ProjectDir)$(RootNamespace)\plugins\amione.DarkwoodCustomizer.dll' -DestinationPath '$(ProjectDir)$(RootNamespace).zip' -Force&quot;" Condition="'$(OS)' == 'Windows_NT'"/>
+    </Target>
 
 
-  <Target Name="PostBuildCopyToGameFolder" AfterTargets="Build">
-    <!-- Set variables for game game file and plugin source -->
-    <PropertyGroup>
-      <GameLocationFile>$(MSBuildProjectDirectory)/.gamelocation</GameLocationFile>
-      <PluginSource>$(MSBuildProjectDirectory)/DarkwoodCustomizer/plugins/amione.DarkwoodCustomizer.dll</PluginSource>
-    </PropertyGroup>
+    <Target Name="PostBuildCopyToGameFolder" AfterTargets="Build">
+        <!-- Set variables for game game file and plugin source -->
+        <PropertyGroup>
+            <GameLocationFile>$(MSBuildProjectDirectory)/.gamelocation</GameLocationFile>
+            <PluginSource>$(MSBuildProjectDirectory)/DarkwoodCustomizer/plugins/amione.DarkwoodCustomizer.dll</PluginSource>
+        </PropertyGroup>
 
-    <!-- Read .gamelocation file if exists -->
-    <ReadLinesFromFile File="$(GameLocationFile)" Condition="Exists('$(GameLocationFile)')">
-      <Output TaskParameter="Lines" ItemName="_GameLocationLines"/>
-    </ReadLinesFromFile>
+        <!-- Read .gamelocation file if exists -->
+        <ReadLinesFromFile File="$(GameLocationFile)" Condition="Exists('$(GameLocationFile)')">
+            <Output TaskParameter="Lines" ItemName="_GameLocationLines"/>
+        </ReadLinesFromFile>
 
-    <!-- Extract first non-empty line as path -->
-    <PropertyGroup>
-      <GamePath Condition="'@(_GameLocationLines)' != ''">$([System.Text.RegularExpressions.Regex]::Match(%(_GameLocationLines.Identity), `^\s*(.+?)\s*$`).Groups[1].Value)</GamePath>
-    </PropertyGroup>
+        <!-- Extract first non-empty line as path -->
+        <PropertyGroup>
+            <GamePath Condition="'@(_GameLocationLines)' != ''">$([System.Text.RegularExpressions.Regex]::Match(%(_GameLocationLines.Identity), `^\s*(.+?)\s*$`).Groups[1].Value)</GamePath>
+        </PropertyGroup>
 
-    <!-- Warning if no valid path found -->
-    <Warning Condition="'$(GamePath)' == ''" Text="Skipping game folder copy: .gamelocation file not found or empty" />
+        <!-- Warning if no valid path found -->
+        <Warning Condition="'$(GamePath)' == ''" Text="Skipping game folder copy: .gamelocation file not found or empty"/>
 
-    <!-- 🪟 Windows -->
-    <Exec Condition="'$(OS)' == 'Windows_NT' And '$(GamePath)' != ''" Command='
+        <!-- 🪟 Windows -->
+        <Exec Condition="'$(OS)' == 'Windows_NT' And '$(GamePath)' != ''" Command='
     setlocal EnableDelayedExpansion &amp;&amp;
     set "TargetPath=$(GamePath)\BepInEx\plugins\DarkwoodCustomizer" &amp;&amp;
     if exist "!TargetPath!" rmdir /s /q "!TargetPath!" &amp;&amp;
     xcopy /s /e /y "$(PluginSource)" "!TargetPath!"
   '/>
 
-    <!-- 🐧 Linux/macOS -->
-    <Exec Condition="'$(OS)' != 'Windows_NT' And '$(GamePath)' != ''" Command='
+        <!-- 🐧 Linux/macOS -->
+        <Exec Condition="'$(OS)' != 'Windows_NT' And '$(GamePath)' != ''" Command='
     TargetPath="$(GamePath)/BepInEx/plugins/DarkwoodCustomizer" &amp;&amp;
     rm -rf "$TargetPath" &amp;&amp;
     mkdir -p "$TargetPath" &amp;&amp;
     cp -r "$(PluginSource)" "$TargetPath"
   '/>
-  </Target>
+    </Target>
 </Project>

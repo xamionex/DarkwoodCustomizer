@@ -1,22 +1,37 @@
-using BepInEx.Configuration;
-using HarmonyLib;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using BepInEx.Configuration;
+using HarmonyLib;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DarkwoodCustomizer;
 
 internal static class CustomUiPatch
 {
-    public static bool IsAnyUiOpen;
-    public static bool IsCapturingHotkey;
-
     private const int MinWindowWidth = 250;
     private const int MinWindowHeight = 180;
+
+    // The value part of an editor row has a fixed width so the Up, Down and X buttons line up on every row, and the nested value size label is kept short so it does not push them out.
+    private const float ValueColumnWidth = 300f;
+    private const float SizeLabelWidth = 110f;
+
+    // The three inventory editor windows sit in one centered row, and the quickpick spans that whole row underneath them so the two together form a rectangle.
+    private const float InventoryWindowWidth = 460f;
+    private const float InventoryWindowGap = 24f;
+
+    // Bottom-right corner resize handle. Input is processed before the windows draw (so scrollbars cannot steal the events) and the visual is drawn after (so it stays on top of the scrollbars).
+    // The handle is 40px so it is easy to grab even when a horizontal scrollbar sits at the bottom of the window.
+    private const float ResizeHandleSize = 40f;
+
+    // Height of the info bar that shows the pinned description, the taller box fits the larger font
+    private const float InfoBarHeight = 110f;
+    public static bool IsAnyUiOpen;
+    public static bool IsCapturingHotkey;
 
     private static readonly Dictionary<int, Rect> WindowRects = new();
     private static readonly Dictionary<int, string[]> WindowBuffers = new();
@@ -34,271 +49,9 @@ internal static class CustomUiPatch
     private static GUIStyle _tabTitleStyle;
     private static GUIStyle _keyLabelStyle;
 
-    // F2 tab layout. A tab either lists its groups with the exact "Section/Key" entries in drawing order, or falls back to drawing every entry of its sections in config order (used by the merged Skills tab, which keeps the tier names as sub headers).
-    private sealed class TabDefinition
-    {
-        public readonly string Name;
-        public readonly string[] Sections;
-        public readonly (string Title, string[] Keys)[] Groups;
-
-        public TabDefinition(string name, string[] sections)
-        {
-            Name = name;
-            Sections = sections;
-        }
-
-        public TabDefinition(string name, (string Title, string[] Keys)[] groups)
-        {
-            Name = name;
-            Groups = groups;
-        }
-    }
-
     // Sections that no longer get an F2 tab, their settings live in the F6 windows or the effect manager
     private static readonly string[] SectionsWithoutTab =
         ["Cheats", "Crafting", "Characters", "Effects", "RandomInventories", "CustomItems"];
-
-    // Builds the F2 tabs. The custom file sections (Characters, Effects, Random Inventories, Crafting recipes) moved into the F6 windows, their loading toggles are drawn there above the save and reload buttons.
-    private static void BuildTabs()
-    {
-        if (UiSections.Count == 0)
-        {
-            foreach (var entry in GetEntries())
-            {
-                if (entry.Definition.Section == "!Mod" && entry.Definition.Key == "Version") continue;
-                if (!UiSections.Contains(entry.Definition.Section)) UiSections.Add(entry.Definition.Section);
-            }
-        }
-
-        if (Tabs.Count > 0 || UiSections.Count == 0) return;
-
-        Tabs.Add(new TabDefinition("!Mod", ["!Mod"]));
-        Tabs.Add(new TabDefinition("Items & Crafting",
-        [
-            ("Crafting",
-            ["Items/Enable Section",
-                "Crafting/Enable Free Crafting"]),
-            ("Stack Sizes",
-            ["Items/Enable Global Stack Size",
-                "Items/Global Stack Resize"]),
-            ("Durability",
-            ["Items/Enable Global Max Durability",
-                "Items/Global Max Durability"]),
-        ]));
-        Tabs.Add(new TabDefinition("Inventories",
-        [
-            ("Toggles",
-            [
-                "Inventories/Remove Excess Slots",
-                "Inventories/Enable Inventory Modification",
-                "Inventories/Enable Hotbar Modification",
-                "Inventories/Enable Trader Modification",
-                "Inventories/Enable Workbench Modification",
-                "Inventories/Enable Crafting Modification"
-            ]),
-            ("Slots",
-            [
-                "Inventories/Workbench Right Slots",
-                "Inventories/Workbench Down Slots",
-                "Inventories/Inventory Right Slots",
-                "Inventories/Inventory Down Slots",
-                "Inventories/Hotbar Right Slots",
-                "Inventories/Hotbar Down Slots",
-                "Inventories/Trader Right Slots",
-                "Inventories/Trader Down Slots",
-                "Inventories/Crafting Window Right Slots",
-                "Inventories/Crafting Window Down Slots"
-            ]),
-            ("Positioning",
-            [
-                "Inventories/Storage X Offset",
-                "Inventories/Storage Z Offset",
-                "Inventories/TraderInventory Window X Offset",
-                "Inventories/TraderInventory Window Z Offset",
-                "Inventories/TraderSell Window X Offset",
-                "Inventories/TraderSell Window Z Offset",
-                "Inventories/TraderBuy Window X Offset",
-                "Inventories/TraderBuy Window Z Offset",
-                "Inventories/TraderClose Button X Offset",
-                "Inventories/TraderClose Button Z Offset",
-                "Inventories/Crafting Window X Offset",
-                "Inventories/Crafting Window Z Offset"
-            ]),
-        ]));
-        Tabs.Add(new TabDefinition("Player",
-        [
-            ("General", ["Player/Enable Section"]),
-            ("Stats",
-            [
-                "Player/Player FoV",
-                "Player/Player FoV at Night Only",
-                "Player/Player Sight Distance",
-                "Player/Player Eagle Eye Distance"
-            ]),
-            ("Stamina",
-            [
-                "Player/Max Stamina",
-                "Player/Stamina Drain Value",
-                "Player/Stamina Regen Value"
-            ]),
-            ("Health",
-            [
-                "Player/Max Health",
-                "Player/Health Regen Interval",
-                "Player/Health Regen Value",
-                "Player/Health Regen Modifier"
-            ]),
-            ("Speed",
-            [
-                "Player/Walk Speed",
-                "Player/Run Speed",
-                "Player/Run Speed Modifier"
-            ]),
-            ("Cheats",
-            [
-                "Player/Cant Get Interrupted",
-                "Player/Infinite Stamina",
-                "Player/Infinite Stamina Effect",
-                "Player/Enable Godmode",
-                "Player/Enable Noclip",
-                "Player/Invisible",
-                "Player/Can see behind walls"
-            ]),
-        ]));
-        Tabs.Add(new TabDefinition("Skills",
-            [.. UiSections.Where(s => s == "Skills" || s.StartsWith("Skills - ", StringComparison.Ordinal))]));
-        Tabs.Add(new TabDefinition("Time",
-        [
-            ("Toggles",
-            ["Time/Enable Section",
-                "Time/Stop Time",
-                "Time/Reset Well"]),
-            ("Time Flow",
-            ["Time/Daytime Flow",
-                "Time/Nighttime Flow"]),
-            ("Change Time",
-            ["Time/Set Time",
-                "Time/Set Current Time"]),
-        ]));
-        Tabs.Add(new TabDefinition("Generator",
-            ["Generator"]));
-        Tabs.Add(new TabDefinition("Camera & UI",
-        [
-            ("Camera",
-            [
-                "Camera/Enable Section",
-                "Camera/Camera Zoom Factor",
-                "Camera/Disable Post FX",
-                "Camera/Disable Vignette"
-            ]),
-            ("UI",
-            [
-                "UI/Enable Section",
-                "UI/Disable UI/HUD",
-                "UI/Disable Healthbar",
-                "UI/Disable Lives",
-                "UI/Disable Staminabar",
-                "UI/Disable Skillbar (current effects)"
-            ]),
-        ]));
-        Tabs.Add(new TabDefinition("Enemies",
-        [
-            ("Toggles",
-            [
-                "Enemies/Disable Night Floor Gore (Requires Save Reload)",
-                "Enemies/Creatures always know where player is"
-            ]),
-            ("Spawn Chances",
-                ["Enemies/Creature Spawn Chance During Nighttime",
-                    "Enemies/Creature Spawn Chance During Daytime"]),
-            ("Spawn Multiplier",
-            [
-                "Enemies/Creature Enemy Multiplier During Nighttime",
-                "Enemies/Creature Enemy Multiplier During Daytime"
-            ]),
-        ]));
-        Tabs.Add(new TabDefinition("Hotkeys",
-        [
-            ("Cheats",
-            [
-                "Hotkeys/Toggle Godmode",
-                "Hotkeys/Toggle Noclip",
-                "Hotkeys/Toggle Infinite Stamina",
-                "Hotkeys/Toggle Time Stop",
-                "Hotkeys/Toggle Free Crafting",
-                "Hotkeys/Toggle Invisible"
-            ]),
-            ("Menus",
-            [
-                "Hotkeys/Toggle HUD/UI",
-                "Hotkeys/Open Customizer UI",
-                "Hotkeys/Open Item Spawner",
-                "Hotkeys/Open Enemy Spawner",
-                "Hotkeys/Open Effect Manager",
-                "Hotkeys/Open Custom Data",
-                "Hotkeys/Open UI Manager",
-                "Hotkeys/Open Inventory Editor",
-                "Hotkeys/Save Cursor Position"
-            ]),
-        ]));
-        Tabs.Add(new TabDefinition("Loot",
-        [
-            ("General",
-            ["Loot/Enable Mushroom Respawn",
-                "Loot/Enable Loot Respawn"]),
-            ("Mushrooms",
-            ["Loot/Mushroom Respawn Time",
-                "Loot/Mushroom Respawn Per Day"]),
-            ("Loot",
-            ["Loot/Loot Respawn Time",
-                "Loot/Loot Respawn Per Day"]),
-        ]));
-        Tabs.Add(new TabDefinition("Defenses",
-        [
-            ("General",
-            ["Defenses/Enable Section",
-                "Defenses/Enable Debug Logs"]),
-            ("Barricades",
-            [
-                "Defenses/Barricade Health Modification",
-                "Defenses/Barricade Health Multiplier",
-                "Defenses/Enable Barricade Healing",
-                "Defenses/Barricade Heal Interval",
-                "Defenses/Barricade Heal Percent",
-                "Defenses/Only Player Can Damage Barricades"
-            ]),
-            ("Beartraps",
-            [
-                "Defenses/BearTrap Recovery",
-                "Defenses/BearTrap Recover Items",
-                "Defenses/Enable BearTrap Damage Modification",
-                "Defenses/BearTrap Damage",
-                "Defenses/BearTrap Auto Recharge",
-                "Defenses/BearTrap Recharge Time"
-            ]),
-            ("Chaintraps",
-            [
-                "Defenses/ChainTrap Recovery",
-                "Defenses/ChainTrap Recover Items",
-                "Defenses/Enable ChainTrap Damage Modification",
-                "Defenses/ChainTrap Damage",
-                "Defenses/ChainTrap Auto Recharge",
-                "Defenses/ChainTrap Recharge Time"
-            ]),
-        ]));
-
-        // Anything that is not in the layout above and not moved to another window still gets a tab
-        foreach (var section in from section in UiSections
-                 where !SectionsWithoutTab.Contains(section)
-                 where !Tabs.Any(t => t.Sections != null && t.Sections.Contains(section))
-                 where !Tabs.Any(t =>
-                     t.Groups != null && t.Groups.Any(g =>
-                         g.Keys.Any(k => k.StartsWith(section + "/", StringComparison.Ordinal))))
-                 select section)
-        {
-            Tabs.Add(new TabDefinition(section, [section]));
-        }
-    }
 
     private static string _itemSearch = "";
     private static string _itemName = "";
@@ -326,7 +79,7 @@ internal static class CustomUiPatch
         "FakeChars/Worms_enemy_01",
         "FakeChars/ForestSpirit2", "FakeChars/pig_big_mutant", "FakeChars/larva_big_01",
         "FakeChars/bug_cockroach_big", "FakeChars/bug_cockroach_huge", "FakeChars/Zombie_male_sitting",
-        "FakeChars/Zombie_female_bathing", "FakeChars/AreaBird",
+        "FakeChars/Zombie_female_bathing", "FakeChars/AreaBird"
     ];
 
     private static readonly Dictionary<CharacterEffectType, EffectInputs> EffectBuffers = new();
@@ -384,34 +137,6 @@ internal static class CustomUiPatch
     // Keeps the game cursor visible for a short time after closing a window, the game hides it on its own when the player is not hovering anything
     private static float _cursorVisibleUntil;
 
-    private sealed class EffectInputs
-    {
-        public string Duration = "0";
-        public string Modifier = "1";
-        public string Interval = "0";
-    }
-
-    private sealed class DataFile(
-        string name,
-        Func<string> path,
-        Func<JObject> get,
-        Action<JObject> set,
-        Func<JToken> newKeyTemplate = null,
-        string[] settings = null)
-    {
-        public readonly string Name = name;
-        public readonly Func<string> Path = path;
-        public readonly Func<JObject> Get = get;
-
-        public readonly Action<JObject> Set = set;
-
-        // Template for a new top level key, per file type
-        public readonly Func<JToken> NewKeyTemplate = newKeyTemplate;
-
-        // Config entries of this file (loading toggles and readmes) drawn above the save and reload buttons
-        public readonly string[] Settings = settings ?? [];
-    }
-
     private static readonly DataFile[] DataFiles =
     [
         new("Custom Items", () => Plugin.CustomItemsPath, () => Plugin.CustomItems, o => Plugin.CustomItems = o,
@@ -439,7 +164,7 @@ internal static class CustomUiPatch
             ["RandomInventories/Enable Section", "RandomInventories/Note"]),
         new("Custom Loot", () => Plugin.CustomLootPath, () => Plugin.CustomLoot, o => Plugin.CustomLoot = o,
             () => new JObject { { "enabled", false }, { "replace", false }, { "items", new JArray() } },
-            ["Loot/Enable Section", "Loot/Note"]),
+            ["Loot/Enable Section", "Loot/Note"])
     ];
 
     private static DataFile _selectedDataFile;
@@ -455,14 +180,14 @@ internal static class CustomUiPatch
         ("requiredlevel", 1),
         ("resource", ""),
         ("givesamount", 1),
-        ("requirements", new JObject()),
+        ("requirements", new JObject())
     ];
 
     private static readonly (string Name, JToken Default)[] LootEntryKeys =
     [
         ("enabled", false),
         ("replace", false),
-        ("items", new JArray()),
+        ("items", new JArray())
     ];
 
     private static readonly (string Name, JToken Default)[] CharacterKeys =
@@ -470,7 +195,7 @@ internal static class CustomUiPatch
         ("Health", 100),
         ("WalkSpeed", 2),
         ("RunSpeed", 4),
-        ("Attacks", new JArray()),
+        ("Attacks", new JArray())
     ];
 
     private static readonly (string Name, JToken Default)[] EffectKeys =
@@ -482,27 +207,13 @@ internal static class CustomUiPatch
         ("stopsPoison", false),
         ("hasPoisonOverlay", false),
         ("activateSound", ""),
-        ("startDelay", 0f),
+        ("startDelay", 0f)
     ];
 
     private static readonly (string Name, JToken Default)[] RandomInvKeys =
     [
-        ("presets", new JArray()),
+        ("presets", new JArray())
     ];
-
-    private static (string Name, JToken Default)[] AvailableKeysFor(string editorName)
-    {
-        return editorName switch
-        {
-            "Custom Items" => ItemKeys,
-            "Custom Crafting Recipes" => RecipeKeys,
-            "Custom Characters" => CharacterKeys,
-            "Custom Character Effects" => EffectKeys,
-            "Custom Random Inventories" => RandomInvKeys,
-            "Custom Loot" => LootEntryKeys,
-            _ => [],
-        };
-    }
 
     // All known Custom Items keys with their default values, used by the item key picker in the Custom Items editor
     private static readonly (string Name, JToken Default)[] ItemKeys =
@@ -612,7 +323,7 @@ internal static class CustomUiPatch
         ("staminaAttackDrain", 0),
         ("staminaSpecialAttackDrain", 0),
         ("takesDamageOnPlayerHit", false),
-        ("zoom", 0f),
+        ("zoom", 0f)
     ];
 
     // Descriptions for the known Custom Items keys, shown in the ? info bar of the Custom Data editor
@@ -725,7 +436,7 @@ internal static class CustomUiPatch
         ["staminaAttackDrain"] = "The stamina drained per attack.",
         ["staminaSpecialAttackDrain"] = "The stamina drained per special attack.",
         ["takesDamageOnPlayerHit"] = "Whether the item takes damage when the player is hit.",
-        ["zoom"] = "The zoom level while aiming.",
+        ["zoom"] = "The zoom level while aiming."
     };
 
     // Descriptions for the Custom Characters keys, shown in the ? info bar of the Custom Data editor
@@ -734,7 +445,7 @@ internal static class CustomUiPatch
         ["Health"] = "The maximum health of the character.",
         ["WalkSpeed"] = "The walking speed of the character.",
         ["RunSpeed"] = "The running speed of the character.",
-        ["Attacks"] = "The list of attacks the character can use.",
+        ["Attacks"] = "The list of attacks the character can use."
     };
 
     // Descriptions for the attack fields shown in the Custom Characters attacks picker
@@ -744,14 +455,8 @@ internal static class CustomUiPatch
             "The internal name of the attack, read only, it comes from the game's own attack sensor.",
         ["AttackIsRanged(ReadOnly)"] = "Whether the attack is a ranged attack, read only.",
         ["Damage"] = "The damage the attack deals to the player.",
-        ["BarricadeDamage"] = "The damage the attack deals to barricades and doors.",
+        ["BarricadeDamage"] = "The damage the attack deals to barricades and doors."
     };
-
-    private static string GetCharacterDescription(string propName)
-    {
-        if (CharacterKeyDescriptions.TryGetValue(propName, out var description)) return description;
-        return AttackKeyDescriptions.TryGetValue(propName, out var attackDescription) ? attackDescription : null;
-    }
 
     // Descriptions for the Custom Character Effects keys, shown in the ? info bar of the Custom Data editor
     private static readonly Dictionary<string, string> EffectKeyDescriptions = new()
@@ -763,7 +468,7 @@ internal static class CustomUiPatch
         ["stopsPoison"] = "Whether the effect stops poison.",
         ["hasPoisonOverlay"] = "Whether the effect shows the poison overlay.",
         ["activateSound"] = "The sound played when the effect activates.",
-        ["startDelay"] = "The delay before the effect starts.",
+        ["startDelay"] = "The delay before the effect starts."
     };
 
     // Descriptions for the Custom Crafting Recipes keys, shown in the ? info bar of the Custom Data editor
@@ -777,7 +482,7 @@ internal static class CustomUiPatch
         ["givesamount"] = "The quantity of the resource produced.",
         ["requirements"] = "The items and amounts needed to craft the resource, format: { \"itemId\": amount }.",
         ["item"] = "The item ID used as an ingredient.",
-        ["amount"] = "How many of the item are needed. Decimal values work for items with durability, like gasoline.",
+        ["amount"] = "How many of the item are needed. Decimal values work for items with durability, like gasoline."
     };
 
     // Descriptions for the Custom Random Inventories keys, shown in the ? info bar of the Custom Data editor
@@ -787,7 +492,7 @@ internal static class CustomUiPatch
         ["type"] = "The item type that can spawn.",
         ["amountMin"] = "The minimum amount of the item that can spawn.",
         ["amountMax"] = "The maximum amount of the item that can spawn.",
-        ["chance"] = "The chance the item spawns, from 0 to 1.",
+        ["chance"] = "The chance the item spawns, from 0 to 1."
     };
 
     // Descriptions for the Custom Loot keys, shown in the ? info bar of the Custom Data editor
@@ -799,8 +504,343 @@ internal static class CustomUiPatch
         ["item"] = "The item ID that can drop.",
         ["minAmount"] = "The minimum amount of the item that can drop.",
         ["maxAmount"] = "The maximum amount of the item that can drop.",
-        ["chance"] = "The chance the item drops, from 0 to 1.",
+        ["chance"] = "The chance the item drops, from 0 to 1."
     };
+
+    // Sound picker state for the Custom Character Effects editor
+    private static string _soundPickerFor = "";
+    private static string _soundPickerSearch = "";
+
+    // Item ID picker: opens from the Pick buttons next to item ID fields and add rows.
+    // _idPickerMode is "" to write into a field, or "loot"/"preset"/"requirement" to add an entry.
+    // _idPickerName scopes a field to a child object (a preset key), _idPickerIndex scopes it to an array entry (a loot slot).
+    private static string _idPickerKey = "";
+    private static string _idPickerMode = "";
+    private static string _idPickerName = "";
+    private static int _idPickerIndex = -1;
+    private static string _idPickerSearch = "";
+    private static Vector2 _idPickerScroll;
+    private static Vector2 _soundPickerScroll;
+    private static string[] _allSounds = [];
+
+    private static readonly (int Id, string Name)[] UiWindows =
+    [
+        (9001, "Customizer"),
+        (9002, "Item Spawner"),
+        (9003, "Enemy Spawner"),
+        (9004, "Effect Manager"),
+        (9005, "Custom Data Files"),
+        (9006, "Custom Data Editor"),
+        (9007, "UI Manager"),
+        (9008, "Inventory Editor: Hotbar"),
+        (9009, "Inventory Editor: Player"),
+        (9010, "Inventory Editor: Container"),
+        (9011, "Inventory Editor: Item Quickpick")
+    ];
+
+    // Draws a window and stores its rect.
+    // While the user is actively dragging or resizing, the tracked rect is kept instead of the one GUILayout.Window returns, so content changes (scrollbars appearing, min sizes) cannot fight the drag and cause lag or jitter.
+    private static readonly HashSet<int> TimedWindows = [];
+
+    // Menu preload: windows do their setup work on the frame the player opens them, which can freeze the game for a moment.
+    // These steps run one per frame once the game is up instead, so the cost is paid before any menu is opened.
+    // This works slightly but it's still not enough, TODO: Improve
+    private static readonly Queue<(string Name, Action Step)> WarmUpSteps = new();
+    private static bool _warmUpFinished;
+
+    private static readonly KeyCode[] AllKeyCodes = (KeyCode[])Enum.GetValues(typeof(KeyCode));
+
+    // Item quickpick (F8): a wide bottom bar listing all items.
+    // Clicking one inserts its ID into the currently focused slot editor text field.
+
+    private static string _quickpickSearch = "";
+
+    private static Vector2 _quickpickScroll;
+
+    // The item picked in the quickpick is kept here so it survives slot switches, and the bar at
+    // the bottom can set the selected slot to it without retyping anything.
+    private static string _quickpickItem = "";
+    private static string _quickpickAmount = "1";
+
+    // Builds the F2 tabs. The custom file sections (Characters, Effects, Random Inventories, Crafting recipes) moved into the F6 windows, their loading toggles are drawn there above the save and reload buttons.
+    private static void BuildTabs()
+    {
+        if (UiSections.Count == 0)
+            foreach (var entry in GetEntries())
+            {
+                if (entry.Definition.Section == "!Mod" && entry.Definition.Key == "Version") continue;
+                if (!UiSections.Contains(entry.Definition.Section)) UiSections.Add(entry.Definition.Section);
+            }
+
+        if (Tabs.Count > 0 || UiSections.Count == 0) return;
+
+        Tabs.Add(new TabDefinition("!Mod", ["!Mod"]));
+        Tabs.Add(new TabDefinition("Items & Crafting",
+        [
+            ("Crafting",
+            [
+                "Items/Enable Section",
+                "Crafting/Enable Free Crafting"
+            ]),
+            ("Stack Sizes",
+            [
+                "Items/Enable Global Stack Size",
+                "Items/Global Stack Resize"
+            ]),
+            ("Durability",
+            [
+                "Items/Enable Global Max Durability",
+                "Items/Global Max Durability"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Inventories",
+        [
+            ("Toggles",
+            [
+                "Inventories/Remove Excess Slots",
+                "Inventories/Enable Inventory Modification",
+                "Inventories/Enable Hotbar Modification",
+                "Inventories/Enable Trader Modification",
+                "Inventories/Enable Workbench Modification",
+                "Inventories/Enable Crafting Modification"
+            ]),
+            ("Slots",
+            [
+                "Inventories/Workbench Right Slots",
+                "Inventories/Workbench Down Slots",
+                "Inventories/Inventory Right Slots",
+                "Inventories/Inventory Down Slots",
+                "Inventories/Hotbar Right Slots",
+                "Inventories/Hotbar Down Slots",
+                "Inventories/Trader Right Slots",
+                "Inventories/Trader Down Slots",
+                "Inventories/Crafting Window Right Slots",
+                "Inventories/Crafting Window Down Slots"
+            ]),
+            ("Positioning",
+            [
+                "Inventories/Storage X Offset",
+                "Inventories/Storage Z Offset",
+                "Inventories/TraderInventory Window X Offset",
+                "Inventories/TraderInventory Window Z Offset",
+                "Inventories/TraderSell Window X Offset",
+                "Inventories/TraderSell Window Z Offset",
+                "Inventories/TraderBuy Window X Offset",
+                "Inventories/TraderBuy Window Z Offset",
+                "Inventories/TraderClose Button X Offset",
+                "Inventories/TraderClose Button Z Offset",
+                "Inventories/Crafting Window X Offset",
+                "Inventories/Crafting Window Z Offset"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Player",
+        [
+            ("General", ["Player/Enable Section"]),
+            ("Stats",
+            [
+                "Player/Player FoV",
+                "Player/Player FoV at Night Only",
+                "Player/Player Sight Distance",
+                "Player/Player Eagle Eye Distance"
+            ]),
+            ("Stamina",
+            [
+                "Player/Max Stamina",
+                "Player/Stamina Drain Value",
+                "Player/Stamina Regen Value"
+            ]),
+            ("Health",
+            [
+                "Player/Max Health",
+                "Player/Health Regen Interval",
+                "Player/Health Regen Value",
+                "Player/Health Regen Modifier"
+            ]),
+            ("Speed",
+            [
+                "Player/Walk Speed",
+                "Player/Run Speed",
+                "Player/Run Speed Modifier"
+            ]),
+            ("Cheats",
+            [
+                "Player/Cant Get Interrupted",
+                "Player/Infinite Stamina",
+                "Player/Infinite Stamina Effect",
+                "Player/Enable Godmode",
+                "Player/Enable Noclip",
+                "Player/Invisible",
+                "Player/Can see behind walls"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Skills",
+            [.. UiSections.Where(s => s == "Skills" || s.StartsWith("Skills - ", StringComparison.Ordinal))]));
+        Tabs.Add(new TabDefinition("Time",
+        [
+            ("Toggles",
+            [
+                "Time/Enable Section",
+                "Time/Stop Time",
+                "Time/Reset Well"
+            ]),
+            ("Time Flow",
+            [
+                "Time/Daytime Flow",
+                "Time/Nighttime Flow"
+            ]),
+            ("Change Time",
+            [
+                "Time/Set Time",
+                "Time/Set Current Time"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Generator",
+            ["Generator"]));
+        Tabs.Add(new TabDefinition("Camera & UI",
+        [
+            ("Camera",
+            [
+                "Camera/Enable Section",
+                "Camera/Camera Zoom Factor",
+                "Camera/Disable Post FX",
+                "Camera/Disable Vignette"
+            ]),
+            ("UI",
+            [
+                "UI/Enable Section",
+                "UI/Disable UI/HUD",
+                "UI/Disable Healthbar",
+                "UI/Disable Lives",
+                "UI/Disable Staminabar",
+                "UI/Disable Skillbar (current effects)"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Enemies",
+        [
+            ("Toggles",
+            [
+                "Enemies/Disable Night Floor Gore (Requires Save Reload)",
+                "Enemies/Creatures always know where player is"
+            ]),
+            ("Spawn Chances",
+            [
+                "Enemies/Creature Spawn Chance During Nighttime",
+                "Enemies/Creature Spawn Chance During Daytime"
+            ]),
+            ("Spawn Multiplier",
+            [
+                "Enemies/Creature Enemy Multiplier During Nighttime",
+                "Enemies/Creature Enemy Multiplier During Daytime"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Hotkeys",
+        [
+            ("Cheats",
+            [
+                "Hotkeys/Toggle Godmode",
+                "Hotkeys/Toggle Noclip",
+                "Hotkeys/Toggle Infinite Stamina",
+                "Hotkeys/Toggle Time Stop",
+                "Hotkeys/Toggle Free Crafting",
+                "Hotkeys/Toggle Invisible"
+            ]),
+            ("Menus",
+            [
+                "Hotkeys/Toggle HUD/UI",
+                "Hotkeys/Open Customizer UI",
+                "Hotkeys/Open Item Spawner",
+                "Hotkeys/Open Enemy Spawner",
+                "Hotkeys/Open Effect Manager",
+                "Hotkeys/Open Custom Data",
+                "Hotkeys/Open UI Manager",
+                "Hotkeys/Open Inventory Editor",
+                "Hotkeys/Save Cursor Position"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Loot",
+        [
+            ("General",
+            [
+                "Loot/Enable Mushroom Respawn",
+                "Loot/Enable Loot Respawn"
+            ]),
+            ("Mushrooms",
+            [
+                "Loot/Mushroom Respawn Time",
+                "Loot/Mushroom Respawn Per Day"
+            ]),
+            ("Loot",
+            [
+                "Loot/Loot Respawn Time",
+                "Loot/Loot Respawn Per Day"
+            ])
+        ]));
+        Tabs.Add(new TabDefinition("Defenses",
+        [
+            ("General",
+            [
+                "Defenses/Enable Section",
+                "Defenses/Enable Debug Logs"
+            ]),
+            ("Barricades",
+            [
+                "Defenses/Barricade Health Modification",
+                "Defenses/Barricade Health Multiplier",
+                "Defenses/Enable Barricade Healing",
+                "Defenses/Barricade Heal Interval",
+                "Defenses/Barricade Heal Percent",
+                "Defenses/Only Player Can Damage Barricades"
+            ]),
+            ("Beartraps",
+            [
+                "Defenses/BearTrap Recovery",
+                "Defenses/BearTrap Recover Items",
+                "Defenses/Enable BearTrap Damage Modification",
+                "Defenses/BearTrap Damage",
+                "Defenses/BearTrap Auto Recharge",
+                "Defenses/BearTrap Recharge Time"
+            ]),
+            ("Chaintraps",
+            [
+                "Defenses/ChainTrap Recovery",
+                "Defenses/ChainTrap Recover Items",
+                "Defenses/Enable ChainTrap Damage Modification",
+                "Defenses/ChainTrap Damage",
+                "Defenses/ChainTrap Auto Recharge",
+                "Defenses/ChainTrap Recharge Time"
+            ])
+        ]));
+
+        // Anything that is not in the layout above and not moved to another window still gets a tab
+        foreach (var section in from section in UiSections
+                 where !SectionsWithoutTab.Contains(section)
+                 where !Tabs.Any(t => t.Sections != null && t.Sections.Contains(section))
+                 where !Tabs.Any(t =>
+                     t.Groups != null && t.Groups.Any(g =>
+                         g.Keys.Any(k => k.StartsWith(section + "/", StringComparison.Ordinal))))
+                 select section)
+            Tabs.Add(new TabDefinition(section, [section]));
+    }
+
+    private static (string Name, JToken Default)[] AvailableKeysFor(string editorName)
+    {
+        return editorName switch
+        {
+            "Custom Items" => ItemKeys,
+            "Custom Crafting Recipes" => RecipeKeys,
+            "Custom Characters" => CharacterKeys,
+            "Custom Character Effects" => EffectKeys,
+            "Custom Random Inventories" => RandomInvKeys,
+            "Custom Loot" => LootEntryKeys,
+            _ => []
+        };
+    }
+
+    private static string GetCharacterDescription(string propName)
+    {
+        if (CharacterKeyDescriptions.TryGetValue(propName, out var description)) return description;
+        return AttackKeyDescriptions.TryGetValue(propName, out var attackDescription) ? attackDescription : null;
+    }
 
     // Returns the description for a property in the currently selected data file, or null if there is none
     private static string GetPropertyDescription(string propName)
@@ -817,41 +857,6 @@ internal static class CustomUiPatch
             _ => null
         };
     }
-
-    // Sound picker state for the Custom Character Effects editor
-    private static string _soundPickerFor = "";
-    private static string _soundPickerSearch = "";
-
-    // Item ID picker: opens from the Pick buttons next to item ID fields and add rows.
-    // _idPickerMode is "" to write into a field, or "loot"/"preset"/"requirement" to add an entry.
-    // _idPickerName scopes a field to a child object (a preset key), _idPickerIndex scopes it to an array entry (a loot slot).
-    private static string _idPickerKey = "";
-    private static string _idPickerMode = "";
-    private static string _idPickerName = "";
-    private static int _idPickerIndex = -1;
-    private static string _idPickerSearch = "";
-    private static Vector2 _idPickerScroll;
-
-    // The value part of an editor row has a fixed width so the Up, Down and X buttons line up on every row, and the nested value size label is kept short so it does not push them out.
-    private const float ValueColumnWidth = 300f;
-    private const float SizeLabelWidth = 110f;
-    private static Vector2 _soundPickerScroll;
-    private static string[] _allSounds = [];
-
-    private static readonly (int Id, string Name)[] UiWindows =
-    [
-        (9001, "Customizer"),
-        (9002, "Item Spawner"),
-        (9003, "Enemy Spawner"),
-        (9004, "Effect Manager"),
-        (9005, "Custom Data Files"),
-        (9006, "Custom Data Editor"),
-        (9007, "UI Manager"),
-        (9008, "Inventory Editor: Hotbar"),
-        (9009, "Inventory Editor: Player"),
-        (9010, "Inventory Editor: Container"),
-        (9011, "Inventory Editor: Item Quickpick"),
-    ];
 
     // Game height minus 25%, centered, 570px wide
     private static Rect MenuRect()
@@ -874,10 +879,6 @@ internal static class CustomUiPatch
         const float width = 940f;
         return new Rect((Screen.width - width) / 2f, 0f, width, Screen.height);
     }
-
-    // The three inventory editor windows sit in one centered row, and the quickpick spans that whole row underneath them so the two together form a rectangle.
-    private const float InventoryWindowWidth = 460f;
-    private const float InventoryWindowGap = 24f;
 
     private static float InventoryRowWidth()
     {
@@ -1230,16 +1231,31 @@ internal static class CustomUiPatch
             }
 
             // Draw the resize handles on top of everything so scrollbars do not cover them
-            if (Plugin.UiOpen) DrawResizeHandleVisual(9001);
-            else if (Plugin.ItemSpawnerOpen) DrawResizeHandleVisual(9002);
-            else if (Plugin.EnemySpawnerOpen) DrawResizeHandleVisual(9003);
-            else if (Plugin.EffectManagerOpen) DrawResizeHandleVisual(9004);
+            if (Plugin.UiOpen)
+            {
+                DrawResizeHandleVisual(9001);
+            }
+            else if (Plugin.ItemSpawnerOpen)
+            {
+                DrawResizeHandleVisual(9002);
+            }
+            else if (Plugin.EnemySpawnerOpen)
+            {
+                DrawResizeHandleVisual(9003);
+            }
+            else if (Plugin.EffectManagerOpen)
+            {
+                DrawResizeHandleVisual(9004);
+            }
             else if (Plugin.CustomDataOpen)
             {
                 DrawResizeHandleVisual(9005);
                 DrawResizeHandleVisual(9006);
             }
-            else if (Plugin.UiManagerOpen) DrawResizeHandleVisual(9007);
+            else if (Plugin.UiManagerOpen)
+            {
+                DrawResizeHandleVisual(9007);
+            }
             else if (Plugin.InventoryEditorOpen)
             {
                 DrawResizeHandleVisual(9008);
@@ -1259,10 +1275,6 @@ internal static class CustomUiPatch
         }
     }
 
-    // Draws a window and stores its rect.
-    // While the user is actively dragging or resizing, the tracked rect is kept instead of the one GUILayout.Window returns, so content changes (scrollbars appearing, min sizes) cannot fight the drag and cause lag or jitter.
-    private static readonly HashSet<int> TimedWindows = [];
-
     private static Rect DrawWindow(int windowId, GUI.WindowFunction func, string title)
     {
         var rect = GetWindowRect(windowId);
@@ -1273,19 +1285,10 @@ internal static class CustomUiPatch
         if (firstDraw)
             Plugin.Log.LogInfo(
                 $"[UI] First draw of window {windowId} '{title}' took {(Time.realtimeSinceStartup - started) * 1000f:F1}ms");
-        if (_resizingWindow == windowId || _draggingWindow == windowId)
-        {
-            return rect;
-        }
+        if (_resizingWindow == windowId || _draggingWindow == windowId) return rect;
 
         return ClampWindowRect(result);
     }
-
-    // Menu preload: windows do their setup work on the frame the player opens them, which can freeze the game for a moment.
-    // These steps run one per frame once the game is up instead, so the cost is paid before any menu is opened.
-    // This works slightly but it's still not enough, TODO: Improve
-    private static readonly Queue<(string Name, Action Step)> WarmUpSteps = new();
-    private static bool _warmUpFinished;
 
     public static void WarmUpStep()
     {
@@ -1319,10 +1322,6 @@ internal static class CustomUiPatch
                 $"[UI] Menu preload step '{name}' took {(Time.realtimeSinceStartup - started) * 1000f:F1}ms");
         if (WarmUpSteps.Count == 0) _warmUpFinished = true;
     }
-
-    // Bottom-right corner resize handle. Input is processed before the windows draw (so scrollbars cannot steal the events) and the visual is drawn after (so it stays on top of the scrollbars).
-    // The handle is 40px so it is easy to grab even when a horizontal scrollbar sits at the bottom of the window.
-    private const float ResizeHandleSize = 40f;
 
     private static Rect GetResizeHandleRect(int windowId)
     {
@@ -1378,10 +1377,7 @@ internal static class CustomUiPatch
         var handleRect = GetResizeHandleRect(windowId);
         var e = Event.current;
         if (e.type != EventType.Repaint) return;
-        if (_resizingWindow == windowId)
-        {
-            GUI.color = new Color(1f, 1f, 0.5f);
-        }
+        if (_resizingWindow == windowId) GUI.color = new Color(1f, 1f, 0.5f);
 
         GUI.Box(handleRect, "<->");
         GUI.color = Color.white;
@@ -1435,10 +1431,7 @@ internal static class CustomUiPatch
     {
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (GUILayout.Button("X", GUILayout.Width(24f)))
-        {
-            CloseUi();
-        }
+        if (GUILayout.Button("X", GUILayout.Width(24f))) CloseUi();
 
         GUILayout.EndHorizontal();
     }
@@ -1550,10 +1543,7 @@ internal static class CustomUiPatch
         if (tab.Groups != null)
         {
             var byKey = new Dictionary<string, ConfigEntryBase>();
-            foreach (var entry in GetEntries())
-            {
-                byKey[entry.Definition.Section + "/" + entry.Definition.Key] = entry;
-            }
+            foreach (var entry in GetEntries()) byKey[entry.Definition.Section + "/" + entry.Definition.Key] = entry;
 
             foreach (var group in tab.Groups)
             {
@@ -1614,9 +1604,6 @@ internal static class CustomUiPatch
         GUILayout.Label(title, _tabTitleStyle, GUILayout.ExpandWidth(true));
     }
 
-    // Height of the info bar that shows the pinned description, the taller box fits the larger font
-    private const float InfoBarHeight = 110f;
-
     private static void DrawInfoBar()
     {
         GUILayout.Box("", GUILayout.Height(4f));
@@ -1625,7 +1612,7 @@ internal static class CustomUiPatch
             alignment = TextAnchor.UpperLeft,
             wordWrap = true,
             fontSize = 14,
-            padding = new RectOffset(10, 10, 8, 8),
+            padding = new RectOffset(10, 10, 8, 8)
         };
         GUILayout.Box(
             string.IsNullOrEmpty(_infoText)
@@ -1690,9 +1677,8 @@ internal static class CustomUiPatch
                 {
                     EditBuffers[key] = newBuffer;
                     if (int.TryParse(newBuffer, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-                    {
-                        if ((int)entry.BoxedValue != parsed) entry.BoxedValue = parsed;
-                    }
+                        if ((int)entry.BoxedValue != parsed)
+                            entry.BoxedValue = parsed;
                 }
             }
             else if (type == typeof(float))
@@ -1708,9 +1694,8 @@ internal static class CustomUiPatch
                 {
                     EditBuffers[key] = newBuffer;
                     if (float.TryParse(newBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-                    {
-                        if (Math.Abs((float)entry.BoxedValue - parsed) > 0.0001f) entry.BoxedValue = parsed;
-                    }
+                        if (Math.Abs((float)entry.BoxedValue - parsed) > 0.0001f)
+                            entry.BoxedValue = parsed;
                 }
             }
             else if (type == typeof(string))
@@ -1734,10 +1719,7 @@ internal static class CustomUiPatch
         }
 
         GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Reset", GUILayout.Width(64f)))
-        {
-            ResetConfigEntry(entry);
-        }
+        if (GUILayout.Button("Reset", GUILayout.Width(64f))) ResetConfigEntry(entry);
 
         GUILayout.EndHorizontal();
     }
@@ -1788,8 +1770,6 @@ internal static class CustomUiPatch
         return true;
     }
 
-    private static readonly KeyCode[] AllKeyCodes = (KeyCode[])Enum.GetValues(typeof(KeyCode));
-
     // Keyboard keys only.
     // KeyCode values below 323 are the keyboard range (letters, numbers, function keys, modifiers), 323+ are mouse and joystick.
     private static bool IsKeyboardKey(KeyCode key)
@@ -1806,86 +1786,6 @@ internal static class CustomUiPatch
             or KeyCode.LeftCommand or KeyCode.RightCommand;
     }
 
-    // Stateful multi-frame key combo capture, same approach my Salt and Sacrifice mods.
-    // Keys held when capture starts are ignored until released so the button that started the capture is not bound.
-    // Newly pressed keys are recorded in order and the combo is committed only once everything has been released, so holding a key waits for the rest of the combo instead of binding immediately.
-    // Real modifiers (Ctrl/Shift/Alt) become the modifier regardless of the order they were pressed in.
-    private sealed class HotkeyCapture
-    {
-        private readonly HashSet<KeyCode> _ignore = [];
-        private readonly List<KeyCode> _seq = [];
-        private readonly HashSet<KeyCode> _seen = [];
-
-        public HotkeyCapture()
-        {
-            foreach (var key in AllKeyCodes)
-            {
-                if (IsKeyboardKey(key) && Input.GetKey(key)) _ignore.Add(key);
-            }
-        }
-
-        public string Preview => string.Join(" + ", _seq);
-
-        // Returns true when the combo is complete (all inputs released)
-        public bool Poll()
-        {
-            // Stop ignoring pre-held inputs once they have been released
-            _ignore.RemoveWhere(key => !Input.GetKey(key));
-
-            var anyHeld = false;
-            foreach (var key in AllKeyCodes)
-            {
-                if (!IsKeyboardKey(key) || _ignore.Contains(key)) continue;
-                if (!Input.GetKey(key)) continue;
-                anyHeld = true;
-                if (_seen.Add(key)) _seq.Add(key);
-            }
-
-            // Wait until something was pressed AND everything has been released
-            if (_seq.Count == 0 || anyHeld) return false;
-
-            if (_seq.Contains(KeyCode.Escape))
-            {
-                // Esc cancels
-                _editingHotkey = null;
-                IsCapturingHotkey = false;
-                return true;
-            }
-
-            // Prefer a real modifier regardless of seen order, so a same-frame Ctrl+A is not inverted (Input.GetKey iteration is keycode-ordered)
-            var mod = KeyCode.None;
-            var main = KeyCode.None;
-            foreach (var key in _seq)
-            {
-                if (IsModifierKey(key))
-                {
-                    if (mod == KeyCode.None) mod = key;
-                }
-                else if (main == KeyCode.None)
-                {
-                    main = key;
-                }
-            }
-
-            KeyCode[] modifiers;
-            if (mod != KeyCode.None && main != KeyCode.None)
-            {
-                modifiers = [mod];
-            }
-            else
-            {
-                // Single key, or only modifiers pressed: last pressed becomes the main key
-                main = _seq[_seq.Count - 1];
-                modifiers = _seq.Count >= 2 ? [_seq[0]] : [];
-            }
-
-            _editingHotkey.BoxedValue = new KeyboardShortcut(main, modifiers);
-            _editingHotkey = null;
-            IsCapturingHotkey = false;
-            return true;
-        }
-    }
-
     private static void ItemSpawnerWindow(int id)
     {
         DrawWindowHeader();
@@ -1898,9 +1798,7 @@ internal static class CustomUiPatch
         }
 
         if (_allItems.Length == 0)
-        {
             _allItems = [.. ItemsDatabase.Instance.itemsDict.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
-        }
 
         GUILayout.BeginHorizontal();
         GUILayout.Label("Item ID", GUILayout.Width(70f));
@@ -1908,11 +1806,9 @@ internal static class CustomUiPatch
         GUILayout.Label("Amount", GUILayout.Width(55f));
         _itemAmount = GUILayout.TextField(_itemAmount, GUILayout.Width(60f));
         if (GUILayout.Button("Give Item", GUILayout.Width(90f)))
-        {
             SetStatus(int.TryParse(_itemAmount, NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount)
                 ? GiveItem(_itemName, amount)
                 : "Amount must be a number");
-        }
 
         GUILayout.EndHorizontal();
 
@@ -1931,15 +1827,9 @@ internal static class CustomUiPatch
         _itemScroll = GUILayout.BeginScrollView(_itemScroll);
         foreach (var item in filtered)
         {
-            if (item == _itemName)
-            {
-                GUI.color = new Color(0.7f, 0.9f, 1f);
-            }
+            if (item == _itemName) GUI.color = new Color(0.7f, 0.9f, 1f);
 
-            if (GUILayout.Button(item))
-            {
-                _itemName = item;
-            }
+            if (GUILayout.Button(item)) _itemName = item;
 
             GUI.color = Color.white;
         }
@@ -1965,10 +1855,7 @@ internal static class CustomUiPatch
                 where prefab && prefab.GetComponent<Character>()
                 select candidate).ToList();
             _enemyNames = [.. valid];
-            if (_enemyNames.Length == 0)
-            {
-                _enemyNames = EnemyCandidates;
-            }
+            if (_enemyNames.Length == 0) _enemyNames = EnemyCandidates;
         }
 
         GUILayout.Space(4f);
@@ -1980,10 +1867,7 @@ internal static class CustomUiPatch
                 ? "Saved position: " + _savedCursorPos.x.ToString("F0", CultureInfo.InvariantCulture) + ", " +
                   _savedCursorPos.z.ToString("F0", CultureInfo.InvariantCulture)
                 : "No saved position yet", GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("Save now", GUILayout.Width(80f)))
-            {
-                SaveCursorPosition();
-            }
+            if (GUILayout.Button("Save now", GUILayout.Width(80f))) SaveCursorPosition();
 
             GUILayout.EndHorizontal();
         }
@@ -1997,10 +1881,7 @@ internal static class CustomUiPatch
         GUILayout.BeginHorizontal();
         GUILayout.Label("Character ID", GUILayout.Width(90f));
         _enemyName = GUILayout.TextField(_enemyName, GUILayout.Width(220f));
-        if (GUILayout.Button("Spawn", GUILayout.Width(80f)))
-        {
-            SetStatus(SpawnCharacter(_enemyName));
-        }
+        if (GUILayout.Button("Spawn", GUILayout.Width(80f))) SetStatus(SpawnCharacter(_enemyName));
 
         GUILayout.EndHorizontal();
 
@@ -2053,13 +1934,10 @@ internal static class CustomUiPatch
             "Effects are applied to the player. Duration 0 means permanent. Active effects are marked in green.",
             GUILayout.ExpandWidth(true));
         if (GUILayout.Button("?", GUILayout.Width(24f)))
-        {
             ShowInfo("Effect Manager",
                 "Effect Manager:\nApplies and removes effects on the player. Duration 0 keeps the effect forever, what the modifier does depends on the effect type, the interval is used by effects that tick over time. The ? buttons next to each field explain them, the game ID of the effect is the type name.\nDisable keeps an effect off the player, Re-apply on loss puts it back with the values from this row whenever the game drops it, for example on death or sleep. Both are saved in your custom character effects config under the effect type.\nEffects are saved to your custom config as you get them.");
-        }
 
         if (GUILayout.Button("Remove All", GUILayout.Width(110f)))
-        {
             try
             {
                 var currentEffects = GetPlayerEffects();
@@ -2071,15 +1949,11 @@ internal static class CustomUiPatch
                 Plugin.Log.LogError(e);
                 SetStatus("Error removing effects: " + e.Message);
             }
-        }
 
         GUILayout.EndHorizontal();
 
         _effectScroll = GUILayout.BeginScrollView(_effectScroll);
-        foreach (CharacterEffectType type in Enum.GetValues(typeof(CharacterEffectType)))
-        {
-            DrawEffectRow(type);
-        }
+        foreach (CharacterEffectType type in Enum.GetValues(typeof(CharacterEffectType))) DrawEffectRow(type);
 
         GUILayout.EndScrollView();
 
@@ -2098,15 +1972,9 @@ internal static class CustomUiPatch
 
         foreach (var file in DataFiles)
         {
-            if (file == _selectedDataFile)
-            {
-                GUI.color = new Color(0.7f, 0.9f, 1f);
-            }
+            if (file == _selectedDataFile) GUI.color = new Color(0.7f, 0.9f, 1f);
 
-            if (GUILayout.Button(file.Name, GUILayout.Height(34f)))
-            {
-                SelectDataFile(file);
-            }
+            if (GUILayout.Button(file.Name, GUILayout.Height(34f))) SelectDataFile(file);
 
             GUI.color = Color.white;
         }
@@ -2168,9 +2036,8 @@ internal static class CustomUiPatch
     {
         var ids = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         if (ItemsDatabase.Instance)
-        {
-            foreach (var key in ItemsDatabase.Instance.itemsDict.Keys) ids.Add(key);
-        }
+            foreach (var key in ItemsDatabase.Instance.itemsDict.Keys)
+                ids.Add(key);
 
         foreach (var property in Plugin.DefaultCustomItems.Properties()) ids.Add(property.Name);
         foreach (var property in Plugin.CustomItems.Properties()) ids.Add(property.Name);
@@ -2214,11 +2081,9 @@ internal static class CustomUiPatch
             : [.. _allItems.Where(x => x.IndexOf(_idPickerSearch, StringComparison.OrdinalIgnoreCase) >= 0)];
 
         if (filtered.Length == 0)
-        {
             GUILayout.Label(_allItems.Length == 0
                 ? "No item IDs known yet. Load a save once so the mod can read the game's item list."
                 : "No item ID matches the search.", GUILayout.ExpandWidth(true));
-        }
 
         _idPickerScroll = GUILayout.BeginScrollView(_idPickerScroll,
             GUILayout.Height(Mathf.Max(GetWindowRect(9006).height * 0.4f, 120f)));
@@ -2245,15 +2110,13 @@ internal static class CustomUiPatch
         {
             case "loot":
                 if (target is JArray lootItems)
-                {
                     lootItems.Add(new JObject
                     {
                         { "item", itemId },
                         { "minAmount", 1 },
                         { "maxAmount", 1 },
-                        { "chance", 1f },
+                        { "chance", 1f }
                     });
-                }
 
                 break;
             case "requirement":
@@ -2262,31 +2125,22 @@ internal static class CustomUiPatch
             case "preset":
                 if (target is JObject presets && !string.IsNullOrEmpty(_idPickerName) &&
                     presets[_idPickerName] is JObject preset)
-                {
                     preset[itemId] = new JObject
                     {
                         { "type", itemId },
                         { "amountMin", 0 },
                         { "amountMax", 1 },
-                        { "chance", 0.5f },
+                        { "chance", 0.5f }
                     };
-                }
 
                 break;
             default:
                 if (target is JArray array && _idPickerIndex >= 0 && _idPickerIndex < array.Count &&
                     array[_idPickerIndex] is JObject row)
-                {
                     row[_idPickerKey] = itemId;
-                }
                 else if (!string.IsNullOrEmpty(_idPickerName) && target[_idPickerName] is JObject named)
-                {
                     named[_idPickerKey] = itemId;
-                }
-                else if (target is JObject entryObject)
-                {
-                    entryObject[_idPickerKey] = itemId;
-                }
+                else if (target is JObject entryObject) entryObject[_idPickerKey] = itemId;
 
                 break;
         }
@@ -2322,31 +2176,21 @@ internal static class CustomUiPatch
         if (_selectedDataFile.Settings.Length > 0)
         {
             var byKey = new Dictionary<string, ConfigEntryBase>();
-            foreach (var entry in GetEntries())
-            {
-                byKey[entry.Definition.Section + "/" + entry.Definition.Key] = entry;
-            }
+            foreach (var entry in GetEntries()) byKey[entry.Definition.Section + "/" + entry.Definition.Key] = entry;
 
             DrawDivider();
             DrawGroupTitle(_selectedDataFile.Name + " settings");
             DrawDivider();
             foreach (var key in _selectedDataFile.Settings)
-            {
-                if (byKey.TryGetValue(key, out var entry)) DrawConfigEntry(entry);
-            }
+                if (byKey.TryGetValue(key, out var entry))
+                    DrawConfigEntry(entry);
         }
 
         GUILayout.Space(4f);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Save", GUILayout.Width(70f)))
-        {
-            SaveDataFile();
-        }
+        if (GUILayout.Button("Save", GUILayout.Width(70f))) SaveDataFile();
 
-        if (GUILayout.Button("Reload", GUILayout.Width(70f)))
-        {
-            SelectDataFile(_selectedDataFile);
-        }
+        if (GUILayout.Button("Reload", GUILayout.Width(70f))) SelectDataFile(_selectedDataFile);
 
         GUILayout.FlexibleSpace();
         GUILayout.Label(_selectedDataFile.Name, GUILayout.ExpandWidth(true));
@@ -2355,17 +2199,11 @@ internal static class CustomUiPatch
         // Add and delete entries right under Save and Reload
         GUILayout.BeginHorizontal();
         _dataNewKey = GUILayout.TextField(_dataNewKey, GUILayout.Width(210f));
-        if (GUILayout.Button("Add", GUILayout.Width(55f)))
-        {
-            AddDataKey();
-        }
+        if (GUILayout.Button("Add", GUILayout.Width(55f))) AddDataKey();
 
         var hadSelection = !string.IsNullOrEmpty(_dataSelectedKey);
         GUI.enabled = hadSelection;
-        if (GUILayout.Button("Delete Selected", GUILayout.Width(130f)))
-        {
-            DeleteSelectedDataKey();
-        }
+        if (GUILayout.Button("Delete Selected", GUILayout.Width(130f))) DeleteSelectedDataKey();
 
         GUI.enabled = true;
         GUILayout.FlexibleSpace();
@@ -2391,15 +2229,9 @@ internal static class CustomUiPatch
                     .Where(p => p.Name.IndexOf(_dataKeysSearch, StringComparison.OrdinalIgnoreCase) >= 0);
             foreach (var prop in filtered)
             {
-                if (prop.Name == _dataSelectedKey)
-                {
-                    GUI.color = new Color(0.7f, 0.9f, 1f);
-                }
+                if (prop.Name == _dataSelectedKey) GUI.color = new Color(0.7f, 0.9f, 1f);
 
-                if (GUILayout.Button(prop.Name, _leftButtonStyle))
-                {
-                    SelectDataKey(prop.Value, prop.Name);
-                }
+                if (GUILayout.Button(prop.Name, _leftButtonStyle)) SelectDataKey(prop.Value, prop.Name);
 
                 GUI.color = Color.white;
             }
@@ -2410,9 +2242,7 @@ internal static class CustomUiPatch
         // Show the keys of the current editor that the selected entry does not have yet, so any
         // key from the wiki can be added without knowing its exact name.
         if (!string.IsNullOrEmpty(_dataSelectedKey) && data?[_dataSelectedKey] is JObject selectedEntry)
-        {
             DrawAvailableKeysPicker(selectedEntry);
-        }
 
         GUILayout.EndVertical();
 
@@ -2423,13 +2253,9 @@ internal static class CustomUiPatch
             GUILayout.ExpandWidth(true));
         _dataPropsScroll = GUILayout.BeginScrollView(_dataPropsScroll);
         if (!string.IsNullOrEmpty(_dataSelectedKey) && data != null && data[_dataSelectedKey] is JObject obj)
-        {
             // Sound picker takes priority, then the item ID picker, then the sub-picker, then the raw editor
             if (!DrawSoundPicker() && !DrawItemIdPicker(obj) && !DrawSubPicker())
-            {
                 DrawObjectEditor(obj);
-            }
-        }
 
         GUILayout.EndScrollView();
         GUILayout.EndVertical();
@@ -2517,11 +2343,9 @@ internal static class CustomUiPatch
         PropBuffers.Clear();
         if (value is not JObject obj) return;
         foreach (var prop in obj.Properties())
-        {
             PropBuffers[prop.Name] = prop.Value.Type == JTokenType.String
                 ? prop.Value.Value<string>()
                 : prop.Value.ToString(Formatting.None);
-        }
     }
 
     private static void DrawObjectEditor(JObject obj)
@@ -2573,9 +2397,8 @@ internal static class CustomUiPatch
                     {
                         PropBuffers[prop.Name] = newBuffer;
                         if (int.TryParse(newBuffer, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-                        {
-                            if ((int)prop.Value != parsed) prop.Value = parsed;
-                        }
+                            if ((int)prop.Value != parsed)
+                                prop.Value = parsed;
                     }
 
                     break;
@@ -2587,9 +2410,8 @@ internal static class CustomUiPatch
                     {
                         PropBuffers[prop.Name] = newBuffer;
                         if (float.TryParse(newBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-                        {
-                            if (Math.Abs((float)prop.Value - parsed) > 0.0001f) prop.Value = parsed;
-                        }
+                            if (Math.Abs((float)prop.Value - parsed) > 0.0001f)
+                                prop.Value = parsed;
                     }
 
                     break;
@@ -2633,23 +2455,17 @@ internal static class CustomUiPatch
 
                     // Sound picker for the activateSound property of character effects
                     if (_selectedDataFile?.Name == "Custom Character Effects" && prop.Name == "activateSound")
-                    {
                         if (GUILayout.Button("Pick", GUILayout.Width(50f)))
                         {
                             _soundPickerFor = _dataSelectedKey;
                             _soundPickerSearch = "";
                             LoadAllSounds();
                         }
-                    }
 
                     // Item ID picker for keys that hold an item ID
                     if (IsItemIdKey(prop.Name))
-                    {
                         if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-                        {
                             OpenIdPicker(prop.Name, "");
-                        }
-                    }
 
                     break;
                 }
@@ -2773,9 +2589,7 @@ internal static class CustomUiPatch
         var path = SubPickerPath.Count > 0 ? " / " + string.Join(" / ", SubPickerPath) : "";
         GUILayout.Label("Editing " + _subPickerKey + " / " + _subPickerProp + path, GUILayout.ExpandWidth(true));
         if (SubPickerPath.Count > 0 && GUILayout.Button("Back", GUILayout.Width(60f)))
-        {
             SubPickerPath.RemoveAt(SubPickerPath.Count - 1);
-        }
 
         if (GUILayout.Button("Close", GUILayout.Width(60f)))
         {
@@ -2786,7 +2600,6 @@ internal static class CustomUiPatch
         GUILayout.EndHorizontal();
 
         if (IsSubPickerProperty(_subPickerProp) && SubPickerPath.Count == 0)
-        {
             switch (_selectedDataFile.Name)
             {
                 case "Custom Loot":
@@ -2803,11 +2616,8 @@ internal static class CustomUiPatch
                     DrawRequirementsPicker(token);
                     break;
             }
-        }
         else
-        {
             DrawGenericTokenEditor(token);
-        }
 
         GUILayout.EndVertical();
         return true;
@@ -3024,9 +2834,7 @@ internal static class CustomUiPatch
                 if (newValue != current.ToString(CultureInfo.InvariantCulture)
                     && int.TryParse(newValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
                     && parsed != current)
-                {
                     SetChildOf(parent, keyName, parsed);
-                }
 
                 break;
             }
@@ -3038,19 +2846,14 @@ internal static class CustomUiPatch
                 if (newValue != current.ToString(CultureInfo.InvariantCulture)
                     && float.TryParse(newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
                     && Math.Abs(parsed - current) > 0.0001f)
-                {
                     SetChildOf(parent, keyName, parsed);
-                }
 
                 break;
             }
             case JTokenType.Object:
             case JTokenType.Array:
             {
-                if (GUILayout.Button("Open", GUILayout.Width(60f)))
-                {
-                    SubPickerPath.Add(keyName);
-                }
+                if (GUILayout.Button("Open", GUILayout.Width(60f))) SubPickerPath.Add(keyName);
 
                 GUILayout.Label(DescribeToken(value), GUILayout.Width(SizeLabelWidth));
                 break;
@@ -3061,10 +2864,7 @@ internal static class CustomUiPatch
                 var newValue = GUILayout.TextField(current, GUILayout.Width(240f));
                 if (newValue != current) SetChildOf(parent, keyName, newValue);
                 // Item ID picker for keys that hold an item ID
-                if (IsItemIdKey(keyName) && GUILayout.Button("Pick", GUILayout.Width(50f)))
-                {
-                    OpenIdPicker(keyName, "");
-                }
+                if (IsItemIdKey(keyName) && GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker(keyName, "");
 
                 break;
             }
@@ -3125,10 +2925,7 @@ internal static class CustomUiPatch
             var newName = GUILayout.TextField(itemName, GUILayout.Width(180f));
             if (newName != itemName) item["item"] = newName;
             DrawPropertyInfoButton("item");
-            if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-            {
-                OpenIdPicker("item", "", "", i);
-            }
+            if (GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker("item", "", "", i);
 
             GUILayout.Label("Min", GUILayout.Width(30f));
             var min = item["minAmount"]?.Value<int>() ?? 1;
@@ -3165,7 +2962,6 @@ internal static class CustomUiPatch
         GUILayout.BeginHorizontal();
         _subPickerNewItem = GUILayout.TextField(_subPickerNewItem, GUILayout.Width(180f));
         if (GUILayout.Button("Add Item", GUILayout.Width(80f)))
-        {
             if (!string.IsNullOrEmpty(_subPickerNewItem))
             {
                 items.Add(new JObject
@@ -3173,16 +2969,12 @@ internal static class CustomUiPatch
                     { "item", _subPickerNewItem },
                     { "minAmount", 1 },
                     { "maxAmount", 1 },
-                    { "chance", 1f },
+                    { "chance", 1f }
                 });
                 _subPickerNewItem = "";
             }
-        }
 
-        if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-        {
-            OpenIdPicker("", "loot");
-        }
+        if (GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker("", "loot");
 
         GUILayout.EndHorizontal();
     }
@@ -3221,10 +3013,7 @@ internal static class CustomUiPatch
                 var typeName = item["type"]?.Value<string>() ?? itemProp.Name;
                 var newType = GUILayout.TextField(typeName, GUILayout.Width(180f));
                 DrawPropertyInfoButton("type");
-                if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-                {
-                    OpenIdPicker("type", "", preset.Name);
-                }
+                if (GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker("type", "", preset.Name);
 
                 if (newType != typeName)
                 {
@@ -3260,10 +3049,7 @@ internal static class CustomUiPatch
                     Math.Abs(parsedChance - chance) > 0.0001f)
                     item["chance"] = parsedChance;
                 DrawPropertyInfoButton("chance");
-                if (GUILayout.Button("X", GUILayout.Width(24f)))
-                {
-                    itemProp.Remove();
-                }
+                if (GUILayout.Button("X", GUILayout.Width(24f))) itemProp.Remove();
 
                 GUILayout.EndHorizontal();
             }
@@ -3272,7 +3058,6 @@ internal static class CustomUiPatch
             GUILayout.Space(20f);
             _subPickerNewItem = GUILayout.TextField(_subPickerNewItem, GUILayout.Width(180f));
             if (GUILayout.Button("Add Item", GUILayout.Width(80f)))
-            {
                 if (!string.IsNullOrEmpty(_subPickerNewItem))
                 {
                     presetObj[_subPickerNewItem] = new JObject
@@ -3280,16 +3065,12 @@ internal static class CustomUiPatch
                         { "type", _subPickerNewItem },
                         { "amountMin", 0 },
                         { "amountMax", 0 },
-                        { "chance", 0f },
+                        { "chance", 0f }
                     };
                     _subPickerNewItem = "";
                 }
-            }
 
-            if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-            {
-                OpenIdPicker("", "preset", preset.Name);
-            }
+            if (GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker("", "preset", preset.Name);
 
             GUILayout.EndHorizontal();
         }
@@ -3309,10 +3090,9 @@ internal static class CustomUiPatch
         {
             var nextIndex = 0;
             foreach (var preset in presets.Properties())
-            {
                 if (int.TryParse(preset.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index) &&
-                    index >= nextIndex) nextIndex = index + 1;
-            }
+                    index >= nextIndex)
+                    nextIndex = index + 1;
 
             presets[nextIndex.ToString(CultureInfo.InvariantCulture)] = new JObject();
             SetEditorStatus("Added preset " + nextIndex + ", add items to it");
@@ -3366,7 +3146,6 @@ internal static class CustomUiPatch
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Add Attack", GUILayout.Width(90f)))
-        {
             attacks.Add(new JObject
             {
                 {
@@ -3375,11 +3154,10 @@ internal static class CustomUiPatch
                         { "AttackName(ReadOnly)", "" },
                         { "AttackIsRanged(ReadOnly)", false },
                         { "Damage", 0 },
-                        { "BarricadeDamage", 0 },
+                        { "BarricadeDamage", 0 }
                     }
                 }
             });
-        }
 
         GUILayout.EndHorizontal();
     }
@@ -3403,10 +3181,7 @@ internal static class CustomUiPatch
             var amount = req.Value.Type == JTokenType.Float ? req.Value.Value<float>() : req.Value.Value<int>();
             var newAmount = GUILayout.TextField(amount.ToString(CultureInfo.InvariantCulture), GUILayout.Width(60f));
             DrawPropertyInfoButton("amount");
-            if (GUILayout.Button("X", GUILayout.Width(24f)))
-            {
-                req.Remove();
-            }
+            if (GUILayout.Button("X", GUILayout.Width(24f))) req.Remove();
 
             GUILayout.EndHorizontal();
 
@@ -3421,9 +3196,7 @@ internal static class CustomUiPatch
 
             if (float.TryParse(newAmount, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedAmount)
                 && Math.Abs(parsedAmount - amount) > 0.0001f)
-            {
                 req.Value = parsedAmount;
-            }
         }
 
         GUILayout.EndScrollView();
@@ -3431,18 +3204,13 @@ internal static class CustomUiPatch
         GUILayout.BeginHorizontal();
         _subPickerNewItem = GUILayout.TextField(_subPickerNewItem, GUILayout.Width(200f));
         if (GUILayout.Button("Add Requirement", GUILayout.Width(120f)))
-        {
             if (!string.IsNullOrEmpty(_subPickerNewItem) && !requirements.ContainsKey(_subPickerNewItem))
             {
                 requirements[_subPickerNewItem] = 1;
                 _subPickerNewItem = "";
             }
-        }
 
-        if (GUILayout.Button("Pick", GUILayout.Width(50f)))
-        {
-            OpenIdPicker("", "requirement");
-        }
+        if (GUILayout.Button("Pick", GUILayout.Width(50f))) OpenIdPicker("", "requirement");
 
         GUILayout.EndHorizontal();
     }
@@ -3547,13 +3315,9 @@ internal static class CustomUiPatch
                     && float.TryParse(buffer[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y)
                     && float.TryParse(buffer[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var w)
                     && float.TryParse(buffer[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var h))
-                {
                     WindowRects[window.Id] = ClampWindowRect(new Rect(x, y, w, h));
-                }
                 else
-                {
                     SetStatus("Invalid numbers for " + window.Name);
-                }
             }
 
             if (GUILayout.Button("Reset", GUILayout.Width(55f)))
@@ -3621,13 +3385,9 @@ internal static class CustomUiPatch
             inputs.Interval = GUILayout.TextField(inputs.Interval, GUILayout.Width(50f));
             DrawEffectInfoButton("Interval", "interval");
 
-            if (GUILayout.Button("Apply", GUILayout.Width(60f)))
-            {
-                ApplyEffect(type, inputs);
-            }
+            if (GUILayout.Button("Apply", GUILayout.Width(60f))) ApplyEffect(type, inputs);
 
             if (GUILayout.Button("Remove", GUILayout.Width(70f)))
-            {
                 try
                 {
                     var currentEffects = GetPlayerEffects();
@@ -3639,7 +3399,6 @@ internal static class CustomUiPatch
                     Plugin.Log.LogError(e);
                     SetStatus("Error removing effect: " + e.Message);
                 }
-            }
 
             // Stored in the character effects config under the plain effect type
             var toggleEntry = GetEffectToggleEntry(type, false);
@@ -3808,11 +3567,9 @@ internal static class CustomUiPatch
                 return type + " has no Character component, cannot spawn it this way";
 
             if (_spawnOnSavedPos)
-            {
                 return !_hasSavedCursorPos
                     ? "No saved position yet, press the Save Cursor Position key (default Shift + F4) or Save now first"
                     : SpawnCharacterAtPosition(type, _savedCursorPos);
-            }
 
             var character = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(Player.Instance.gameObject,
                 Vector3.zero, distance, type, false);
@@ -3831,10 +3588,7 @@ internal static class CustomUiPatch
     {
         try
         {
-            if (!Core.withinWorldBounds(position))
-            {
-                return "Saved position is outside the world";
-            }
+            if (!Core.withinWorldBounds(position)) return "Saved position is outside the world";
 
             var spawner = Singleton<CharacterSpawner>.Instance;
             var spawned = Core.AddPrefab("Characters/" + type, position, Quaternion.Euler(90f, 0f, 0f), spawner.holder,
@@ -3842,23 +3596,18 @@ internal static class CustomUiPatch
             var character = spawned.GetComponent<Character>();
             if (!character)
             {
-                UnityEngine.Object.Destroy(spawned);
+                Object.Destroy(spawned);
                 return "Could not spawn " + type + " at the saved position";
             }
 
             if (Player.Instance.whereAmI && Player.Instance.whereAmI.bigLocation)
-            {
                 character.setWaypoints(Player.Instance.whereAmI.bigLocation.waypoints);
-            }
 
             character.temporarySpawned = true;
             character.isActive = true;
             if (!Singleton<Dreams>.Instance.dreaming)
             {
-                if (!spawner.spawnedCharacters.Contains(spawned))
-                {
-                    spawner.spawnedCharacters.Add(spawned);
-                }
+                if (!spawner.spawnedCharacters.Contains(spawned)) spawner.spawnedCharacters.Add(spawned);
 
                 Core.addToSaveable(spawned, true);
             }
@@ -3954,36 +3703,26 @@ internal static class CustomUiPatch
         }
 
         if (GUILayout.Button("- Slot", GUILayout.Width(60f)))
-        {
             if (inv.slots.Count > 1)
             {
                 inv.removeSlot();
                 inv.refresh();
             }
-        }
 
         GUILayout.EndHorizontal();
 
-        if (!InvScrolls.TryGetValue(windowId, out var scroll))
-        {
-            scroll = Vector2.zero;
-        }
+        if (!InvScrolls.TryGetValue(windowId, out var scroll)) scroll = Vector2.zero;
 
         scroll = GUILayout.BeginScrollView(scroll);
         InvScrolls[windowId] = scroll;
 
-        for (var i = 0; i < inv.slots.Count; i++)
-        {
-            DrawInvSlotRow(windowId, inv, i);
-        }
+        for (var i = 0; i < inv.slots.Count; i++) DrawInvSlotRow(windowId, inv, i);
 
         GUILayout.EndScrollView();
 
         // Editor for the selected slot
         if (_selectedInvWindow == windowId && _selectedInvSlot >= 0 && _selectedInvSlot < inv.slots.Count)
-        {
             DrawInvSlotEditor(windowId, inv);
-        }
     }
 
     private static void DrawInvSlotRow(int windowId, Inventory inv, int index)
@@ -3993,10 +3732,7 @@ internal static class CustomUiPatch
         var selected = _selectedInvWindow == windowId && _selectedInvSlot == index;
 
         GUILayout.BeginHorizontal();
-        if (selected)
-        {
-            GUI.color = new Color(0.7f, 0.9f, 1f);
-        }
+        if (selected) GUI.color = new Color(0.7f, 0.9f, 1f);
 
         var label = hasItem ? slot.invItem.type + " x" + slot.invItem.amount : "(empty)";
         if (GUILayout.Button(label, GUILayout.ExpandWidth(true)))
@@ -4012,10 +3748,7 @@ internal static class CustomUiPatch
         if (hasItem && GUILayout.Button("Clear", GUILayout.Width(55f)))
         {
             slot.removeItem();
-            if (_selectedInvWindow == windowId && _selectedInvSlot == index)
-            {
-                _selectedInvSlot = -1;
-            }
+            if (_selectedInvWindow == windowId && _selectedInvSlot == index) _selectedInvSlot = -1;
 
             inv.refresh();
         }
@@ -4061,10 +3794,7 @@ internal static class CustomUiPatch
             }
             else
             {
-                if (!InvItemClass.isNull(slot.invItem))
-                {
-                    slot.removeItem();
-                }
+                if (!InvItemClass.isNull(slot.invItem)) slot.removeItem();
 
                 slot.createItem(_invSlotItemName, amount);
                 inv.refresh();
@@ -4079,27 +3809,12 @@ internal static class CustomUiPatch
             SetStatus("Cleared slot");
         }
 
-        if (GUILayout.Button("Close", GUILayout.Width(60f)))
-        {
-            _selectedInvSlot = -1;
-        }
+        if (GUILayout.Button("Close", GUILayout.Width(60f))) _selectedInvSlot = -1;
 
         GUILayout.EndHorizontal();
 
         GUILayout.EndVertical();
     }
-
-    // Item quickpick (F8): a wide bottom bar listing all items.
-    // Clicking one inserts its ID into the currently focused slot editor text field.
-
-    private static string _quickpickSearch = "";
-
-    private static Vector2 _quickpickScroll;
-
-    // The item picked in the quickpick is kept here so it survives slot switches, and the bar at
-    // the bottom can set the selected slot to it without retyping anything.
-    private static string _quickpickItem = "";
-    private static string _quickpickAmount = "1";
 
     private static void QuickPickWindow(int id)
     {
@@ -4114,9 +3829,7 @@ internal static class CustomUiPatch
         }
 
         if (_allItems.Length == 0)
-        {
             _allItems = [.. ItemsDatabase.Instance.itemsDict.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
-        }
 
         // Bottom bar mirroring the slot editor: the picked item and an amount, kept between picks
         GUILayout.BeginHorizontal("box");
@@ -4124,10 +3837,7 @@ internal static class CustomUiPatch
         _quickpickItem = GUILayout.TextField(_quickpickItem, GUILayout.Width(200f));
         GUILayout.Label("Amount", GUILayout.Width(55f));
         _quickpickAmount = GUILayout.TextField(_quickpickAmount, GUILayout.Width(60f));
-        if (GUILayout.Button("Set to quickpicked item", GUILayout.Width(180f)))
-        {
-            SetQuickPickedItemToSlot();
-        }
+        if (GUILayout.Button("Set to quickpicked item", GUILayout.Width(180f))) SetQuickPickedItemToSlot();
 
         GUILayout.FlexibleSpace();
         GUILayout.Label("Click an item to pick it", GUILayout.ExpandWidth(true));
@@ -4237,5 +3947,130 @@ internal static class CustomUiPatch
         if (!inventory || _selectedInvSlot >= inventory.slots.Count) return null;
         slot = inventory.slots[_selectedInvSlot];
         return inventory;
+    }
+
+    // F2 tab layout. A tab either lists its groups with the exact "Section/Key" entries in drawing order, or falls back to drawing every entry of its sections in config order (used by the merged Skills tab, which keeps the tier names as sub headers).
+    private sealed class TabDefinition
+    {
+        public readonly (string Title, string[] Keys)[] Groups;
+        public readonly string Name;
+        public readonly string[] Sections;
+
+        public TabDefinition(string name, string[] sections)
+        {
+            Name = name;
+            Sections = sections;
+        }
+
+        public TabDefinition(string name, (string Title, string[] Keys)[] groups)
+        {
+            Name = name;
+            Groups = groups;
+        }
+    }
+
+    private sealed class EffectInputs
+    {
+        public string Duration = "0";
+        public string Interval = "0";
+        public string Modifier = "1";
+    }
+
+    private sealed class DataFile(
+        string name,
+        Func<string> path,
+        Func<JObject> get,
+        Action<JObject> set,
+        Func<JToken> newKeyTemplate = null,
+        string[] settings = null)
+    {
+        public readonly Func<JObject> Get = get;
+        public readonly string Name = name;
+
+        // Template for a new top level key, per file type
+        public readonly Func<JToken> NewKeyTemplate = newKeyTemplate;
+        public readonly Func<string> Path = path;
+
+        public readonly Action<JObject> Set = set;
+
+        // Config entries of this file (loading toggles and readmes) drawn above the save and reload buttons
+        public readonly string[] Settings = settings ?? [];
+    }
+
+    // Stateful multi-frame key combo capture, same approach my Salt and Sacrifice mods.
+    // Keys held when capture starts are ignored until released so the button that started the capture is not bound.
+    // Newly pressed keys are recorded in order and the combo is committed only once everything has been released, so holding a key waits for the rest of the combo instead of binding immediately.
+    // Real modifiers (Ctrl/Shift/Alt) become the modifier regardless of the order they were pressed in.
+    private sealed class HotkeyCapture
+    {
+        private readonly HashSet<KeyCode> _ignore = [];
+        private readonly HashSet<KeyCode> _seen = [];
+        private readonly List<KeyCode> _seq = [];
+
+        public HotkeyCapture()
+        {
+            foreach (var key in AllKeyCodes)
+                if (IsKeyboardKey(key) && Input.GetKey(key))
+                    _ignore.Add(key);
+        }
+
+        public string Preview => string.Join(" + ", _seq);
+
+        // Returns true when the combo is complete (all inputs released)
+        public bool Poll()
+        {
+            // Stop ignoring pre-held inputs once they have been released
+            _ignore.RemoveWhere(key => !Input.GetKey(key));
+
+            var anyHeld = false;
+            foreach (var key in AllKeyCodes)
+            {
+                if (!IsKeyboardKey(key) || _ignore.Contains(key)) continue;
+                if (!Input.GetKey(key)) continue;
+                anyHeld = true;
+                if (_seen.Add(key)) _seq.Add(key);
+            }
+
+            // Wait until something was pressed AND everything has been released
+            if (_seq.Count == 0 || anyHeld) return false;
+
+            if (_seq.Contains(KeyCode.Escape))
+            {
+                // Esc cancels
+                _editingHotkey = null;
+                IsCapturingHotkey = false;
+                return true;
+            }
+
+            // Prefer a real modifier regardless of seen order, so a same-frame Ctrl+A is not inverted (Input.GetKey iteration is keycode-ordered)
+            var mod = KeyCode.None;
+            var main = KeyCode.None;
+            foreach (var key in _seq)
+                if (IsModifierKey(key))
+                {
+                    if (mod == KeyCode.None) mod = key;
+                }
+                else if (main == KeyCode.None)
+                {
+                    main = key;
+                }
+
+            KeyCode[] modifiers;
+            if (mod != KeyCode.None && main != KeyCode.None)
+            {
+                modifiers = [mod];
+            }
+            else
+            {
+                // Single key, or only modifiers pressed: last pressed becomes the main key
+                main = _seq[_seq.Count - 1];
+                modifiers = _seq.Count >= 2 ? [_seq[0]] : [];
+            }
+
+            _editingHotkey.BoxedValue = new KeyboardShortcut(main, modifiers);
+            _editingHotkey = null;
+            IsCapturingHotkey = false;
+            return true;
+        }
     }
 }

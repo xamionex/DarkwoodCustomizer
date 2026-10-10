@@ -1,292 +1,309 @@
-using HarmonyLib;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Linq;
+using HarmonyLib;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
+using Object = UnityEngine.Object;
+using Random = UnityEngine.Random;
 
 namespace DarkwoodCustomizer;
 
 internal class InventoryPatch
 {
-  [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-  [HarmonyPostfix]
-  // ReSharper disable once InconsistentNaming
-  public static void InventoryBackgrounds(Inventory __instance, string labelName = "")
-  {
-    try
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
+    [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
+    public static void InventoryBackgrounds(Inventory __instance, string labelName = "")
     {
-      var gameObject = __instance.thisUI;
-      var positionMe = gameObject.GetComponent<PositionMe>();
-      if (Plugin.WorkbenchInventoryModification.Value && labelName == "Storage")
-      {
-        positionMe.offset = new Vector2(__instance.position.x + Plugin.StorageXOffset.Value, __instance.position.z + Plugin.StorageZOffset.Value);
-      }
-
-      if (!Plugin.CraftingModification.Value || __instance.invType != Inventory.InvType.crafting) return;
-      positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value, __instance.position.z + Plugin.CraftingZOffset.Value);
-      UpgradeItemMenuPatch.CraftingPos.x = positionMe.offset.x;
-      UpgradeItemMenuPatch.CraftingPos.y = positionMe.offset.y;
-      if (!__instance.isWorkbench) return;
-      foreach (var child in gameObject.GetComponentsInChildren<Transform>())
-      {
-        if (child.name != "WorkbenchBackground") continue;
-        UnityEngine.Object.Destroy(child.gameObject);
-        var extraSlots = Plugin.CraftingRightSlots.Value - 5f;
-        var xPosition = 119f + 31f * extraSlots;
-        var xScale = 1f + 0.21f * extraSlots;
-        var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f), Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject);
-        workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
-        Singleton<InventoryController>.Instance.repairBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
-        Singleton<InventoryController>.Instance.upgradeBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
-        Singleton<InventoryController>.Instance.upgradeWorkbenchBtn.transform.position = gameObject.transform.position + new Vector3(xPosition, 5f, -503f);
-        break;
-      }
-    }
-    catch (Exception e)
-    {
-      Plugin.Log.LogError("Failed to get PositionMe component on Inventory, exiting early");
-      Plugin.Log.LogError(e);
-    }
-
-  }
-
-  [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-  [HarmonyPrefix]
-  // ReSharper disable once InconsistentNaming
-  public static void InventorySlots(Inventory __instance, string labelName = "")
-  {
-    var maxSlots = 0;
-
-    if (labelName == "Storage")
-    {
-      if (Plugin.WorkbenchInventoryModification.Value)
-      {
-        __instance.maxColumns = Plugin.RightSlots.Value;
-        maxSlots = __instance.maxColumns * Plugin.DownSlots.Value;
-      }
-      else
-      {
-        __instance.maxColumns = 6;
-        maxSlots = 48; // 6*8
-      }
-    }
-    else
-    {
-      switch (__instance.invType)
-      {
-        case Inventory.InvType.crafting:
-          if (Plugin.CraftingModification.Value)
-          {
-            __instance.maxColumns = Plugin.CraftingRightSlots.Value;
-            // Do not resize slots for workbench inventories.
-            // Workbench.setRecipes() expects a stable slot count and crashes if slots are removed or if the count does not match recipe count.
-            // Don't know when I wrote this, but it isn't true, it only breaks the crafting if there's not enough slots
-            //if (!__instance.isWorkbench)
-            //{
-            maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
-            //}
-          }
-          else
-          {
-            __instance.maxColumns = 5;
-            maxSlots = 35; // 5*7
-          }
-          break;
-        case Inventory.InvType.hotbar:
-          if (Plugin.HotbarSlots.Value)
-          {
-            __instance.maxColumns = Plugin.HotbarRightSlots.Value;
-            maxSlots = __instance.maxColumns * Plugin.HotbarDownSlots.Value;
-          }
-          else
-          {
-            __instance.maxColumns = 1;
-            maxSlots = 3 + Player.Instance.hotbarUpgrades;
-          }
-          break;
-        case Inventory.InvType.playerInv:
-          if (Plugin.InventorySlots.Value)
-          {
-            __instance.maxColumns = Plugin.InventoryRightSlots.Value;
-            maxSlots = __instance.maxColumns * Plugin.InventoryDownSlots.Value;
-          }
-          else
-          {
-            __instance.maxColumns = 2;
-            maxSlots = 12 + (2 * Player.Instance.inventoryUpgrades);
-          }
-          break;
-        case Inventory.InvType.shop:
-          if (Plugin.TraderSlots.Value)
-          {
-            __instance.maxColumns = Plugin.TraderRightSlots.Value;
-            maxSlots = __instance.maxColumns * Plugin.TraderDownSlots.Value;
-          }
-          else
-          {
-            __instance.maxColumns = 6;
-            maxSlots = 42; // 6*7
-          }
-          break;
-        case Inventory.InvType.itemInv:
-        case Inventory.InvType.shopExchangePlayer:
-        case Inventory.InvType.shopExchangeTrader:
-        case Inventory.InvType.leveling:
-        case Inventory.InvType.deathDrop:
-          break;
-        default:
-          throw new ArgumentOutOfRangeException();
-      }
-    }
-    
-    if (maxSlots > 0 && maxSlots != __instance.slots.Count)
-    {
-      if (Plugin.LogDebug.Value)
-      {
-        Plugin.LogDivider();
-        Plugin.Log.LogInfo($"Player has {Player.Instance.inventoryUpgrades} inventory upgrades and {Player.Instance.hotbarUpgrades} hotbar upgrades.");
-      }
-      ChangeSlots(__instance, maxSlots);
-    }
-  }
-
-  // ReSharper disable once InconsistentNaming
-  public static void ChangeSlots(Inventory __instance, int maximumSlots)
-  {
-    var difference = maximumSlots - __instance.slots.Count;
-    if (Plugin.LogDebug.Value)
-    {
-      Plugin.LogDivider();
-      Plugin.Log.LogInfo($"Maximum slots allowed in \"{__instance.name}\" is {maximumSlots} and we have {__instance.slots.Count}");
-
-      Plugin.Log.LogInfo(difference < 0 ? $"Removing {Math.Abs(difference)} slots" : $"Adding {difference} slots");
-      Plugin.LogDivider();
-    }
-    while (difference < 0 && Plugin.RemoveExcess.Value)
-    {
-      var indexToRemove = __instance.slots.Count - 1;
-      var slot = __instance.slots[indexToRemove];
-      if (!InvItemClass.isNull(slot.invItem))
-      {
-        // Cannot safely remove a slot that contains an item because relocating would require updating the internal slot reference.
-        Plugin.Log.LogWarning($"Cannot reduce slots for '{__instance.name}' because slot {indexToRemove} still contains an item. Stopping removal at {__instance.slots.Count} slots.");
-        break;
-      }
-      __instance.slots.RemoveAt(indexToRemove);
-      difference++;
-    }
-    while (difference > 0)
-    {
-      __instance.slots.Add(new InvSlot());
-      difference--;
-    }
-  }
-
-  [HarmonyPatch(typeof(Inventory), nameof(Inventory.initSlots))]
-  [HarmonyPrefix]
-  // ReSharper disable once InconsistentNaming
-  private static void InventoryItems(ref Inventory __instance)
-  {
-    var name = __instance.gameObject.name;
-
-    // Check if the inventory name exists in CustomLoot
-    if (!Plugin.CustomLoot.ContainsKey(name))
-    {
-      // Create an empty JArray for itemsList
-      var itemsList = new JArray();
-
-      // Loop through slots and add items dynamically
-      foreach (var itemObject in __instance.slots.Select(t => new JObject
+        try
         {
-         { "item", t.item?.type ?? "Empty" },
-         { "minAmount", 1 },
-         { "maxAmount", 1 },
-         { "chance", 1f },
-        }))
-      {
-        // Add the item object to the itemsList
-        itemsList.Add(itemObject);
-      }
+            var gameObject = __instance.thisUI;
+            var positionMe = gameObject.GetComponent<PositionMe>();
+            if (Plugin.WorkbenchInventoryModification.Value && labelName == "Storage")
+                positionMe.offset = new Vector2(__instance.position.x + Plugin.StorageXOffset.Value,
+                    __instance.position.z + Plugin.StorageZOffset.Value);
 
-      // Default structure for this inventory
-      Plugin.CustomLoot[name] = new JObject
-      {
-        { "enabled", false },
-        { "replace", false },
-        { "items", itemsList },
-      };
-      Plugin.SaveLoot = true;
+            if (!Plugin.CraftingModification.Value || __instance.invType != Inventory.InvType.crafting) return;
+            positionMe.offset = new Vector2(__instance.position.x + Plugin.CraftingXOffset.Value,
+                __instance.position.z + Plugin.CraftingZOffset.Value);
+            UpgradeItemMenuPatch.CraftingPos.x = positionMe.offset.x;
+            UpgradeItemMenuPatch.CraftingPos.y = positionMe.offset.y;
+            if (!__instance.isWorkbench) return;
+            foreach (var child in gameObject.GetComponentsInChildren<Transform>())
+            {
+                if (child.name != "WorkbenchBackground") continue;
+                Object.Destroy(child.gameObject);
+                var extraSlots = Plugin.CraftingRightSlots.Value - 5f;
+                var xPosition = 119f + 31f * extraSlots;
+                var xScale = 1f + 0.21f * extraSlots;
+                var workbenchBackground = Core.AddPrefab("UI/WorkbenchBackground", new Vector3(xPosition, -10f, -233f),
+                    Quaternion.Euler(90f, 0f, 0f), gameObject.gameObject);
+                workbenchBackground.transform.localScale = new Vector3(xScale, 1f, 1f);
+                Singleton<InventoryController>.Instance.repairBtn.transform.position =
+                    gameObject.transform.position + new Vector3(xPosition, 5f, -409f);
+                Singleton<InventoryController>.Instance.upgradeBtn.transform.position =
+                    gameObject.transform.position + new Vector3(xPosition, 5f, -451f);
+                Singleton<InventoryController>.Instance.upgradeWorkbenchBtn.transform.position =
+                    gameObject.transform.position + new Vector3(xPosition, 5f, -503f);
+                break;
+            }
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogError("Failed to get PositionMe component on Inventory, exiting early");
+            Plugin.Log.LogError(e);
+        }
     }
 
-    if (!Plugin.LootModification.Value) return;
-
-    ApplyCustomLoot(__instance);
-  }
-
-  [HarmonyPatch(typeof(Inventory.SaveState), nameof(Inventory.SaveState.loadValues))]
-  [HarmonyPostfix]
-  // ReSharper disable once InconsistentNaming
-  private static void InventoryItemsAfterLoad(Inventory inv)
-  {
-    // Saving an inventory stores its slot count, and loadValues() truncates the slots back to
-    // that count after initSlots ran. Re-apply the custom loot so loaded saves keep the
-    // configured drops instead of reverting to the saved (base game) ones.
-    ApplyCustomLoot(inv);
-  }
-
-  // ReSharper disable once InconsistentNaming
-  internal static void ApplyCustomLoot(Inventory inventory)
-  {
-    var name = inventory.gameObject.name;
-
-    if (!Plugin.LootModification.Value) return;
-
-    var lootEntry = Plugin.CustomLoot.Properties().FirstOrDefault(x => x.Name == name);
-    if (lootEntry == null) return;
-    var lootItems = lootEntry.Value["items"];
-    var replaceSlot = lootEntry.Value["replace"];
-
-    if (!(bool)lootEntry.Value["enabled"]) return;
-
-    // Expand the inventory slots if the CustomLoot has more items than the inventory has slots.
-    // This fixes the issue where editing an enemy's drop list to have more drops than its default slot count would silently drop the excess items.
-    if (lootItems is JArray lootArray && lootArray.Count > inventory.slots.Count)
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
+    [HarmonyPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void InventorySlots(Inventory __instance, string labelName = "")
     {
-      var isLootable = inventory.invType == Inventory.InvType.itemInv
-                       || inventory.invType == Inventory.InvType.deathDrop
-                       || inventory.gameObject.GetComponent<Character>()
-                       || inventory.gameObject.GetComponent<NPC>();
-      if (isLootable)
-      {
-        var oldCount = inventory.slots.Count;
-        while (inventory.slots.Count < lootArray.Count)
-          inventory.slots.Add(new InvSlot());
+        var maxSlots = 0;
+
+        if (labelName == "Storage")
+        {
+            if (Plugin.WorkbenchInventoryModification.Value)
+            {
+                __instance.maxColumns = Plugin.RightSlots.Value;
+                maxSlots = __instance.maxColumns * Plugin.DownSlots.Value;
+            }
+            else
+            {
+                __instance.maxColumns = 6;
+                maxSlots = 48; // 6*8
+            }
+        }
+        else
+        {
+            switch (__instance.invType)
+            {
+                case Inventory.InvType.crafting:
+                    if (Plugin.CraftingModification.Value)
+                    {
+                        __instance.maxColumns = Plugin.CraftingRightSlots.Value;
+                        // Do not resize slots for workbench inventories.
+                        // Workbench.setRecipes() expects a stable slot count and crashes if slots are removed or if the count does not match recipe count.
+                        // Don't know when I wrote this, but it isn't true, it only breaks the crafting if there's not enough slots
+                        //if (!__instance.isWorkbench)
+                        //{
+                        maxSlots = __instance.maxColumns * Plugin.CraftingDownSlots.Value;
+                        //}
+                    }
+                    else
+                    {
+                        __instance.maxColumns = 5;
+                        maxSlots = 35; // 5*7
+                    }
+
+                    break;
+                case Inventory.InvType.hotbar:
+                    if (Plugin.HotbarSlots.Value)
+                    {
+                        __instance.maxColumns = Plugin.HotbarRightSlots.Value;
+                        maxSlots = __instance.maxColumns * Plugin.HotbarDownSlots.Value;
+                    }
+                    else
+                    {
+                        __instance.maxColumns = 1;
+                        maxSlots = 3 + Player.Instance.hotbarUpgrades;
+                    }
+
+                    break;
+                case Inventory.InvType.playerInv:
+                    if (Plugin.InventorySlots.Value)
+                    {
+                        __instance.maxColumns = Plugin.InventoryRightSlots.Value;
+                        maxSlots = __instance.maxColumns * Plugin.InventoryDownSlots.Value;
+                    }
+                    else
+                    {
+                        __instance.maxColumns = 2;
+                        maxSlots = 12 + 2 * Player.Instance.inventoryUpgrades;
+                    }
+
+                    break;
+                case Inventory.InvType.shop:
+                    if (Plugin.TraderSlots.Value)
+                    {
+                        __instance.maxColumns = Plugin.TraderRightSlots.Value;
+                        maxSlots = __instance.maxColumns * Plugin.TraderDownSlots.Value;
+                    }
+                    else
+                    {
+                        __instance.maxColumns = 6;
+                        maxSlots = 42; // 6*7
+                    }
+
+                    break;
+                case Inventory.InvType.itemInv:
+                case Inventory.InvType.shopExchangePlayer:
+                case Inventory.InvType.shopExchangeTrader:
+                case Inventory.InvType.leveling:
+                case Inventory.InvType.deathDrop:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        if (maxSlots > 0 && maxSlots != __instance.slots.Count)
+        {
+            if (Plugin.LogDebug.Value)
+            {
+                Plugin.LogDivider();
+                Plugin.Log.LogInfo(
+                    $"Player has {Player.Instance.inventoryUpgrades} inventory upgrades and {Player.Instance.hotbarUpgrades} hotbar upgrades.");
+            }
+
+            ChangeSlots(__instance, maxSlots);
+        }
+    }
+
+    // ReSharper disable once InconsistentNaming
+    public static void ChangeSlots(Inventory __instance, int maximumSlots)
+    {
+        var difference = maximumSlots - __instance.slots.Count;
         if (Plugin.LogDebug.Value)
-          Plugin.Log.LogInfo($"[CustomLoot] Expanded '{name}' from {oldCount} to {inventory.slots.Count} slots to fit configured drops");
-      }
+        {
+            Plugin.LogDivider();
+            Plugin.Log.LogInfo(
+                $"Maximum slots allowed in \"{__instance.name}\" is {maximumSlots} and we have {__instance.slots.Count}");
+
+            Plugin.Log.LogInfo(difference < 0
+                ? $"Removing {Math.Abs(difference)} slots"
+                : $"Adding {difference} slots");
+            Plugin.LogDivider();
+        }
+
+        while (difference < 0 && Plugin.RemoveExcess.Value)
+        {
+            var indexToRemove = __instance.slots.Count - 1;
+            var slot = __instance.slots[indexToRemove];
+            if (!InvItemClass.isNull(slot.invItem))
+            {
+                // Cannot safely remove a slot that contains an item because relocating would require updating the internal slot reference.
+                Plugin.Log.LogWarning(
+                    $"Cannot reduce slots for '{__instance.name}' because slot {indexToRemove} still contains an item. Stopping removal at {__instance.slots.Count} slots.");
+                break;
+            }
+
+            __instance.slots.RemoveAt(indexToRemove);
+            difference++;
+        }
+
+        while (difference > 0)
+        {
+            __instance.slots.Add(new InvSlot());
+            difference--;
+        }
     }
 
-    for (var i = 0; i < inventory.slots.Count; i++)
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.initSlots))]
+    [HarmonyPrefix]
+    // ReSharper disable once InconsistentNaming
+    private static void InventoryItems(ref Inventory __instance)
     {
-      // InvSlot instances are never null, so only slots that actually contain an item count as occupied.
-      // replace=false keeps the default loot in occupied slots and fills only the empty ones.
-      var slot = inventory.slots[i];
-      if (!(bool)replaceSlot && (slot.item || !InvItemClass.isNull(slot.invItem))) continue;
+        var name = __instance.gameObject.name;
 
-      // Get the item data for the current slot.
-      // lootItems can have less or more than this inventories slots
-      var itemData = (JObject)lootItems?[i];
-      if (itemData == null) continue;
-      var itemName = itemData["item"]?.ToString();
-      var chance = (float)itemData["chance"];
+        // Check if the inventory name exists in CustomLoot
+        if (!Plugin.CustomLoot.ContainsKey(name))
+        {
+            // Create an empty JArray for itemsList
+            var itemsList = new JArray();
 
-      if (itemName == "Empty") continue;
+            // Loop through slots and add items dynamically
+            foreach (var itemObject in __instance.slots.Select(t => new JObject
+                     {
+                         { "item", t.item?.type ?? "Empty" },
+                         { "minAmount", 1 },
+                         { "maxAmount", 1 },
+                         { "chance", 1f }
+                     }))
+                // Add the item object to the itemsList
+                itemsList.Add(itemObject);
 
-      // Determine if the item should be added based on its chance
-      if (!(UnityEngine.Random.value <= chance)) continue;
-      // Add the item to the inventories slots
-      var amount = UnityEngine.Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
-      slot.createItem(itemName, amount);
+            // Default structure for this inventory
+            Plugin.CustomLoot[name] = new JObject
+            {
+                { "enabled", false },
+                { "replace", false },
+                { "items", itemsList }
+            };
+            Plugin.SaveLoot = true;
+        }
+
+        if (!Plugin.LootModification.Value) return;
+
+        ApplyCustomLoot(__instance);
     }
-  }
+
+    [HarmonyPatch(typeof(Inventory.SaveState), nameof(Inventory.SaveState.loadValues))]
+    [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
+    private static void InventoryItemsAfterLoad(Inventory inv)
+    {
+        // Saving an inventory stores its slot count, and loadValues() truncates the slots back to
+        // that count after initSlots ran. Re-apply the custom loot so loaded saves keep the
+        // configured drops instead of reverting to the saved (base game) ones.
+        ApplyCustomLoot(inv);
+    }
+
+    // ReSharper disable once InconsistentNaming
+    internal static void ApplyCustomLoot(Inventory inventory)
+    {
+        var name = inventory.gameObject.name;
+
+        if (!Plugin.LootModification.Value) return;
+
+        var lootEntry = Plugin.CustomLoot.Properties().FirstOrDefault(x => x.Name == name);
+        if (lootEntry == null) return;
+        var lootItems = lootEntry.Value["items"];
+        var replaceSlot = lootEntry.Value["replace"];
+
+        if (!(bool)lootEntry.Value["enabled"]) return;
+
+        // Expand the inventory slots if the CustomLoot has more items than the inventory has slots.
+        // This fixes the issue where editing an enemy's drop list to have more drops than its default slot count would silently drop the excess items.
+        if (lootItems is JArray lootArray && lootArray.Count > inventory.slots.Count)
+        {
+            var isLootable = inventory.invType == Inventory.InvType.itemInv
+                             || inventory.invType == Inventory.InvType.deathDrop
+                             || inventory.gameObject.GetComponent<Character>()
+                             || inventory.gameObject.GetComponent<NPC>();
+            if (isLootable)
+            {
+                var oldCount = inventory.slots.Count;
+                while (inventory.slots.Count < lootArray.Count)
+                    inventory.slots.Add(new InvSlot());
+                if (Plugin.LogDebug.Value)
+                    Plugin.Log.LogInfo(
+                        $"[CustomLoot] Expanded '{name}' from {oldCount} to {inventory.slots.Count} slots to fit configured drops");
+            }
+        }
+
+        for (var i = 0; i < inventory.slots.Count; i++)
+        {
+            // InvSlot instances are never null, so only slots that actually contain an item count as occupied.
+            // replace=false keeps the default loot in occupied slots and fills only the empty ones.
+            var slot = inventory.slots[i];
+            if (!(bool)replaceSlot && (slot.item || !InvItemClass.isNull(slot.invItem))) continue;
+
+            // Get the item data for the current slot.
+            // lootItems can have less or more than this inventories slots
+            var itemData = (JObject)lootItems?[i];
+            if (itemData == null) continue;
+            var itemName = itemData["item"]?.ToString();
+            var chance = (float)itemData["chance"];
+
+            if (itemName == "Empty") continue;
+
+            // Determine if the item should be added based on its chance
+            if (!(Random.value <= chance)) continue;
+            // Add the item to the inventories slots
+            var amount = Random.Range((int)itemData["minAmount"], (int)itemData["maxAmount"] + 1);
+            slot.createItem(itemName, amount);
+        }
+    }
 }

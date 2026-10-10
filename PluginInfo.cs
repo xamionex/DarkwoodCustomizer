@@ -1,5 +1,6 @@
-internal static class PluginInfo {
-public const string PluginGuid = "amione.DarkwoodCustomizer";
-public const string PluginName = "DarkwoodCustomizer";
-public const string PluginVersion = "1.7.3";
+internal static class PluginInfo
+{
+    public const string PluginGuid = "amione.DarkwoodCustomizer";
+    public const string PluginName = "DarkwoodCustomizer";
+    public const string PluginVersion = "1.7.3";
 }

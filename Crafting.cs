@@ -1,6 +1,6 @@
-using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 
 namespace DarkwoodCustomizer;
 
@@ -22,10 +22,8 @@ internal static class CraftingPatch
     private static void Postfix_CraftingRequirement_Refresh(CraftingRequirement __instance)
     {
         if (Plugin.FreeCrafting.Value)
-        {
             // Force the requirement to always be met
             __instance.met = true;
-        }
     }
 
     // Tracks workbench upgrade crafts so the postfix can ensure the item is consumed.
@@ -35,10 +33,7 @@ internal static class CraftingPatch
     private static void Prefix_DoCraft(CraftingRecipes __instance, CraftingRecipes.Recipe __0)
     {
         var invItem = __instance.GetComponent<InvItem>();
-        if (invItem && invItem.isWorkbenchUpgrade)
-        {
-            PendingUpgradeRecipe[__instance] = __0;
-        }
+        if (invItem && invItem.isWorkbenchUpgrade) PendingUpgradeRecipe[__instance] = __0;
     }
 
     [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
@@ -57,8 +52,8 @@ internal static class CraftingPatch
 
         // Remove the upgrade item from player inventory, hotbar, and workbench storage.
         // This handles cases where the vanilla removeItem() failed because the item was stackable and merged into an existing stack.
-        foreach (var slot in Player.Instance.Inventory.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
-        {
+        foreach (var slot in Player.Instance.Inventory.slots.TakeWhile(_ => remaining > 0)
+                     .Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
             if (slot.invItem.amount <= remaining)
             {
                 remaining -= slot.invItem.amount;
@@ -70,9 +65,9 @@ internal static class CraftingPatch
                 slot.invItem.refresh();
                 remaining = 0;
             }
-        }
-        foreach (var slot in Player.Instance.Hotbar.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
-        {
+
+        foreach (var slot in Player.Instance.Hotbar.slots.TakeWhile(_ => remaining > 0)
+                     .Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
             if (slot.invItem.amount <= remaining)
             {
                 remaining -= slot.invItem.amount;
@@ -84,11 +79,10 @@ internal static class CraftingPatch
                 slot.invItem.refresh();
                 remaining = 0;
             }
-        }
+
         if (Player.Instance.openedItemInventory2)
-        {
-            foreach (var slot in Player.Instance.openedItemInventory2.slots.TakeWhile(_ => remaining > 0).Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
-            {
+            foreach (var slot in Player.Instance.openedItemInventory2.slots.TakeWhile(_ => remaining > 0)
+                         .Where(slot => !InvItemClass.isNull(slot.invItem) && slot.invItem.type == itemType))
                 if (slot.invItem.amount <= remaining)
                 {
                     remaining -= slot.invItem.amount;
@@ -100,12 +94,9 @@ internal static class CraftingPatch
                     slot.invItem.refresh();
                     remaining = 0;
                 }
-            }
-        }
 
         if (remaining > 0)
-        {
-            Plugin.Log.LogWarning($"Could not fully remove workbench upgrade item {itemType} from player inventory. {remaining} remaining.");
-        }
+            Plugin.Log.LogWarning(
+                $"Could not fully remove workbench upgrade item {itemType} from player inventory. {remaining} remaining.");
     }
 }

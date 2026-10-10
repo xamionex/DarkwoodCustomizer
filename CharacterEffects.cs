@@ -1,10 +1,10 @@
-using BepInEx;
-using HarmonyLib;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using BepInEx;
+using HarmonyLib;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace DarkwoodCustomizer;
@@ -45,11 +45,13 @@ internal class CharacterEffectsPatch
                         if (Plugin.LogDebug.Value)
                             Plugin.Log.LogInfo($"[Effects] Removed disabled effect {type}");
                     }
+
                     continue;
                 }
 
                 if (effects.hasEffectType(type)) continue;
-                effects.activate(type, data["duration"]?.Value<float>() ?? 0f, data["modifier"]?.Value<float>() ?? 1f, data["interval"]?.Value<float>() ?? 0f, 0f);
+                effects.activate(type, data["duration"]?.Value<float>() ?? 0f, data["modifier"]?.Value<float>() ?? 1f,
+                    data["interval"]?.Value<float>() ?? 0f, 0f);
                 if (Plugin.LogDebug.Value)
                     Plugin.Log.LogInfo($"[Effects] Re-applied {type}");
             }
@@ -69,7 +71,8 @@ internal class CharacterEffectsPatch
         if (Singleton<Dreams>.Instance.dreaming) return;
 
         var typeclean = effect.type.ToString();
-        var type = $"{typeclean}_d{effect.duration.ToString(CultureInfo.InvariantCulture)}_m{effect.modifier.ToString(CultureInfo.InvariantCulture)}_i{effect.interval.ToString(CultureInfo.InvariantCulture)}";
+        var type =
+            $"{typeclean}_d{effect.duration.ToString(CultureInfo.InvariantCulture)}_m{effect.modifier.ToString(CultureInfo.InvariantCulture)}_i{effect.interval.ToString(CultureInfo.InvariantCulture)}";
         var customEffects = Plugin.CharacterEffects;
 
         // Initialize effect in config if it doesn't exist
@@ -84,7 +87,7 @@ internal class CharacterEffectsPatch
                 { "stopsPoison", effect.stopsPoison },
                 { "hasPoisonOverlay", effect.hasPoisonOverlay },
                 { "activateSound", effect.activateSound },
-                { "startDelay", effect.startDelay },
+                { "startDelay", effect.startDelay }
             };
             Plugin.SaveCharacterEffects = true;
         }
@@ -106,10 +109,7 @@ internal class CharacterEffectsPatch
             LogStats += "----------------------------------------\n";
 
             var logPath = Path.Combine(Paths.ConfigPath, PluginInfo.PluginGuid, "EffectLog.log");
-            if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats)
-            {
-                File.WriteAllText(logPath, LogStats);
-            }
+            if (!File.Exists(logPath) || File.ReadAllText(logPath) != LogStats) File.WriteAllText(logPath, LogStats);
         }
 
         // Apply modifications
@@ -120,21 +120,21 @@ internal class CharacterEffectsPatch
     {
         if (data == null) return;
 
-        if (float.TryParse(data["duration"]?.Value<string>(), out var duration)) 
+        if (float.TryParse(data["duration"]?.Value<string>(), out var duration))
             effect.duration = duration;
-        if (float.TryParse(data["modifier"]?.Value<string>(), out var modifier)) 
+        if (float.TryParse(data["modifier"]?.Value<string>(), out var modifier))
             effect.modifier = modifier;
-        if (float.TryParse(data["interval"]?.Value<string>(), out var interval)) 
+        if (float.TryParse(data["interval"]?.Value<string>(), out var interval))
             effect.interval = interval;
-        if (bool.TryParse(data["stopsBleeding"]?.Value<string>(), out var stopsBleeding)) 
+        if (bool.TryParse(data["stopsBleeding"]?.Value<string>(), out var stopsBleeding))
             effect.stopsBleeding = stopsBleeding;
-        if (bool.TryParse(data["stopsPoison"]?.Value<string>(), out var stopsPoison)) 
+        if (bool.TryParse(data["stopsPoison"]?.Value<string>(), out var stopsPoison))
             effect.stopsPoison = stopsPoison;
-        if (bool.TryParse(data["hasPoisonOverlay"]?.Value<string>(), out var hasPoisonOverlay)) 
+        if (bool.TryParse(data["hasPoisonOverlay"]?.Value<string>(), out var hasPoisonOverlay))
             effect.hasPoisonOverlay = hasPoisonOverlay;
-        if (data.ContainsKey("activateSound")) 
+        if (data.ContainsKey("activateSound"))
             effect.activateSound = data["activateSound"]?.Value<string>();
-        if (float.TryParse(data["startDelay"]?.Value<string>(), out var startDelay)) 
+        if (float.TryParse(data["startDelay"]?.Value<string>(), out var startDelay))
             effect.startDelay = startDelay;
     }
 }

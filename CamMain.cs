@@ -8,7 +8,7 @@ internal class CamMainPatch
     private static bool _previousPostFxState;
     private static bool _previousVignetteState;
     private static float _previousFoV;
-    
+
     // Cache child camera names to avoid repeated string operations
     private static readonly string[] ChildCameraNames =
     [
@@ -18,7 +18,7 @@ internal class CamMainPatch
         "CamLightning",
         "CamTopMask"
     ];
-    
+
     [HarmonyPatch(typeof(CamMain), "Update")]
     [HarmonyPostfix]
     // ReSharper disable once InconsistentNaming
@@ -26,32 +26,30 @@ internal class CamMainPatch
     {
         // This also runs on the title screen and during loading, where there is no player yet
         if (Plugin.PlayerModification.Value && Player.Instance && Player.Instance.skills)
-        {
-            __instance.seeDistance = Player.Instance.skills.Farsight ? Plugin.PlayerFarSight.Value : Plugin.PlayerSight.Value;
-        }
+            __instance.seeDistance =
+                Player.Instance.skills.Farsight ? Plugin.PlayerFarSight.Value : Plugin.PlayerSight.Value;
         if (!Plugin.CameraModification.Value) return;
-        
+
         // Cache the main camera component
         var mainCamera = __instance.GetComponent<tk2dCamera>();
-        
+
         // Handle FoV changes
-        if (!Mathf.Approximately(mainCamera.ZoomFactor, Plugin.CameraFoV.Value) || !Mathf.Approximately(_previousFoV, Plugin.CameraFoV.Value))
+        if (!Mathf.Approximately(mainCamera.ZoomFactor, Plugin.CameraFoV.Value) ||
+            !Mathf.Approximately(_previousFoV, Plugin.CameraFoV.Value))
         {
             mainCamera.ZoomFactor = Plugin.CameraFoV.Value;
-            
+
             // Update all child cameras
             var instanceTransform = __instance.transform;
             foreach (var cameraName in ChildCameraNames)
-            {
                 instanceTransform.Find(cameraName).GetComponent<tk2dCamera>().ZoomFactor = Plugin.CameraFoV.Value;
-            }
-            
+
             _previousFoV = Plugin.CameraFoV.Value;
         }
-        
+
         // Cache the PostFX transform
         var postFxTransform = __instance.transform.Find("CamPostFX");
-        
+
         if (_previousPostFxState != Plugin.CameraDisablePostFX.Value)
         {
             postFxTransform.GetComponent<AmplifyColorEffect>().enabled = !Plugin.CameraDisablePostFX.Value;

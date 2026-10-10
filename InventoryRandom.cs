@@ -6,79 +6,83 @@ namespace DarkwoodCustomizer;
 
 internal class InventoryRandomizePatch
 {
-  [HarmonyPatch(typeof(InventoryRandom), nameof(InventoryRandom.randomize))]
-  [HarmonyPostfix]
-  // ReSharper disable once InconsistentNaming
-  private static void PatchRandomizedInventory(InventoryRandom __instance)
-  {
-    var customRandomInventories = Plugin.CustomRandomInventories;
-    if (!customRandomInventories.ContainsKey(__instance.name))
+    [HarmonyPatch(typeof(InventoryRandom), nameof(InventoryRandom.randomize))]
+    [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
+    private static void PatchRandomizedInventory(InventoryRandom __instance)
     {
-      customRandomInventories[__instance.name] = new JObject
+        var customRandomInventories = Plugin.CustomRandomInventories;
+        if (!customRandomInventories.ContainsKey(__instance.name))
+        {
+            customRandomInventories[__instance.name] = new JObject
             {
                 { "presets", new JObject() }
             };
-      Plugin.SaveRandomInventories = true;
-    }
-    for (var i = 0; i < __instance.presets.Count; i++)
-    {
-      if (!__instance.presets[i])
-      {
-        continue;
-      }
+            Plugin.SaveRandomInventories = true;
+        }
 
-      var token = customRandomInventories[__instance.name]?["presets"][i.ToString()];
-      if (token is not { Type: JTokenType.Object })
-      {
-        customRandomInventories[__instance.name]["presets"][i.ToString()] = new JObject();
-        foreach (var item in __instance.presets[i].permittedItems)
+        for (var i = 0; i < __instance.presets.Count; i++)
         {
-          if (!item.type)
-          {
-            Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item ({item}) with no type, skipping");
-            continue;
-          }
-          customRandomInventories[__instance.name]["presets"][i.ToString()][item.type.name] = new JObject
+            if (!__instance.presets[i]) continue;
+
+            var token = customRandomInventories[__instance.name]?["presets"][i.ToString()];
+            if (token is not { Type: JTokenType.Object })
+            {
+                customRandomInventories[__instance.name]["presets"][i.ToString()] = new JObject();
+                foreach (var item in __instance.presets[i].permittedItems)
+                {
+                    if (!item.type)
+                    {
+                        Plugin.Log.LogError(
+                            $"[CustomRandomInventories] Preset {i} in {__instance.name} has an item ({item}) with no type, skipping");
+                        continue;
+                    }
+
+                    customRandomInventories[__instance.name]["presets"][i.ToString()][item.type.name] = new JObject
                     {
                         { "type", item.type.name },
                         { "amountMin", item.amountMin },
                         { "amountMax", item.amountMax },
                         { "chance", item.chance }
                     };
+                }
+
+                Plugin.SaveRandomInventories = true;
+            }
+
+            if (!Plugin.RandomInventoriesModification.Value) return;
+
+            __instance.presets[i].permittedItems = [];
+            foreach (var item in (JObject)customRandomInventories[__instance.name]["presets"][i.ToString()])
+            {
+                var typeName = item.Value["type"]?.Value<string>();
+                if (typeName == null)
+                {
+                    Plugin.Log.LogError(
+                        $"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with a null type, skipping");
+                    continue;
+                }
+
+                var type = ItemsDatabase.Instance.getItem(typeName, false);
+                if (!type)
+                {
+                    Plugin.Log.LogError(
+                        $"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with an invalid type, skipping");
+                    continue;
+                }
+
+                __instance.presets[i].permittedItems.Add(new PermittedItem
+                {
+                    type = type,
+                    amountMin = item.Value["amountMin"]?.Value<int>() ?? 0,
+                    amountMax = item.Value["amountMax"]?.Value<int>() ?? 0,
+                    chance = item.Value["chance"]?.Value<float>() ?? 0
+                });
+            }
+
+            __instance.excludeFromDifficultyRandomizer = true;
+
+            __instance.presets[i].allowedItems = [.. __instance.presets[i].permittedItems.Select(item => item.type)];
         }
-        Plugin.SaveRandomInventories = true;
-      }
-
-      if (!Plugin.RandomInventoriesModification.Value) return;
-
-      __instance.presets[i].permittedItems = [];
-      foreach (var item in (JObject)customRandomInventories[__instance.name]["presets"][i.ToString()])
-      {
-
-        var typeName = item.Value["type"]?.Value<string>();
-        if (typeName == null)
-        {
-          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with a null type, skipping");
-          continue;
-        }
-        var type = ItemsDatabase.Instance.getItem(typeName, false);
-        if (!type)
-        {
-          Plugin.Log.LogError($"[CustomRandomInventories] Preset {i} in {__instance.name} has an item with an invalid type, skipping");
-          continue;
-        }
-        __instance.presets[i].permittedItems.Add(new PermittedItem
-        {
-          type = type,
-          amountMin = item.Value["amountMin"]?.Value<int>() ?? 0,
-          amountMax = item.Value["amountMax"]?.Value<int>() ?? 0,
-          chance = item.Value["chance"]?.Value<float>() ?? 0
-        });
-      }
-
-      __instance.excludeFromDifficultyRandomizer = true;
-
-      __instance.presets[i].allowedItems = [.. __instance.presets[i].permittedItems.Select(item => item.type)];
     }
-  }
 }

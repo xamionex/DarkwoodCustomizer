@@ -6,6 +6,7 @@ namespace DarkwoodCustomizer;
 internal class UIPatch
 {
     private static bool _previousUiState;
+
     private static readonly (string Name, bool Previous, Func<bool> Current)[] Elements =
     [
         ("HealthBar", false, () => !Plugin.UIDisabledHealthBar.Value),
@@ -28,13 +29,13 @@ internal class UIPatch
                 __instance.hidePlayerUI();
             else
                 __instance.showPlayerUI();
-            
+
             _previousUiState = Plugin.UIDisabled.Value;
         }
 
         // Handle individual elements
         var barsTransform = __instance.bars.transform;
-        
+
         for (var i = 0; i < Elements.Length; i++)
         {
             var element = Elements[i];
@@ -43,11 +44,11 @@ internal class UIPatch
             if (currentState == element.Previous) continue;
             var obj = barsTransform.Find(element.Name).gameObject;
             obj.SetActive(currentState);
-                
+
             // Handle Skillbar's additional Sprite0
             if (element.Name == "Skillbar")
                 barsTransform.Find("Sprite0").gameObject.SetActive(currentState);
-                
+
             Elements[i].Previous = currentState;
         }
     }

@@ -1,8 +1,8 @@
-using HarmonyLib;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using HarmonyLib;
+using Newtonsoft.Json.Linq;
 
 namespace DarkwoodCustomizer;
 
@@ -20,9 +20,16 @@ internal static class FlamethrowerPatch
         if (!Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) || itemData is not JObject data) return;
         var contactDmgToken = data["flamethrowerContactDamage"];
         if (contactDmgToken != null)
-        {
             AccessTools.Field(typeof(Flame), "contactDamage").SetValue(__instance, contactDmgToken.Value<int>());
-        }
+    }
+
+    public static float GetCustomBurnDamage(float originalModifier)
+    {
+        if (!Plugin.CustomItemsModification.Value ||
+            !Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) ||
+            itemData is not JObject data) return originalModifier;
+        var burnDmgToken = data["flamethrowerBurnDamage"];
+        return burnDmgToken?.Value<float>() ?? originalModifier;
     }
 
     [HarmonyPatch]
@@ -43,21 +50,12 @@ internal static class FlamethrowerPatch
             var codes = new List<CodeInstruction>(instructions);
 
             for (var i = 0; i < codes.Count; i++)
-            {
                 if (codes[i].opcode == OpCodes.Callvirt && codes[i].operand is MethodInfo { Name: "getHit" })
-                {
-                    codes.Insert(i - 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FlamethrowerPatch), nameof(GetCustomBurnDamage))));
-                }
-            }
+                    codes.Insert(i - 1,
+                        new CodeInstruction(OpCodes.Call,
+                            AccessTools.Method(typeof(FlamethrowerPatch), nameof(GetCustomBurnDamage))));
 
             return codes;
         }
-    }
-
-    public static float GetCustomBurnDamage(float originalModifier)
-    {
-        if (!Plugin.CustomItemsModification.Value || !Plugin.CustomItems.TryGetValue("flamethrower", out var itemData) || itemData is not JObject data) return originalModifier;
-        var burnDmgToken = data["flamethrowerBurnDamage"];
-        return burnDmgToken?.Value<float>() ?? originalModifier;
     }
 }
