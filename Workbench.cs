@@ -66,6 +66,10 @@ internal class WorkbenchPatch
   // The recipes the game itself had on each item prefab, captured before this mod touches them.
   // A recipe with "replace": true empties them out, and this is what puts them back when the flag is turned off again or the config is edited.
   private static readonly Dictionary<CraftingRecipes, List<CraftingRecipes.Recipe>> VanillaRecipes = [];
+
+  // The workbench level entries placed by this mod during the latest recipe injection, newest last.
+  // The safety prefix drops these (and only these) when the recipe grid is too small for everything, so the game's own recipes still load instead of the whole setRecipes() being skipped.
+  private static readonly List<(Workbench.Level level, CraftingRecipes entry)> ModLevelEntries = [];
   private static string _logTypeFlag = "";
 
   // Size the workbench recipe grid ends up with once Inventory.show() has run (see InventoryPatch.InventorySlots).
@@ -140,7 +144,29 @@ internal class WorkbenchPatch
       Plugin.Log.LogInfo($"[WB-Diag] setRecipes() on '{__instance.name}': needs {requiredSlots} slots (recipe book {recipeBookSlots} + level recipes {levelSlots}), grid has {grid.slots.Count}");
 
     if (requiredSlots <= grid.slots.Count) return true;
-    Plugin.Log.LogError($"Workbench '{__instance.name}' requires {requiredSlots} slots but workbenchInventory only has {grid.slots.Count}. Skipping setRecipes() to prevent item duplication/corruption. If you changed Crafting slot sizes, try increasing them or resetting to defaults.");
+
+    // Not enough room: drop the level entries this mod placed (newest first) until the rest fits.
+    // This keeps the game's own recipes loadable; skipping setRecipes() entirely, which is what this used to do, left the workbench with no recipes at all (custom recipes on, Inventory tab off).
+    var dropped = 0;
+    while (requiredSlots > grid.slots.Count && ModLevelEntries.Count > 0)
+    {
+      var last = ModLevelEntries[ModLevelEntries.Count - 1];
+      ModLevelEntries.RemoveAt(ModLevelEntries.Count - 1);
+      if (!last.level.recipes.Remove(last.entry)) continue;
+      var freed = last.entry ? last.entry.recipes?.Count ?? 0 : 0;
+      requiredSlots -= freed;
+      dropped++;
+      if (Plugin.LogWorkbench.Value)
+        Plugin.Log.LogInfo($"[WB-Diag] Dropped modded recipe entry '{TypeOf(last.entry)}' ({freed} slot(s)) from level idx {last.level.level} to fit the grid");
+    }
+
+    if (requiredSlots <= grid.slots.Count)
+    {
+      Plugin.Log.LogWarning($"Workbench '{__instance.name}' needs more slots than workbenchInventory has ({grid.slots.Count}), skipped {dropped} modded recipe(s) to make the game's own recipes fit. Enable 'Enable Crafting Modification' and increase the crafting window slots to show them.");
+      return true;
+    }
+
+    Plugin.Log.LogError($"Workbench '{__instance.name}' requires {requiredSlots} slots but workbenchInventory only has {grid.slots.Count}, even after skipping every modded recipe. Skipping setRecipes() to prevent item duplication/corruption. If you changed Crafting slot sizes, try increasing them or resetting to defaults.");
     return false;
   }
 
@@ -149,6 +175,9 @@ internal class WorkbenchPatch
   // ReSharper disable once InconsistentNaming
   public static void WorkbenchRecipes(Workbench __instance)
   {
+    // Tracks this pass's placements so the safety prefix can drop only these entries if the grid is too small.
+    // Cleared even when the toggle is off, otherwise stale entries from another workbench's pass would be dropped against the wrong level lists.
+    ModLevelEntries.Clear();
     if (!Plugin.CraftingRecipesModification.Value) return;
     SaveVanillaRecipes(__instance);
     if (Plugin.CustomCraftingRecipesUseDefaults.Value)
@@ -416,6 +445,13 @@ internal class WorkbenchPatch
     {
       if (Plugin.LogWorkbench.Value)
         Plugin.Log.LogInfo($"{_logTypeFlag} Skipping {itemName}, its recipe is already applied on '{itemPath.name}' next to {itemPath.recipes.Count - 1} game recipe(s).");
+      // The recipe on the item is unchanged, but its workbench entry may have been dropped by the safety prefix when the grid was full, so it has to be placed again to reappear.
+      // If the entry is already there it still has to be recorded, otherwise a re-opened workbench would have nothing to drop and the safety prefix would skip everything again.
+      var existingLevel = instance.levels.Take(levelCount).FirstOrDefault(level => level.recipes.Contains(itemPath));
+      if (existingLevel == null)
+        PlaceModdedRecipe(instance, itemPath, levelToAddTo, itemName);
+      else
+        ModLevelEntries.Add((existingLevel, itemPath));
       return;
     }
 
@@ -435,8 +471,17 @@ internal class WorkbenchPatch
     itemPath.recipes.Add(newRecipe);
     ModRecipes[itemPath] = newRecipe;
 
+    if (Plugin.LogWorkbench.Value)
+      Plugin.Log.LogInfo($"{_logTypeFlag} Added recipe of {itemName} (obj='{itemPath.name}', type='{TypeOf(itemPath)}') with {newRecipe.requirements.Count} requirements at level {requiredLevel} (index {levelToAddTo}) workbench, '{itemPath.name}' now has {itemPath.recipes.Count} recipe(s)");
+    PlaceModdedRecipe(instance, itemPath, levelToAddTo, itemName);
+  }
+
+  // Moves the recipe's entry to its configured level and records it in ModLevelEntries so the safety prefix can drop it when the workbench grid has no room for it.
+  private static void PlaceModdedRecipe(Workbench instance, CraftingRecipes itemPath, int levelToAddTo, string itemName)
+  {
     // Remove any existing entry with the same GameObject name from every level (so the recipe only lives at its new level).
     var prefabName = itemPath.name;
+    var levelCount = Math.Min(8, instance.levels.Count);
     for (var i = 0; i < levelCount; i++)
     {
       var recipes = instance.levels[i].recipes;
@@ -453,9 +498,9 @@ internal class WorkbenchPatch
       recipes.RemoveAt(index);
     }
 
-    if (Plugin.LogWorkbench.Value)
-      Plugin.Log.LogInfo($"{_logTypeFlag} Added recipe of {itemName} (obj='{itemPath.name}', type='{TypeOf(itemPath)}') with {newRecipe.requirements.Count} requirements at level {requiredLevel} (index {levelToAddTo}) workbench, '{itemPath.name}' now has {itemPath.recipes.Count} recipe(s)");
-    instance.levels[levelToAddTo].recipes.Add(itemPath);
+    var level = instance.levels[levelToAddTo];
+    level.recipes.Add(itemPath);
+    ModLevelEntries.Add((level, itemPath));
   }
 
   // Compares two recipes by what they produce and need, so re-opening the workbench with an unchanged config does not apply the mod's recipe a second time while a changed config replaces it.
